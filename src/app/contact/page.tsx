@@ -17,7 +17,11 @@ export default function ContactPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
               <div>
                 <h2 className="text-2xl font-bold mb-4">Get In Touch</h2>
-                <form className="space-y-4">
+                <form
+                  method="POST"
+                  action="/api/contact"
+                  className="space-y-4"
+                >
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium mb-1">
                       Name
@@ -25,6 +29,8 @@ export default function ContactPage() {
                     <input
                       type="text"
                       id="name"
+                      name="name"
+                      required
                       className="w-full p-2 border border-border rounded-md"
                       placeholder="Your name"
                     />
@@ -36,6 +42,8 @@ export default function ContactPage() {
                     <input
                       type="email"
                       id="email"
+                      name="email"
+                      required
                       className="w-full p-2 border border-border rounded-md"
                       placeholder="Your email"
                     />
@@ -47,6 +55,8 @@ export default function ContactPage() {
                     <input
                       type="text"
                       id="subject"
+                      name="subject"
+                      required
                       className="w-full p-2 border border-border rounded-md"
                       placeholder="Subject"
                     />
@@ -57,7 +67,9 @@ export default function ContactPage() {
                     </label>
                     <textarea
                       id="message"
+                      name="message"
                       rows={5}
+                      required
                       className="w-full p-2 border border-border rounded-md"
                       placeholder="Your message"
                     />
@@ -67,6 +79,7 @@ export default function ContactPage() {
                   </Button>
                 </form>
               </div>
+
               <div>
                 <h2 className="text-2xl font-bold mb-4">Contact Information</h2>
                 <div className="bg-muted/30 p-6 rounded-lg border border-border">

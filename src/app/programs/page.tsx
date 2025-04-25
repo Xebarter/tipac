@@ -65,7 +65,7 @@ export default function ProgramsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
               <div className="relative aspect-video overflow-hidden rounded-lg">
                 <Image
-                  src="https://source.unsplash.com/random/800x600?theatre,children,acting"
+                  src="/image1.jpg"
                   alt="Theatre Workshops"
                   fill
                   className="object-cover"
@@ -107,7 +107,7 @@ export default function ProgramsPage() {
                 </div>
 
                 <Button className="tipac-gradient">
-                  Register Now
+                  Contact us
                 </Button>
               </div>
             </div>
@@ -119,7 +119,7 @@ export default function ProgramsPage() {
               <div className="order-1 lg:order-2">
                 <div className="relative aspect-video overflow-hidden rounded-lg">
                   <Image
-                    src="https://source.unsplash.com/random/800x600?musical,singing,children"
+                    src="/image2.jpg"
                     alt="Musical Theatre Program"
                     fill
                     className="object-cover"
@@ -162,7 +162,7 @@ export default function ProgramsPage() {
                 </div>
 
                 <Button className="tipac-gradient-reverse">
-                  Learn More
+                  Contact us
                 </Button>
               </div>
             </div>
@@ -173,7 +173,7 @@ export default function ProgramsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
               <div className="relative aspect-video overflow-hidden rounded-lg">
                 <Image
-                  src="https://source.unsplash.com/random/800x600?storytelling,africa"
+                  src="/image3.jpg"
                   alt="Storytelling Program"
                   fill
                   className="object-cover"
@@ -215,7 +215,7 @@ export default function ProgramsPage() {
                 </div>
 
                 <Button className="tipac-gradient">
-                  Join Program
+                  Contact Us
                 </Button>
               </div>
             </div>
@@ -227,7 +227,7 @@ export default function ProgramsPage() {
               <div className="order-1 lg:order-2">
                 <div className="relative aspect-video overflow-hidden rounded-lg">
                   <Image
-                    src="https://source.unsplash.com/random/800x600?stage,lighting,theatre"
+                    src="/image4.jpg"
                     alt="Technical Theatre Program"
                     fill
                     className="object-cover"
@@ -270,7 +270,7 @@ export default function ProgramsPage() {
                 </div>
 
                 <Button className="tipac-gradient-reverse">
-                  Explore Program
+                  Contact Us
                 </Button>
               </div>
             </div>
@@ -281,7 +281,7 @@ export default function ProgramsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
               <div className="relative aspect-video overflow-hidden rounded-lg">
                 <Image
-                  src="https://source.unsplash.com/random/800x600?community,change,youth"
+                  src="/image5.jpg"
                   alt="Theatre for Social Change"
                   fill
                   className="object-cover"
@@ -323,7 +323,7 @@ export default function ProgramsPage() {
                 </div>
 
                 <Button className="tipac-gradient">
-                  Apply Now
+                  Contact Us
                 </Button>
               </div>
             </div>
