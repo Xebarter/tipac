@@ -5,7 +5,7 @@ export function Testimonials() {
     {
       name: "Mr. Mugwanya Christopher",
       role: "Founder & Director",
-      image: "/team/christopher.jpg",
+      image: "/team/Christopher.jpg",
       bio: "With over 15 years of experience in arts education, Christopher founded TIPAC to bring theatrical arts to children across Uganda.",
       email: "christopher@tipac.co.ug",
       phone: "+256 772470972"
