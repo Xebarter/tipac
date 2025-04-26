@@ -373,27 +373,7 @@ export default function ProgramsPage() {
         </div>
       </section>
 
-      {/* Registration CTA */}
-      <section className="w-full py-16">
-        <div className="container">
-          <div className="tipac-gradient rounded-xl p-12 text-center">
-            <h2 className="text-3xl font-bold mb-4 text-white">Ready to Join a Program?</h2>
-            <p className="text-white/90 mb-8 max-w-2xl mx-auto">
-              Enrollment is open for our upcoming term. Secure your child's spot in one of our transformative theatre programs.
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Button size="lg" variant="secondary" className="bg-white text-primary hover:bg-white/90">
-                View Program Schedule
-              </Button>
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-                Contact Us
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ Section */}
+            {/* FAQ Section */}
       <section className="w-full py-16">
         <div className="container">
           <div className="max-w-3xl mx-auto">
