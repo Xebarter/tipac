@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ClientBody from "./ClientBody";
+<meta name="apple-mobile-web-app-title" content="tipac.co.ug" />
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
