@@ -25,7 +25,7 @@ export default function AboutPage() {
 
             <h2 className="text-2xl font-bold mt-12 mb-4">Our Story</h2>
             <p className="text-lg mb-6">
-              TIPAC was founded in 2015 by a group of passionate theatre artists who recognized the lack of arts education opportunities for children in Uganda. What began as small drama workshops in a few schools has grown into a comprehensive program that reaches thousands of children across the country.
+              TIPAC was founded in 2021 by a group of passionate theatre artists who recognized the lack of arts education opportunities for children in Uganda. What began as small drama workshops in a few schools has grown into a comprehensive program that reaches thousands of children across the country.
             </p>
             <p className="text-lg mb-12">
               Through partnerships with schools, community centers, and international organizations, we've been able to expand our reach and impact. Today, TIPAC alumni are pursuing careers in the arts, becoming leaders in their communities, and passing on their love of theatre to the next generation.

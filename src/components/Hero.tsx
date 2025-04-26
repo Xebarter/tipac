@@ -271,12 +271,12 @@ export function Hero() {
             </div>
             
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
-              <Button size="lg" className="bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 hover:opacity-90 text-white font-medium">
-                Our Programs
-              </Button>
-              <Button size="lg" variant="outline" className="border-2 hover:bg-slate-100 dark:hover:bg-slate-800">
-                Learn More
-              </Button>
+            <Link href="/programs" passHref>
+  <Button size="lg" className="bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 hover:opacity-90 text-white font-medium">
+    Our Programs
+  </Button>
+</Link>
+              
             </div>
             
             <div className="flex items-center space-x-4">

@@ -86,7 +86,7 @@ export default function ContactPage() {
                   <div className="mb-6">
                     <h3 className="font-bold mb-2">Address</h3>
                     <p className="text-muted-foreground">
-                      123 Theatre Lane
+                      National Theatre
                       <br />
                       Kampala, Uganda
                     </p>
@@ -97,7 +97,7 @@ export default function ContactPage() {
                   </div>
                   <div className="mb-6">
                     <h3 className="font-bold mb-2">Phone</h3>
-                    <p className="text-muted-foreground">+256 700 123 456</p>
+                    <p className="text-muted-foreground">+256 772 470 972</p>
                   </div>
                   <div>
                     <h3 className="font-bold mb-2">Hours</h3>
