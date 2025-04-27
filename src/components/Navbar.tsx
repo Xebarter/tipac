@@ -142,3 +142,5 @@ export function Navbar() {
     </nav>
   );
 }
+
+<img src="https://tracker.metricool.com/c3po.jpg?hash=4b07d88664615331ed8d6ff18faa8d3"/>
