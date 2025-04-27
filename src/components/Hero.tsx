@@ -16,7 +16,7 @@ export function Hero() {
           TIPAC MDD & Poetry Festival
         </h1>
         <p className="text-lg md:text-2xl font-medium max-w-2xl mx-auto">
-          Happening <span className="text-yellow-300 font-bold">Today</span> at the{" "}
+          Happening <span className="text-yellow-300 font-bold">NOW</span> at the{" "}
           <span className="underline underline-offset-4">National Theatre</span>!
         </p>
         <p className="text-md md:text-lg">
