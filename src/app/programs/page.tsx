@@ -3,8 +3,39 @@ import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
+import fs from "fs";
+import path from "path";
 
-export default function ProgramsPage() {
+// Define the props interface for the ProgramsPage component
+interface ProgramsPageProps {
+  galleryImages: string[];
+}
+
+// Function to get a random image from the list of images
+const getRandomImage = (images: string[]): string => {
+  if (!images || images.length === 0) return "/placeholder.jpg"; // Fallback if no images
+  const randomIndex = Math.floor(Math.random() * images.length);
+  return `/gallery/${images[randomIndex]}`;
+};
+
+// Fetch images server-side (runs at build time or on-demand)
+async function getGalleryImages(): Promise<string[]> {
+  const galleryPath = path.join(process.cwd(), "public/gallery");
+  try {
+    const images = fs.readdirSync(galleryPath).filter((file) =>
+      /\.(jpg|jpeg|png|gif|webp)$/i.test(file)
+    );
+    return images;
+  } catch (error) {
+    console.error("Error reading gallery folder:", error);
+    return [];
+  }
+}
+
+// Server Component
+export default async function ProgramsPage() {
+  const galleryImages = await getGalleryImages();
+
   return (
     <main className="min-h-screen flex flex-col">
       <Navbar />
@@ -65,7 +96,7 @@ export default function ProgramsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
               <div className="relative aspect-video overflow-hidden rounded-lg">
                 <Image
-                  src="/image1.jpg"
+                  src={getRandomImage(galleryImages)}
                   alt="Theatre Workshops"
                   fill
                   className="object-cover"
@@ -106,8 +137,8 @@ export default function ProgramsPage() {
                   </ul>
                 </div>
 
-                <Button className="tipac-gradient">
-                  Contact us
+                <Button asChild className="tipac-gradient">
+                  <Link href="/contact">Contact Us</Link>
                 </Button>
               </div>
             </div>
@@ -119,7 +150,7 @@ export default function ProgramsPage() {
               <div className="order-1 lg:order-2">
                 <div className="relative aspect-video overflow-hidden rounded-lg">
                   <Image
-                    src="/image2.jpg"
+                    src={getRandomImage(galleryImages)}
                     alt="Musical Theatre Program"
                     fill
                     className="object-cover"
@@ -161,8 +192,8 @@ export default function ProgramsPage() {
                   </ul>
                 </div>
 
-                <Button className="tipac-gradient-reverse">
-                  Contact us
+                <Button asChild className="tipac-gradient-reverse">
+                  <Link href="/contact">Contact Us</Link>
                 </Button>
               </div>
             </div>
@@ -173,10 +204,11 @@ export default function ProgramsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
               <div className="relative aspect-video overflow-hidden rounded-lg">
                 <Image
-                  src="/image3.jpg"
+                  src={getRandomImage(galleryImages)}
                   alt="Storytelling Program"
                   fill
                   className="object-cover"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
               </div>
               <div>
@@ -214,8 +246,8 @@ export default function ProgramsPage() {
                   </ul>
                 </div>
 
-                <Button className="tipac-gradient">
-                  Contact Us
+                <Button asChild className="tipac-gradient">
+                  <Link href="/contact">Contact Us</Link>
                 </Button>
               </div>
             </div>
@@ -227,7 +259,7 @@ export default function ProgramsPage() {
               <div className="order-1 lg:order-2">
                 <div className="relative aspect-video overflow-hidden rounded-lg">
                   <Image
-                    src="/image4.jpg"
+                    src={getRandomImage(galleryImages)}
                     alt="Technical Theatre Program"
                     fill
                     className="object-cover"
@@ -269,8 +301,8 @@ export default function ProgramsPage() {
                   </ul>
                 </div>
 
-                <Button className="tipac-gradient-reverse">
-                  Contact Us
+                <Button asChild className="tipac-gradient-reverse">
+                  <Link href="/contact">Contact Us</Link>
                 </Button>
               </div>
             </div>
@@ -281,7 +313,7 @@ export default function ProgramsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
               <div className="relative aspect-video overflow-hidden rounded-lg">
                 <Image
-                  src="/image5.jpg"
+                  src={getRandomImage(galleryImages)}
                   alt="Theatre for Social Change"
                   fill
                   className="object-cover"
@@ -322,8 +354,8 @@ export default function ProgramsPage() {
                   </ul>
                 </div>
 
-                <Button className="tipac-gradient">
-                  Contact Us
+                <Button asChild className="tipac-gradient">
+                  <Link href="/contact">Contact Us</Link>
                 </Button>
               </div>
             </div>
@@ -373,7 +405,7 @@ export default function ProgramsPage() {
         </div>
       </section>
 
-            {/* FAQ Section */}
+      {/* FAQ Section */}
       <section className="w-full py-16">
         <div className="container">
           <div className="max-w-3xl mx-auto">
