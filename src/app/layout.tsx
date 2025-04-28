@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ClientBody from "./ClientBody";
-<meta name="apple-mobile-web-app-title" content="tipac.co.ug" />
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,12 +20,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body>
+      <body className="antialiased">
         <ClientBody>{children}</ClientBody>
       </body>
     </html>
