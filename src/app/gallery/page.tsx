@@ -20,7 +20,7 @@ interface ModifiedGalleryContentProps {
   onImageClick: (imageUrl: string, index: number) => void;
 }
 
-// This component fetches the image list from the API
+// Main Gallery Page Component
 export default function GalleryPage() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number>(0);
@@ -28,26 +28,23 @@ export default function GalleryPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch images from our API route
+  // Fetch images from API
   useEffect(() => {
     async function fetchGalleryImages() {
       try {
         setLoading(true);
         const response = await fetch('/api/gallery-images');
-        
         if (!response.ok) {
           throw new Error('Failed to fetch gallery images');
         }
-        
+
         const data = await response.json();
         const imageFiles = data.images;
-        
-        // Create gallery items from the image filenames
+
         const items: GalleryItem[] = imageFiles.map((filename: string, index: number) => {
-          // Generate a random category for each image
           const categories = ["Performances", "Workshops", "Outreach"];
           const randomCategory = categories[Math.floor(Math.random() * categories.length)];
-          
+
           return {
             id: index + 1,
             imageUrl: `/gallery/${filename}`,
@@ -56,8 +53,7 @@ export default function GalleryPage() {
             category: randomCategory,
           };
         });
-        
-        // Shuffle the array to randomize the order
+
         const shuffledItems = [...items].sort(() => Math.random() - 0.5);
         setGalleryItems(shuffledItems);
         setLoading(false);
@@ -71,36 +67,67 @@ export default function GalleryPage() {
     fetchGalleryImages();
   }, []);
 
-  // Extract unique categories for filtering
+  // Function to fetch more images
+  async function fetchMoreGalleryImages() {
+    try {
+      const response = await fetch('/api/gallery-images');
+      if (!response.ok) {
+        throw new Error('Failed to fetch more gallery images');
+      }
+
+      const data = await response.json();
+      const imageFiles = data.images;
+
+      const newItems: GalleryItem[] = imageFiles.map((filename: string, index: number) => {
+        const categories = ["Performances", "Workshops", "Outreach"];
+        const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+
+        return {
+          id: galleryItems.length + index + 1,
+          imageUrl: `/gallery/${filename}`,
+          title: `Gallery Image ${galleryItems.length + index + 1}`,
+          description: `Beautiful image from our gallery collection.`,
+          category: randomCategory,
+        };
+      });
+
+      const shuffledNewItems = [...newItems].sort(() => Math.random() - 0.5);
+      setGalleryItems(prev => [...prev, ...shuffledNewItems]);
+    } catch (err) {
+      console.error("Error fetching more gallery images:", err);
+      setError("Failed to load more images. Please try again later.");
+    }
+  }
+
   const categories: string[] = ["All", ...Array.from(new Set(galleryItems.map(item => item.category)))];
 
-  // Function to open preview modal
   const openPreview = (imageUrl: string, index: number): void => {
     setPreviewImage(imageUrl);
     setPreviewIndex(index);
-    document.body.style.overflow = "hidden"; // Prevent scrolling of main page when modal is open
+    document.body.style.overflow = "hidden";
   };
 
-  // Function to close preview modal
   const closePreview = (): void => {
     setPreviewImage(null);
-    document.body.style.overflow = "auto"; // Restore scrolling
+    document.body.style.overflow = "auto";
   };
 
-  // Functions to navigate between images in preview mode
   const prevImage = (): void => {
     const newIndex = (previewIndex - 1 + galleryItems.length) % galleryItems.length;
     setPreviewIndex(newIndex);
     setPreviewImage(galleryItems[newIndex].imageUrl);
   };
 
-  const nextImage = (): void => {
+  const nextImage = async (): Promise<void> => {
+    // If we are close to end, fetch more
+    if (previewIndex + 1 >= galleryItems.length - 2) {
+      await fetchMoreGalleryImages();
+    }
     const newIndex = (previewIndex + 1) % galleryItems.length;
     setPreviewIndex(newIndex);
     setPreviewImage(galleryItems[newIndex].imageUrl);
   };
 
-  // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent): void => {
     if (previewImage) {
       if (e.key === "ArrowLeft") prevImage();
@@ -112,7 +139,7 @@ export default function GalleryPage() {
   return (
     <main className="min-h-screen flex flex-col" onKeyDown={handleKeyDown} tabIndex={0}>
       <Navbar />
-      
+
       {loading ? (
         <div className="flex-grow flex justify-center items-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
@@ -128,10 +155,9 @@ export default function GalleryPage() {
           onImageClick={openPreview} 
         />
       )}
-      
+
       <Footer />
 
-      {/* Image Preview Modal */}
       {previewImage && (
         <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex flex-col justify-center items-center">
           <div className="absolute top-4 right-4 z-10 flex space-x-4">
@@ -140,6 +166,7 @@ export default function GalleryPage() {
               className="text-white bg-red-500 hover:bg-red-600 p-2 rounded-full"
               aria-label="Close preview"
             >
+              {/* X icon */}
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -153,6 +180,7 @@ export default function GalleryPage() {
               className="text-white bg-black bg-opacity-50 hover:bg-opacity-70 p-4 rounded-full"
               aria-label="Previous image"
             >
+              {/* Left arrow */}
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="15 18 9 12 15 6"></polyline>
               </svg>
@@ -165,6 +193,7 @@ export default function GalleryPage() {
               className="text-white bg-black bg-opacity-50 hover:bg-opacity-70 p-4 rounded-full"
               aria-label="Next image"
             >
+              {/* Right arrow */}
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
@@ -175,7 +204,7 @@ export default function GalleryPage() {
             <div className="min-h-full flex items-center justify-center p-4">
               <img 
                 src={previewImage} 
-                alt={galleryItems[previewIndex].title}
+                alt={galleryItems[previewIndex]?.title || "Gallery Image"}
                 className="max-w-full max-h-full object-contain"
               />
             </div>
@@ -183,8 +212,8 @@ export default function GalleryPage() {
 
           <div className="absolute bottom-8 left-0 right-0">
             <div className="bg-black bg-opacity-75 text-white p-4 max-w-2xl mx-auto rounded-lg">
-              <h3 className="text-xl font-bold">{galleryItems[previewIndex].title}</h3>
-              <p className="text-gray-300">{galleryItems[previewIndex].description}</p>
+              <h3 className="text-xl font-bold">{galleryItems[previewIndex]?.title}</h3>
+              <p className="text-gray-300">{galleryItems[previewIndex]?.description}</p>
             </div>
           </div>
         </div>
@@ -193,10 +222,10 @@ export default function GalleryPage() {
   );
 }
 
-// Modified version of GalleryContent that includes click handler for images
+// Component for displaying gallery items
 function ModifiedGalleryContent({ galleryItems, categories, onImageClick }: ModifiedGalleryContentProps) {
   const [activeCategory, setActiveCategory] = useState<string>("All");
-  
+
   const filteredItems = activeCategory === "All"
     ? galleryItems
     : galleryItems.filter(item => item.category === activeCategory);
@@ -207,7 +236,7 @@ function ModifiedGalleryContent({ galleryItems, categories, onImageClick }: Modi
         <h1 className="text-4xl font-bold text-center mb-12">
           Our <span className="bg-clip-text text-transparent bg-gradient-to-r from-red-500 to-purple-500">Gallery</span>
         </h1>
-        
+
         {/* Category filters */}
         <div className="flex flex-wrap justify-center gap-2 mb-8">
           {categories.map(category => (
@@ -224,7 +253,7 @@ function ModifiedGalleryContent({ galleryItems, categories, onImageClick }: Modi
             </button>
           ))}
         </div>
-        
+
         {/* Gallery grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map((item, index) => (
