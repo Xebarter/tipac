@@ -387,12 +387,12 @@ export function Hero() {
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <Link href="/programs" passHref>
+                <Link href="/contact" passHref>
                   <Button
                     size="lg"
                     className="bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 hover:opacity-90 text-white font-medium"
                   >
-                    Our Programs
+                    Contact Us
                   </Button>
                 </Link>
               </div>
