@@ -14,13 +14,25 @@ if (!process.env.MONGODB_URI) {
 
 if (process.env.NODE_ENV === "development") {
   if (!global._mongoClientPromise) {
+    console.log("Creating new MongoDB client...");
     client = new MongoClient(uri);
     global._mongoClientPromise = client.connect();
   }
   clientPromise = global._mongoClientPromise;
 } else {
+  console.log("Creating new MongoDB client...");
   client = new MongoClient(uri);
   clientPromise = client.connect();
 }
 
-export const getMongoClient = async () => await clientPromise;
+export const getMongoClient = async () => {
+  try {
+    console.log("Connecting to MongoDB...");
+    await clientPromise;  // Ensure the connection is successful
+    console.log("MongoDB connected successfully.");
+    return client;
+  } catch (error) {
+    console.error("Error connecting to MongoDB:", error);
+    throw new Error("MongoDB connection failed");
+  }
+};

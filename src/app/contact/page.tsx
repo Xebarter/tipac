@@ -1,8 +1,62 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
+import { useState } from "react";
+
+// Define the form data interface
+interface FormData {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}
 
 export default function ContactPage() {
+  const [formData, setFormData] = useState<FormData>({
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
+  });
+  const [submissionStatus, setSubmissionStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSubmissionStatus("submitting");
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setSubmissionStatus("success");
+        setFormData({ name: "", email: "", subject: "", message: "" }); // Clear form
+      } else {
+        setSubmissionStatus("error");
+        setErrorMessage(data.error || "An error occurred while sending the message.");
+      }
+    } catch (error) {
+      setSubmissionStatus("error");
+      setErrorMessage("Failed to connect to the server.");
+      console.error("Form submission error:", error);
+    }
+  };
+
   return (
     <main className="min-h-screen flex flex-col">
       <Navbar />
@@ -11,17 +65,13 @@ export default function ContactPage() {
           <div className="max-w-3xl mx-auto">
             <h1 className="text-4xl font-bold mb-6">Contact Us</h1>
             <p className="text-lg text-muted-foreground mb-8">
-              We'd love to hear from you! Please use the form below to get in touch with our team.
+              We&apos;d love to hear from you! Please use the form below to get in touch with our team.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
               <div>
                 <h2 className="text-2xl font-bold mb-4">Get In Touch</h2>
-                <form
-                  method="POST"
-                  action="/api/contact"
-                  className="space-y-4"
-                >
+                <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium mb-1">
                       Name
@@ -30,6 +80,8 @@ export default function ContactPage() {
                       type="text"
                       id="name"
                       name="name"
+                      value={formData.name}
+                      onChange={handleChange}
                       required
                       className="w-full p-2 border border-border rounded-md"
                       placeholder="Your name"
@@ -43,6 +95,8 @@ export default function ContactPage() {
                       type="email"
                       id="email"
                       name="email"
+                      value={formData.email}
+                      onChange={handleChange}
                       required
                       className="w-full p-2 border border-border rounded-md"
                       placeholder="Your email"
@@ -56,6 +110,8 @@ export default function ContactPage() {
                       type="text"
                       id="subject"
                       name="subject"
+                      value={formData.subject}
+                      onChange={handleChange}
                       required
                       className="w-full p-2 border border-border rounded-md"
                       placeholder="Subject"
@@ -69,14 +125,26 @@ export default function ContactPage() {
                       id="message"
                       name="message"
                       rows={5}
+                      value={formData.message}
+                      onChange={handleChange}
                       required
                       className="w-full p-2 border border-border rounded-md"
                       placeholder="Your message"
                     />
                   </div>
-                  <Button type="submit" className="w-full tipac-gradient">
-                    Send Message
+                  <Button
+                    type="submit"
+                    className="w-full tipac-gradient"
+                    disabled={submissionStatus === "submitting"}
+                  >
+                    {submissionStatus === "submitting" ? "Sending..." : "Send Message"}
                   </Button>
+                  {submissionStatus === "success" && (
+                    <p className="text-green-500">Message sent successfully!</p>
+                  )}
+                  {submissionStatus === "error" && errorMessage && (
+                    <p className="text-red-500">{errorMessage}</p>
+                  )}
                 </form>
               </div>
 
