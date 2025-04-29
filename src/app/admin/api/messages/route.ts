@@ -14,11 +14,12 @@ export async function GET(req: NextRequest) {
       .sort({ createdAt: -1 })
       .toArray();
 
+    console.log(`Fetched ${messages.length} messages from MongoDB`);
     return NextResponse.json({ messages });
   } catch (error) {
     console.error("Failed to fetch messages:", error);
     return NextResponse.json(
-      { error: "Failed to load messages" },
+      { error: "Failed to load messages", details: String(error) },
       { status: 500 }
     );
   }

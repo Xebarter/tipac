@@ -5,7 +5,6 @@ import validator from "validator";
 
 const dbName = "TIPAC";
 
-// Basic input validation
 const validateInput = (data: { name: string; email: string; subject: string; message: string }) => {
   const errors: string[] = [];
 
@@ -32,6 +31,7 @@ export async function POST(req: NextRequest) {
     // Validate input
     const validationErrors = validateInput({ name, email, subject, message });
     if (validationErrors.length > 0) {
+      console.log("Validation errors:", validationErrors);
       return NextResponse.json(
         { success: false, error: validationErrors.join(", ") },
         { status: 400 }
@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
       subject: validator.escape(subject.trim()),
       message: validator.escape(message.trim()),
       createdAt: new Date(),
+      read: false, // Initialize read status as false
     };
 
     // 1. Save to MongoDB
@@ -53,6 +54,7 @@ export async function POST(req: NextRequest) {
     const collection = db.collection("contacts");
 
     await collection.insertOne(sanitizedData);
+    console.log("Message saved to MongoDB:", sanitizedData);
 
     // 2. Send email
     const transporter = nodemailer.createTransport({
@@ -62,7 +64,7 @@ export async function POST(req: NextRequest) {
         pass: process.env.EMAIL_PASS,
       },
       tls: {
-        rejectUnauthorized: false, // Remove in production
+        rejectUnauthorized: false, // Remove in production if possible
       },
     });
 
@@ -78,13 +80,15 @@ export async function POST(req: NextRequest) {
         <p><strong>Message:</strong></p>
         <p>${sanitizedData.message}</p>
       `,
+    }).then(() => {
+      console.log("Email sent successfully to", process.env.RECIPIENT_EMAIL);
     });
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error in contact submission:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to process contact message" },
+      { success: false, error: "Failed to process contact message", details: String(error) },
       { status: 500 }
     );
   }
