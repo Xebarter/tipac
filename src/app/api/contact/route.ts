@@ -1,42 +1,91 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { getMongoClient } from "@/lib/mongodb";
+import validator from "validator";
 
-// Create a transport for sending emails
-const transporter = nodemailer.createTransport({
-  service: "gmail", // Use any email service provider (e.g., Gmail, SendGrid, etc.)
-  auth: {
-    user: process.env.EMAIL_USER,   // Your email address (e.g., your Gmail address)
-    pass: process.env.EMAIL_PASS,   // Your email password or app-specific password
-  },
-});
+const dbName = "TIPAC";
 
-export async function POST(request: Request) {
+// Basic input validation
+const validateInput = (data: { name: string; email: string; subject: string; message: string }) => {
+  const errors: string[] = [];
+
+  if (!data.name || data.name.trim().length < 2) {
+    errors.push("Name must be at least 2 characters long");
+  }
+  if (!data.email || !validator.isEmail(data.email)) {
+    errors.push("A valid email is required");
+  }
+  if (!data.subject || data.subject.trim().length < 3) {
+    errors.push("Subject must be at least 3 characters long");
+  }
+  if (!data.message || data.message.trim().length < 10) {
+    errors.push("Message must be at least 10 characters long");
+  }
+
+  return errors;
+};
+
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json();
+    const { name, email, subject, message } = await req.json();
 
-    const name = body.name?.trim() || "";
-    const email = body.email?.trim() || "";
-    const subject = body.subject?.trim() || "";
-    const message = body.message?.trim() || "";
-
-    if (!name || !email || !subject || !message) {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    // Validate input
+    const validationErrors = validateInput({ name, email, subject, message });
+    if (validationErrors.length > 0) {
+      return NextResponse.json(
+        { success: false, error: validationErrors.join(", ") },
+        { status: 400 }
+      );
     }
 
-    // Create the email content
-    const mailOptions = {
-      from: email, // Sender email
-      to: process.env.RECIPIENT_EMAIL, // Recipient email (where you want the message sent)
-      subject: `Contact Us Message: ${subject}`,
-      text: `You have received a new message from ${name} (${email})\n\nMessage:\n${message}`,
+    // Sanitize inputs
+    const sanitizedData = {
+      name: validator.escape(name.trim()),
+      email: email.trim().toLowerCase(),
+      subject: validator.escape(subject.trim()),
+      message: validator.escape(message.trim()),
+      createdAt: new Date(),
     };
 
-    // Send the email
-    await transporter.sendMail(mailOptions);
+    // 1. Save to MongoDB
+    const client = await getMongoClient();
+    const db = client.db(dbName);
+    const collection = db.collection("contacts");
 
-    return NextResponse.json({ success: true, message: "Message sent successfully" }, { status: 200 });
+    await collection.insertOne(sanitizedData);
+
+    // 2. Send email
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+      tls: {
+        rejectUnauthorized: false, // Remove in production
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"TIPAC Contact Form" <${process.env.EMAIL_USER}>`,
+      to: process.env.RECIPIENT_EMAIL,
+      subject: `New Contact Form Message: ${sanitizedData.subject}`,
+      html: `
+        <h2>New Message from TIPAC Contact Form</h2>
+        <p><strong>Name:</strong> ${sanitizedData.name}</p>
+        <p><strong>Email:</strong> ${sanitizedData.email}</p>
+        <p><strong>Subject:</strong> ${sanitizedData.subject}</p>
+        <p><strong>Message:</strong></p>
+        <p>${sanitizedData.message}</p>
+      `,
+    });
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error sending email:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error("Error in contact submission:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to process contact message" },
+      { status: 500 }
+    );
   }
 }

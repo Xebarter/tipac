@@ -25,7 +25,8 @@
     "react-icons": "^5.5.0",
     "react-swipeable": "^7.0.2",
     "tailwind-merge": "^3.0.1",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "validator": "^13.15.0"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
@@ -34,6 +35,7 @@
     "@types/nodemailer": "^6.4.17",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
+    "@types/validator": "^13.15.0",
     "eslint": "^9",
     "eslint-config-next": "15.1.7",
     "postcss": "^8",

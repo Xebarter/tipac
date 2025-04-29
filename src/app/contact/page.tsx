@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { useState } from "react";
+import validator from "validator";
 
-// Define the form data interface
 interface FormData {
   name: string;
   email: string;
@@ -23,12 +23,43 @@ export default function ContactPage() {
   const [submissionStatus, setSubmissionStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const validateForm = () => {
+    const errors: string[] = [];
+
+    if (!formData.name || formData.name.trim().length < 2) {
+      errors.push("Name must be at least 2 characters long");
+    }
+    if (!formData.email || !validator.isEmail(formData.email)) {
+      errors.push("A valid email is required");
+    }
+    if (!formData.subject || formData.subject.trim().length < 3) {
+      errors.push("Subject must be at least 3 characters long");
+    }
+    if (!formData.message || formData.message.trim().length < 10) {
+      errors.push("Message must be at least 10 characters long");
+    }
+
+    return errors;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (submissionStatus === "error") {
+      setErrorMessage(null); // Clear error on input change
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // Client-side validation
+    const validationErrors = validateForm();
+    if (validationErrors.length > 0) {
+      setSubmissionStatus("error");
+      setErrorMessage(validationErrors.join(", "));
+      return;
+    }
+
     setSubmissionStatus("submitting");
     setErrorMessage(null);
 
@@ -45,7 +76,7 @@ export default function ContactPage() {
 
       if (response.ok && data.success) {
         setSubmissionStatus("success");
-        setFormData({ name: "", email: "", subject: "", message: "" }); // Clear form
+        setFormData({ name: "", email: "", subject: "", message: "" });
       } else {
         setSubmissionStatus("error");
         setErrorMessage(data.error || "An error occurred while sending the message.");
@@ -65,7 +96,7 @@ export default function ContactPage() {
           <div className="max-w-3xl mx-auto">
             <h1 className="text-4xl font-bold mb-6">Contact Us</h1>
             <p className="text-lg text-muted-foreground mb-8">
-              We&apos;d love to hear from you! Please use the form below to get in touch with our team.
+              We'd love to hear from you! Please use the form below to get in touch with our team.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">

@@ -1,6 +1,11 @@
 import { MongoClient } from "mongodb";
 
-const uri = process.env.MONGODB_URI!;
+const uri = process.env.MONGODB_URI;
+
+if (!uri) {
+  throw new Error("MONGODB_URI environment variable is not defined");
+}
+
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
 
@@ -8,31 +13,37 @@ declare global {
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
-if (!process.env.MONGODB_URI) {
-  throw new Error("Please define the MONGODB_URI environment variable");
-}
-
 if (process.env.NODE_ENV === "development") {
   if (!global._mongoClientPromise) {
-    console.log("Creating new MongoDB client...");
-    client = new MongoClient(uri);
-    global._mongoClientPromise = client.connect();
+    client = new MongoClient(uri, {
+      tls: true,
+      minPoolSize: 1,
+      maxPoolSize: 10,
+    });
+    global._mongoClientPromise = client.connect().then((connectedClient) => {
+      console.log("MongoDB client connected in development mode");
+      return connectedClient;
+    });
   }
   clientPromise = global._mongoClientPromise;
 } else {
-  console.log("Creating new MongoDB client...");
-  client = new MongoClient(uri);
-  clientPromise = client.connect();
+  client = new MongoClient(uri, {
+    tls: true,
+    minPoolSize: 1,
+    maxPoolSize: 10,
+  });
+  clientPromise = client.connect().then((connectedClient) => {
+    console.log("MongoDB client connected in production mode");
+    return connectedClient;
+  });
 }
 
 export const getMongoClient = async () => {
   try {
-    console.log("Connecting to MongoDB...");
-    await clientPromise;  // Ensure the connection is successful
-    console.log("MongoDB connected successfully.");
-    return client;
+    const connectedClient = await clientPromise;
+    return connectedClient;
   } catch (error) {
-    console.error("Error connecting to MongoDB:", error);
+    console.error("Failed to connect to MongoDB:", error);
     throw new Error("MongoDB connection failed");
   }
 };
