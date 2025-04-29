@@ -47,8 +47,24 @@ export function Footer() {
             <address className="not-italic text-muted-foreground">
               <p>National Theatre</p>
               <p>Kampala, Uganda</p>
-              <p className="mt-2">Email: info@tipac.org</p>
-              <p>Phone: +256 772 470 972</p>
+              <p className="mt-2">
+                Email:{" "}
+                <Link
+                  href="mailto:info@tipac.org"
+                  className="hover:text-primary transition-colors"
+                >
+                  info@tipac.org
+                </Link>
+              </p>
+              <p>
+                Phone:{" "}
+                <Link
+                  href="tel:+256772470972"
+                  className="hover:text-primary transition-colors"
+                >
+                  +256 772 470 972
+                </Link>
+              </p>
             </address>
           </div>
         </div>
