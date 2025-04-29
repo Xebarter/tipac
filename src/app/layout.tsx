@@ -13,7 +13,6 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// ✅ Updated metadata with Open Graph and Twitter tags
 export const metadata: Metadata = {
   title: "TIPAC - Theatre Initiative for The Pearl of Africa Children",
   description: "Empowering children through the art of theatre in Uganda",
@@ -21,10 +20,12 @@ export const metadata: Metadata = {
     title: "TIPAC - Theatre Initiative for The Pearl of Africa Children",
     description: "Empowering children through the art of theatre in Uganda",
     url: "https://tipac.co.ug",
+    siteName: "TIPAC Uganda", // Added for better branding
     type: "website",
+    locale: "en_US", // Added for language specification
     images: [
       {
-        url: "https://tipac.co.ug/og-image.jpg", // Ensure this file is in your /public folder
+        url: "/og-image.jpg", // Relative path for flexibility
         width: 1200,
         height: 630,
         alt: "TIPAC Uganda Poster",
@@ -35,7 +36,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "TIPAC - Theatre Initiative for The Pearl of Africa Children",
     description: "Empowering children through the art of theatre in Uganda",
-    images: ["https://tipac.co.ug/og-image.jpg"],
+    images: ["/og-image.jpg"], // Relative path
   },
 };
 
