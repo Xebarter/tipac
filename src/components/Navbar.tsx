@@ -80,13 +80,9 @@ export function Navbar() {
           >
             Contact
           </Link>
-          <a
-            href="https://flutterwave.com/donate/wlij6ldg0bpq"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <Link href="/donation">
             <Button className="tipac-gradient">Donate Now</Button>
-          </a>
+          </Link>
         </div>
 
         {/* Mobile Navigation Menu */}
@@ -127,20 +123,16 @@ export function Navbar() {
             >
               Contact
             </Link>
-            <a
-              href="https://flutterwave.com/donate/wlij6ldg0bpq"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/donation"
               onClick={closeMobileMenu}
               className="w-48"
             >
               <Button className="tipac-gradient w-full">Donate Now</Button>
-            </a>
+            </Link>
           </div>
         )}
       </div>
     </nav>
   );
 }
-
-<img src="https://tracker.metricool.com/c3po.jpg?hash=4b07d88664615331ed8d6ff18faa8d3"/>

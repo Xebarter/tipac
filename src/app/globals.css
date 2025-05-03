@@ -75,14 +75,7 @@
   .tipac-gradient-reverse {
     @apply bg-gradient-to-r from-primary to-secondary text-white;
   }
-  /* Glow effect for text container */
-  .glow-effect {
-    box-shadow: 0 0 15px hsl(var(--primary-foreground) / 0.3), 0 0 30px hsl(var(--primary-foreground) / 0.2);
-    transition: box-shadow 0.3s ease;
-  }
 }
-
-/* Existing fade-in-up animation */
 @keyframes fade-in-up {
   0% {
     opacity: 0;
@@ -96,42 +89,4 @@
 
 .animate-fade-in-up {
   animation: fade-in-up 0.8s ease-out both;
-}
-
-/* Hero section text container styles */
-.hero-text-container {
-  @apply max-w-md bg-black/40 dark:bg-black/60 p-6 rounded-xl backdrop-blur-sm text-center md:text-left;
-  max-width: min(400px, 80vw);
-  margin: 3rem; /* Safe margin to avoid navigation overlap */
-}
-
-/* Navigation buttons and dots */
-.hero-navigation-button {
-  @apply bg-white/90 hover:bg-white text-slate-800 p-4 rounded-full focus:outline-none focus:ring-2 focus:ring-primary z-40;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-}
-
-.hero-navigation-dot {
-  @apply w-4 h-4 rounded-full focus:outline-none focus:ring-2 focus:ring-primary;
-}
-
-/* Responsive adjustments for very small screens */
-@media (max-width: 480px) {
-  .hero-text-container {
-    max-width: min(300px, 75vw);
-    margin: 2rem;
-  }
-}
-
-/* Disable animations for prefers-reduced-motion */
-@media (prefers-reduced-motion: reduce) {
-  .motion-div {
-    animation: none;
-    transform: translate(0, 0) scale(1);
-  }
-}
-
-/* Optimize animations for performance */
-motion.div {
-  will-change: transform, scale;
 }
