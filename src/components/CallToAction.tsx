@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 
 export function CallToAction() {
   return (
@@ -13,7 +12,11 @@ export function CallToAction() {
             Your contribution helps us continue providing theatre education and
             opportunities for children across Uganda.
           </p>
-          <Link href="/donation" passHref>
+          <a
+            href="https://store.pesapal.com/tipac"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             <Button
               size="lg"
               variant="secondary"
@@ -21,7 +24,7 @@ export function CallToAction() {
             >
               Make a Donation
             </Button>
-          </Link>
+          </a>
         </div>
       </div>
     </section>

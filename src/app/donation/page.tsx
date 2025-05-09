@@ -1,116 +1,127 @@
-"use client";
+'use client';
 
-import { Navbar } from "@/components/Navbar";
-import { Footer } from "@/components/Footer";
-import { motion } from "framer-motion";
-import Head from "next/head";
-import { FaEnvelope, FaPhone, FaMoneyCheckAlt, FaHeart } from "react-icons/fa";
+import { useState } from 'react';
 
 export default function DonationPage() {
-  const sectionVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeInOut" } },
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    amount: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/pesapal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (data?.url) {
+        window.location.href = data.url; // Redirect to PesaPal hosted payment page
+      } else {
+        setError('Failed to initiate donation. Please try again.');
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Something went wrong. Please try again.');
+      setLoading(false);
+    }
   };
 
   return (
-    <>
-      <Head>
-        <title>Donate to TIPAC | Support Ugandan Children Through Theatre</title>
-        <meta
-          name="description"
-          content="Support TIPAC and empower Ugandan children through theatre. Learn how to donate and contribute to our mission."
-        />
-        <meta name="keywords" content="TIPAC, donate, support, Uganda, children, theatre, charity" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      </Head>
-      <main className="min-h-screen flex flex-col bg-gray-50">
-        <Navbar />
-        <section className="w-full py-28 md:py-36 px-6 lg:px-10 xl:px-16 bg-white">
-          <div className="container max-w-4xl mx-auto text-center space-y-16">
-            <motion.div
-              variants={sectionVariants}
-              initial="hidden"
-              animate="visible"
-              className="space-y-6"
-            >
-              <FaHeart className="text-4xl text-red-500 mx-auto" />
-              <h1 className="text-4xl md:text-5xl font-extrabold text-purple-900 tracking-tight">
-                Support Our Mission
-              </h1>
-              <p className="text-lg md:text-xl text-gray-700 leading-relaxed">
-                Every donation brings us one step closer to building a brighter future
-                for Ugandan children through the power of theatre and performing arts.
-              </p>
-            </motion.div>
+    <section className="max-w-xl mx-auto py-16 px-6">
+      <h1 className="text-4xl font-bold text-center mb-6 text-primary">
+        Support Our Cause
+      </h1>
+      <p className="text-center text-gray-600 mb-8">
+        Make a donation <strong> (UGX)</strong> to help us with our work.
+      </p>
 
-            <motion.div
-              variants={sectionVariants}
-              initial="hidden"
-              animate="visible"
-              transition={{ delay: 0.2 }}
-              className="bg-purple-50 border border-purple-200 rounded-xl p-8 shadow-md space-y-8 text-left"
-            >
-              <div className="space-y-4">
-                <h2 className="text-2xl font-semibold text-purple-900 flex items-center gap-2">
-                  <FaMoneyCheckAlt className="text-purple-700" /> How to Donate
-                </h2>
-                <p className="text-gray-700 text-lg">
-                  We currently accept donations through
-                  mobile money. To contribute, please reach out to us using the
-                  contact details below.
-                </p>
-              </div>
+      <form onSubmit={handleSubmit} className="space-y-5 bg-white shadow-lg p-6 rounded-xl border">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            First Name
+          </label>
+          <input
+            type="text"
+            name="firstName"
+            required
+            value={formData.firstName}
+            onChange={handleChange}
+            className="w-full p-3 border rounded-lg focus:outline-none focus:ring focus:ring-primary/50"
+          />
+        </div>
 
-              <div className="space-y-4">
-                <h3 className="text-xl font-medium text-purple-800">Recipient Information</h3>
-                <ul className="text-gray-700 text-base space-y-1">
-                <li><strong>NUMBER:</strong> +256 776 742 690</li>
-                  <li><strong>Name:</strong> FRED KIZZA</li>
-                  <li><strong>Channel:</strong> MTN MOBILE MONEY</li>
-                  <li><strong>Reason:</strong> TIPAC</li>
-                </ul>
-              </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Last Name
+          </label>
+          <input
+            type="text"
+            name="lastName"
+            required
+            value={formData.lastName}
+            onChange={handleChange}
+            className="w-full p-3 border rounded-lg focus:outline-none focus:ring focus:ring-primary/50"
+          />
+        </div>
 
-              <div className="space-y-4">
-                <h3 className="text-xl font-medium text-purple-800">Contact Us</h3>
-                <p className="text-gray-700">
-                  Please confirm your donation with us so we can thank you and keep you updated.
-                </p>
-                <ul className="space-y-2 text-gray-700 text-base">
-                  <li className="flex items-center gap-2">
-                    <FaEnvelope className="text-purple-700" />
-                    <a href="mailto:info@tipac.org" className="underline hover:text-purple-900">
-                      info@tipac.org
-                    </a>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <FaPhone className="text-purple-700" />
-                    <a href="tel:+256700123456" className="underline hover:text-purple-900">
-                    +256 776 742 690
-                    </a>
-                  </li>
-                </ul>
-              </div>
-            </motion.div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Email Address
+          </label>
+          <input
+            type="email"
+            name="email"
+            required
+            value={formData.email}
+            onChange={handleChange}
+            className="w-full p-3 border rounded-lg focus:outline-none focus:ring focus:ring-primary/50"
+          />
+        </div>
 
-            <motion.div
-              variants={sectionVariants}
-              initial="hidden"
-              animate="visible"
-              transition={{ delay: 0.4 }}
-              className="text-center"
-            >
-              <p className="text-lg text-gray-700 mb-4">
-                Your generosity directly supports children's theatre education, creative workshops, and performances across Uganda.
-              </p>
-              <span className="inline-block bg-gradient-to-r from-red-500 to-purple-600 text-white px-6 py-3 rounded-md font-semibold shadow-lg">
-                Thank you for believing in our mission!
-              </span>
-            </motion.div>
-          </div>
-        </section>
-        <Footer />
-      </main>
-    </>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Amount (UGX)
+          </label>
+          <input
+            type="number"
+            name="amount"
+            required
+            min={1000}
+            value={formData.amount}
+            onChange={handleChange}
+            className="w-full p-3 border rounded-lg focus:outline-none focus:ring focus:ring-primary/50"
+          />
+        </div>
+
+        {error && (
+          <p className="text-sm text-red-600 mt-2">{error}</p>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-3 bg-gradient-to-r from-red-500 to-purple-500 text-white font-semibold rounded-lg hover:opacity-90 transition"
+        >
+          {loading ? 'Processing Donation...' : 'Donate Now'}
+        </button>
+      </form>
+    </section>
   );
 }

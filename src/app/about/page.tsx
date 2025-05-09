@@ -5,6 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { motion } from "framer-motion";
 import Head from "next/head";
 import { FaLightbulb, FaEye, FaHistory, FaHeart } from "react-icons/fa";
+import Link from "next/link"; // Import the Link component
 
 export default function AboutPage() {
   const sectionVariants = {
@@ -166,7 +167,7 @@ export default function AboutPage() {
               </div>
               <p className="text-lg text-gray-700 mb-6 leading-relaxed">
                 Your support can make a real difference in the lives of Ugandan
-                children. To donate, please contact our team directly via email.
+                children. To donate, please use the link below.
               </p>
               <div className="flex justify-center gap-4">
                 <a
@@ -176,13 +177,15 @@ export default function AboutPage() {
                 >
                   info@tipac.org
                 </a>
-                <a
-                  href="/donation"
+                <Link
+                  href="https://store.pesapal.com/tipac"
                   className="inline-block bg-gradient-to-r from-red-500 to-purple-600 text-white px-8 py-3 rounded-md font-semibold hover:from-red-600 hover:to-purple-700 transition duration-300 shadow-md"
-                  aria-label="Donate to TIPAC"
+                  aria-label="Donate to TIPAC via Pesapal"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
                   Donate Now
-                </a>
+                </Link>
               </div>
             </motion.div>
           </div>
