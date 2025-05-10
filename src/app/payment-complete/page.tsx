@@ -1,24 +1,13 @@
+// src/app/payment-complete/page.tsx
 import { Suspense } from "react";
-import { motion } from "framer-motion";
 import PaymentCompleteContent from "./PaymentCompleteContent";
 
+// The main page component, which can be prerendered (server component)
 export default function PaymentComplete() {
   return (
     <section className="py-16 bg-gradient-to-b from-gray-900 to-black relative overflow-hidden min-h-screen flex items-center justify-center">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.05)_0%,transparent_70%)]" />
-      
-      <motion.div
-        className="absolute top-0 left-0 w-64 h-64 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full blur-3xl"
-        animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.7, 0.5] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-      />
-
-      <motion.div
-        className="absolute bottom-0 right-0 w-80 h-80 bg-gradient-to-r from-cyan-500/20 to-blue-600/20 rounded-full blur-3xl"
-        animate={{ scale: [1, 1.3, 1], opacity: [0.4, 0.6, 0.4] }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-      />
-
+      {/* Remove the motion.div elements from here */}
       <div className="container mx-auto px-4 relative z-10">
         <Suspense
           fallback={
