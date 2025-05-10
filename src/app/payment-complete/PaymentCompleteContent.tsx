@@ -25,15 +25,25 @@ export default function PaymentCompleteContent() {
       const checkPaymentStatus = async () => {
         try {
           const response = await fetch(`/api/pesapal-status?orderTrackingId=${trackingId}`);
-          const data = await response.json();
-
           if (!response.ok) {
-            throw new Error(data.error || "Failed to check payment status");
+            const errorText = await response.text();
+            throw new Error(
+              errorText.startsWith("<!DOCTYPE")
+                ? "Unexpected server response"
+                : errorText || "Failed to check payment status"
+            );
           }
-
+          const data = await response.json();
+          if (data.error) {
+            throw new Error(data.error);
+          }
           setPaymentStatus(data.status);
         } catch (err: any) {
-          setError(err.message);
+          setError(
+            err.message.includes("Unexpected token")
+              ? "Unable to verify payment status due to a server error. Please try again later."
+              : err.message
+          );
           console.error("[PAYMENT STATUS ERROR]", err);
         }
       };
@@ -44,7 +54,6 @@ export default function PaymentCompleteContent() {
 
   return (
     <>
-      {/* Add the animated blobs here */}
       <motion.div
         className="absolute top-0 left-0 w-64 h-64 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full blur-3xl"
         animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.7, 0.5] }}
@@ -65,9 +74,7 @@ export default function PaymentCompleteContent() {
           Thank You for Your Donation!
         </h2>
         {error ? (
-          <p className="text-red-400 mb-6">
-            Unable to verify payment status: {error}
-          </p>
+          <p className="text-red-400 mb-6">{error}</p>
         ) : paymentStatus ? (
           <p className="text-lg text-gray-300 mb-6">
             {paymentStatus === "COMPLETED"
