@@ -178,7 +178,7 @@ export default function AboutPage() {
                   info@tipac.org
                 </a>
                 <Link
-                  href="https://store.pesapal.com/tipac"
+                  href="/donation"
                   className="inline-block bg-gradient-to-r from-red-500 to-purple-600 text-white px-8 py-3 rounded-md font-semibold hover:from-red-600 hover:to-purple-700 transition duration-300 shadow-md"
                   aria-label="Donate to TIPAC via Pesapal"
                   target="_blank"

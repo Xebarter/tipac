@@ -80,7 +80,7 @@ export function Navbar() {
           >
             Contact
           </Link>
-          <Link href="https://store.pesapal.com/tipac" target="_blank" rel="noopener noreferrer">
+          <Link href="/donation" target="_blank" rel="noopener noreferrer">
             <Button className="tipac-gradient">Donate Now</Button>
           </Link>
         </div>
@@ -124,7 +124,7 @@ export function Navbar() {
               Contact
             </Link>
             <Link
-              href="https://store.pesapal.com/tipac"
+              href="/donation"
               onClick={closeMobileMenu}
               className="w-48"
               target="_blank"
