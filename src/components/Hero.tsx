@@ -162,7 +162,10 @@ export function Hero() {
 
         {/* Content Area - Positioned below images on small screens, overlaid on larger screens */}
         <div className="w-full md:absolute md:inset-0 md:flex md:items-center z-20 px-4 md:px-8">
-          <div className="max-w-md mx-auto md:mx-0 bg-black/30 p-4 rounded-xl backdrop-blur-sm text-white text-center md:text-left mt-6 md:mt-0">
+          <div
+            className="max-w-md mx-auto md:mx-0 p-4 rounded-xl backdrop-blur-sm text-white text-center md:text-left mt-6 md:mt-0
+              bg-gradient-to-br from-indigo-900 via-purple-900 to-black/90 md:bg-black/20 md:backdrop-blur-md"
+          >
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-3">
               Empowering Children Through{' '}
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-red-400 via-purple-400 to-blue-400">
