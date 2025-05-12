@@ -4,12 +4,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Menu, X } from "lucide-react";
 
 export function Navbar() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen((prev) => !prev);
@@ -21,10 +22,22 @@ export function Navbar() {
 
   const isLinkActive = (path: string) => pathname === path;
 
+  // Close the menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isMobileMenuOpen && menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        closeMobileMenu();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isMobileMenuOpen]);
+
   return (
     <nav className="w-full py-4 border-b border-border sticky top-0 z-50 bg-background">
-      <div className="container mx-auto flex items-center justify-between px-4">
-        {/* Logo and Brand */}
+      <div className="container flex items-center justify-between relative">
+        {/* Logo */}
         <div className="flex items-center gap-4">
           <Image src="/logo.svg" alt="TIPAC Logo" width={40} height={40} />
           <Link href="/" className="flex items-center">
@@ -34,25 +47,22 @@ export function Navbar() {
           </Link>
         </div>
 
-        {/* Desktop Navigation */}
+        {/* Mobile Toggle */}
+        <div className="md:hidden">
+          <button onClick={toggleMobileMenu} className="text-gray-500 hover:text-gray-700 focus:outline-none">
+            {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
+
+        {/* Desktop Links */}
         <div className="hidden md:flex items-center gap-8">
-          {[
-            { href: "/", label: "Home" },
-            { href: "/about", label: "About Us" },
-            { href: "/programs", label: "Programs" },
-            { href: "/gallery", label: "Gallery" },
-            { href: "/contact", label: "Contact" },
-          ].map(({ href, label }) => (
+          {["/", "/about", "/programs", "/gallery", "/contact"].map((path, i) => (
             <Link
-              key={href}
-              href={href}
-              className={`transition-colors ${
-                isLinkActive(href)
-                  ? "text-primary font-medium"
-                  : "hover:text-primary"
-              }`}
+              key={i}
+              href={path}
+              className={`transition-colors ${isLinkActive(path) ? "text-primary font-medium" : "hover:text-primary"}`}
             >
-              {label}
+              {path === "/" ? "Home" : path.slice(1).charAt(0).toUpperCase() + path.slice(2)}
             </Link>
           ))}
           <Link href="/donation" target="_blank" rel="noopener noreferrer">
@@ -60,52 +70,36 @@ export function Navbar() {
           </Link>
         </div>
 
-        {/* Mobile Menu Toggle */}
-        <div className="md:hidden">
-          <button
-            onClick={toggleMobileMenu}
-            className="text-gray-500 hover:text-gray-700 focus:outline-none"
-            aria-label="Toggle Menu"
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div
+            ref={menuRef}
+            className="absolute top-full left-0 w-full bg-background shadow-md py-4 flex flex-col items-center gap-4 z-50"
           >
-            {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Navigation Menu */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden px-4 pt-4 pb-6 bg-background shadow-md border-t border-border space-y-3">
-          {[
-            { href: "/", label: "Home" },
-            { href: "/about", label: "About Us" },
-            { href: "/programs", label: "Programs" },
-            { href: "/gallery", label: "Gallery" },
-            { href: "/contact", label: "Contact" },
-          ].map(({ href, label }) => (
+            {["/", "/about", "/programs", "/gallery", "/contact"].map((path, i) => (
+              <Link
+                key={i}
+                href={path}
+                className={`transition-colors block py-2 ${
+                  isLinkActive(path) ? "text-primary font-medium" : "hover:text-primary"
+                }`}
+                onClick={closeMobileMenu}
+              >
+                {path === "/" ? "Home" : path.slice(1).charAt(0).toUpperCase() + path.slice(2)}
+              </Link>
+            ))}
             <Link
-              key={href}
-              href={href}
+              href="/donation"
               onClick={closeMobileMenu}
-              className={`block text-center py-2 transition-colors ${
-                isLinkActive(href)
-                  ? "text-primary font-medium"
-                  : "hover:text-primary"
-              }`}
+              className="w-48"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              {label}
+              <Button className="tipac-gradient w-full">Donate Now</Button>
             </Link>
-          ))}
-          <Link
-            href="/donation"
-            onClick={closeMobileMenu}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full text-center"
-          >
-            <Button className="tipac-gradient w-full">Donate Now</Button>
-          </Link>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </nav>
   );
 }
