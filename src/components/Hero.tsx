@@ -211,6 +211,11 @@ export function Hero() {
                   Contact Us
                 </Button>
               </Link>
+              <Link href="/donation" passHref>
+                <Button className="bg-gradient-to-r from-green-500 via-lime-500 to-yellow-500 hover:opacity-90 text-white font-medium">
+                  Donate
+                </Button>
+              </Link>
             </div>
             <div className="flex items-center justify-center md:justify-start space-x-3">
               <div className="flex -space-x-2">
