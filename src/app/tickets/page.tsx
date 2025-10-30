@@ -41,9 +41,16 @@ export default function TicketsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Fetch events and tickets
   useEffect(() => {
+    if (!isClient) return;
+
     const fetchData = async () => {
       try {
         // Fetch events
@@ -66,7 +73,7 @@ export default function TicketsPage() {
         setTickets(ticketsData || []);
         
         // Check if an event was passed as a query parameter
-        const eventIdFromQuery = searchParams.get('event');
+        const eventIdFromQuery = searchParams?.get('event');
         if (eventIdFromQuery && eventsData?.some((e: Event) => e.id === eventIdFromQuery)) {
           setSelectedEvent(eventIdFromQuery);
         } else if (eventsData && eventsData.length > 0) {
@@ -80,7 +87,7 @@ export default function TicketsPage() {
     };
 
     fetchData();
-  }, [searchParams]);
+  }, [searchParams, isClient]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -180,6 +187,11 @@ export default function TicketsPage() {
       setLoading(false);
     }
   };
+
+  // Show loading state until client-side code is ready
+  if (!isClient) {
+    return null; // Loading component will be shown instead
+  }
 
   return (
     <section className="py-16 bg-gradient-to-b from-gray-900 to-black relative overflow-hidden">
