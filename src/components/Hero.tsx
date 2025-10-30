@@ -1,15 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
 import Head from 'next/head';
+import { supabase } from '@/lib/supabaseClient';
 
 interface GalleryImage {
   id: string;
   url: string;
   alt?: string;
+  filename?: string;
+  original_name?: string;
 }
 
 export function Hero() {
@@ -17,219 +20,253 @@ export function Hero() {
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isUserInteracting, setIsUserInteracting] = useState(false);
-  const [isLoadingInitial, setIsLoadingInitial] = useState(true); // Track initial load
+  const [isLoadingInitial, setIsLoadingInitial] = useState(true);
 
+  // Fetch gallery images on mount
   useEffect(() => {
     let isMounted = true;
+
     async function fetchGalleryImages() {
       try {
-        const response = await fetch('/api/gallery-images', {
-          next: { revalidate: 3600 },
-        });
-        if (!response.ok) throw new Error('Failed to fetch gallery images');
-        const data = await response.json();
+        const { data, error: supabaseError } = await supabase
+          .from('gallery_images')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (supabaseError) throw supabaseError;
+        
         if (isMounted) {
-          if (data.images?.length > 0) {
-            setGalleryImages(
-              data.images.map((url: string, index: number) => ({
-                id: `image-${index}`,
-                url,
-                alt: `Performance at TIPAC theatre program, showcasing ${
-                  url.split('.')[0]
-                }`,
-              }))
-            );
+          if (data && data.length > 0) {
+            const formattedImages = data.map(img => ({
+              id: img.id,
+              url: img.url,
+              alt: img.original_name 
+                ? `Performance at TIPAC theatre program, showcasing ${img.original_name}` 
+                : 'TIPAC performance image',
+              filename: img.filename,
+              original_name: img.original_name
+            }));
+            setGalleryImages(formattedImages);
           } else {
             setError('No images available');
           }
-          setIsLoadingInitial(false); // Initial load complete
+          setIsLoadingInitial(false);
         }
       } catch (err) {
         if (isMounted) {
           setError('Failed to load images. Please try again later.');
           console.error('Error fetching gallery images:', err);
-          setIsLoadingInitial(false); // Initial load failed
+          setIsLoadingInitial(false);
         }
       }
     }
+
     fetchGalleryImages();
+
     return () => {
       isMounted = false;
     };
   }, []);
 
+  // Setup auto-rotation interval
   useEffect(() => {
-    if (galleryImages.length <= 1 || isUserInteracting) return;
-    const imageInterval = setInterval(() => {
-      setCurrentImageIndex((prev) => (prev + 1) % galleryImages.length);
-    }, 5000);
-    return () => clearInterval(imageInterval);
-  }, [galleryImages, isUserInteracting]);
+    let interval: NodeJS.Timeout | null = null;
 
-  const handleImageNavigation = (direction: 'prev' | 'next') => {
+    const startRotation = () => {
+      if (galleryImages.length > 1 && !isUserInteracting) {
+        interval = setInterval(() => {
+          setCurrentImageIndex(prevIndex => (prevIndex + 1) % galleryImages.length);
+        }, 5000);
+      }
+    };
+
+    const stopRotation = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    startRotation();
+
+    return () => stopRotation();
+  }, [galleryImages.length, isUserInteracting]);
+
+  // Handle user interaction timeout
+  const handleUserInteraction = useCallback(() => {
     setIsUserInteracting(true);
-    setCurrentImageIndex((prev) =>
-      direction === 'prev'
-        ? (prev - 1 + galleryImages.length) % galleryImages.length
-        : (prev + 1) % galleryImages.length
+    setTimeout(() => setIsUserInteracting(false), 10000);
+  }, []);
+
+  const goToPrevious = () => {
+    handleUserInteraction();
+    setCurrentImageIndex(prevIndex => 
+      prevIndex === 0 ? galleryImages.length - 1 : prevIndex - 1
     );
-    setTimeout(() => setIsUserInteracting(false), 3000);
   };
+
+  const goToNext = () => {
+    handleUserInteraction();
+    setCurrentImageIndex(prevIndex => 
+      (prevIndex + 1) % galleryImages.length
+    );
+  };
+
+  const goToIndex = (index: number) => {
+    handleUserInteraction();
+    setCurrentImageIndex(index);
+  };
+
+  if (isLoadingInitial) {
+    return (
+      <section className="relative w-full h-screen flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+        <div className="text-center animate-fade-in">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-white/20 border-t-white mx-auto mb-4"></div>
+          <p className="text-xl text-white font-semibold">Loading gallery...</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (error || galleryImages.length === 0) {
+    return (
+      <section className="relative w-full h-screen flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+        <div className="text-center px-4 animate-fade-in">
+          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 drop-shadow-2xl">
+            TIPAC
+          </h1>
+          <p className="text-2xl md:text-3xl text-white/90 mb-10 max-w-2xl mx-auto leading-relaxed">
+            Theatre Initiative for the Pearl of Africa Children
+          </p>
+          <p className="text-lg text-white/70 mb-10">{error || 'No gallery images available at the moment.'}</p>
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center">
+            <Button asChild size="lg" className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 font-bold shadow-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl">
+              <Link href="/events">Upcoming Events</Link>
+            </Button>
+            <Button asChild size="lg" className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 font-bold shadow-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl">
+                <Link href="/tickets">Buy Ticket</Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <>
       <Head>
-        <link
+        <link 
           rel="preload"
-          href={
-            galleryImages.length > 0
-              ? `/gallery/${galleryImages[0].url}`
-              : '/images/fallback-placeholder.jpg'
-          }
+          href={galleryImages[currentImageIndex]?.url || '/images/fallback-placeholder.jpg'}
           as="image"
           fetchPriority="high"
         />
       </Head>
-      <section
-        role="region"
-        aria-label="Hero section with image slideshow"
-        className="w-full flex flex-col min-h-[40rem] relative bg-slate-50 dark:bg-slate-900"
-      >
-        {/* Image Slideshow Container */}
-        <div className="relative w-full h-[50vh] sm:h-[70vh] md:min-h-[40rem]">
-          {error ? (
-            <div className="absolute inset-0 flex justify-center items-center bg-slate-100 dark:bg-slate-800">
-              <p className="text-red-500 text-lg">{error}</p>
-            </div>
-          ) : galleryImages.length === 0 && isLoadingInitial ? (
-            <div className="absolute inset-0 animate-pulse bg-gray-200" />
-          ) : (
-            <div className="absolute inset-0">
-              {galleryImages.map((image, index) => (
+      <section className="relative w-full h-screen overflow-hidden">
+        <div className="absolute inset-0">
+          {galleryImages.map((image, index) => (
+            <div 
+              key={image.id}
+              className={`absolute inset-0 transition-all duration-1000 ease-in-out ${
+                index === currentImageIndex ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
+              }`}
+            >
+              <div className="relative w-full h-full">
                 <Image
-                  key={image.id}
-                  src={`/gallery/${image.url}`}
-                  alt={image.alt || `TIPAC theatre program image ${index + 1}`}
+                  src={image.url}
+                  alt={image.alt || "TIPAC performance image"}
                   fill
-                  className={`object-cover object-center transition-opacity duration-1000 ${
-                    index === currentImageIndex ? 'opacity-100' : 'opacity-0'
-                  }`}
-                  priority={index === 0}
-                  loading={index === 0 ? 'eager' : 'lazy'}
+                  className="object-cover"
+                  priority={index === currentImageIndex}
                   sizes="100vw"
-                  // Optimization: Consider smaller sizes for initial mobile view
-                  // sizes="(max-width: 768px) 75vw, 100vw"
+                  onError={(e) => {
+                    e.currentTarget.src = '/placeholder-image.jpg';
+                  }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        {/* Navigation Controls */}
+        {galleryImages.length > 1 && (
+          <>
+            {/* Navigation Arrows */}
+            <button 
+              onClick={goToPrevious}
+              className="absolute left-6 top-1/2 -translate-y-1/2 bg-black/40 backdrop-blur-sm text-white p-3 rounded-full hover:bg-black/60 hover:scale-110 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/50 shadow-lg z-20"
+              aria-label="Previous image"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            
+            <button 
+              onClick={goToNext}
+              className="absolute right-6 top-1/2 -translate-y-1/2 bg-black/40 backdrop-blur-sm text-white p-3 rounded-full hover:bg-black/60 hover:scale-110 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/50 shadow-lg z-20"
+              aria-label="Next image"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            
+            {/* Image Indicators */}
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex space-x-3 z-20">
+              {galleryImages.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => goToIndex(index)}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/50 ${
+                    index === currentImageIndex 
+                      ? 'bg-white scale-125 shadow-md' 
+                      : 'bg-white/50 hover:bg-white/70 hover:scale-110'
+                  }`}
+                  aria-label={`Go to image ${index + 1} of ${galleryImages.length}`}
                 />
               ))}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-              {galleryImages.length > 1 && (
-                <>
-                  <button
-                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/60 hover:bg-white text-slate-800 p-3 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 z-30"
-                    onClick={() => handleImageNavigation('prev')}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ')
-                        handleImageNavigation('prev');
-                    }}
-                    tabIndex={0}
-                    aria-label="Previous image"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path d="m15 18-6-6 6-6" />
-                    </svg>
-                  </button>
-                  <button
-                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/60 hover:bg-white text-slate-800 p-3 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 z-30"
-                    onClick={() => handleImageNavigation('next')}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ')
-                        handleImageNavigation('next');
-                    }}
-                    tabIndex={0}
-                    aria-label="Next image"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path d="m9 18 6-6-6-6" />
-                    </svg>
-                  </button>
-                  <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2 z-30">
-                    {galleryImages.map((_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => {
-                          setIsUserInteracting(true);
-                          setCurrentImageIndex(i);
-                          setTimeout(() => setIsUserInteracting(false), 3000);
-                        }}
-                        className={`w-3 h-3 rounded-full ${
-                          currentImageIndex === i ? 'bg-white' : 'bg-white/40'
-                        } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                        aria-label={`Select image ${i + 1}`}
-                        tabIndex={0}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
             </div>
-          )}
-        </div>
-
-        {/* Content Area */}
-        <div className="w-full md:absolute md:inset-0 md:flex md:items-center z-20 px-4 md:px-8">
-          <div
-            className="max-w-md mx-auto md:mx-0 p-4 rounded-xl backdrop-blur-sm text-white text-center md:text-left mt-6 md:mt-0
-              bg-gradient-to-br from-indigo-900 via-purple-900 to-black/90 md:bg-black/20 md:backdrop-blur-md"
-          >
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-3">
-              Empowering Children Through{' '}
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-red-400 via-purple-400 to-blue-400">
-                Theatre
-              </span>
+          </>
+        )}
+        
+        {/* Content Overlay */}
+        <div className="absolute inset-0 flex items-center justify-center text-center text-white z-10 px-4 animate-fade-in">
+          <div className="max-w-4xl mx-auto">
+            <h1 className="text-5xl md:text-7xl font-bold mb-6 drop-shadow-2xl leading-tight">
+              TIPAC
             </h1>
-            <p className="text-lg md:text-xl mb-4">
-              TIPAC works to inspire, educate, and transform the lives of
-              children in Uganda through the power of theatrical arts.
+            <p className="text-2xl md:text-3xl mb-10 drop-shadow-xl leading-relaxed text-white/90">
+              Theatre Initiative for the Pearl of Africa Children
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 mb-4 justify-center md:justify-start">
-              <Link href="/contact" passHref>
-                <Button className="bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 hover:opacity-90 text-white font-medium">
-                  Contact Us
-                </Button>
-              </Link>
-              <Link href="/donation" passHref>
-                <Button className="bg-gradient-to-r from-green-500 via-lime-500 to-yellow-500 hover:opacity-90 text-white font-medium">
-                  Donate
-                </Button>
-              </Link>
-            </div>
-            <div className="flex items-center justify-center md:justify-start space-x-3">
-              <div className="flex -space-x-2">
-                <div className="w-8 h-8 rounded-full bg-purple-500"></div>
-                <div className="w-8 h-8 rounded-full bg-red-500"></div>
-                <div className="w-8 h-8 rounded-full bg-blue-500"></div>
-              </div>
-              <p className="text-sm">
-                #MDD & Poetry Festival 2025 @ National Theatre
-              </p>
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center">
+              <Button asChild size="lg" className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-sm sm:text-base md:text-lg px-3 sm:px-6 md:px-8 py-3 sm:py-4 font-bold shadow-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl min-h-12 sm:min-h-14">
+                <Link href="/events">Upcoming Events</Link>
+              </Button>
+              <Button asChild size="lg" className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-sm sm:text-base md:text-lg px-3 sm:px-6 md:px-8 py-3 sm:py-4 font-bold shadow-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl min-h-12 sm:min-h-14">
+                <Link href="/tickets">Buy Ticket</Link>
+              </Button>
             </div>
           </div>
         </div>
       </section>
+
+      <style jsx>{`
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fade-in {
+          animation: fade-in 1s ease-out forwards;
+        }
+      `}</style>
     </>
   );
 }

@@ -1,30 +1,26 @@
-import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import { NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabaseClient';
 
 export async function GET() {
   try {
-    // Get the absolute path to the gallery directory
-    const galleryDir = path.join(process.cwd(), "public/gallery");
-    
-    // Read the directory contents
-    const files = fs.readdirSync(galleryDir);
-    
-    // Filter for image files
-    const imageFiles = files.filter(file => {
-      const extension = path.extname(file).toLowerCase();
-      return ['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(extension);
-    });
-    
-    // Shuffle the array to randomize the order
-    const shuffledImages = [...imageFiles].sort(() => Math.random() - 0.5);
-    
-    // Return the list of image files
-    return NextResponse.json({ images: shuffledImages });
+    // Fetch images from Supabase
+    const { data, error } = await supabase
+      .from('gallery_images')
+      .select('filename')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    // Extract filenames from the data
+    const filenames = data?.map(img => img.filename) || [];
+
+    return NextResponse.json({ images: filenames });
   } catch (error) {
-    console.error("Error reading gallery directory:", error);
+    console.error('Error fetching gallery images from Supabase:', error);
     return NextResponse.json(
-      { error: "Failed to read gallery directory" },
+      { error: 'Failed to fetch gallery images' },
       { status: 500 }
     );
   }

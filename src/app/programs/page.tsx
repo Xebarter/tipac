@@ -456,6 +456,21 @@ export default async function ProgramsPage() {
         </div>
       </section>
 
+      {/* Upcoming Events Section */}
+      <section className="w-full py-16 bg-muted/30">
+        <div className="container">
+          <div className="max-w-4xl mx-auto text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">Upcoming Events</h2>
+            <p className="text-muted-foreground mb-8">
+              Check out our upcoming performances, workshops, and special events where you can see our programs in action.
+            </p>
+            <Button asChild size="lg" className="tipac-gradient">
+              <Link href="/events">View All Events</Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
       <Footer />
     </main>
   );

@@ -56,17 +56,17 @@ export function Navbar() {
 
         {/* Desktop Links */}
         <div className="hidden md:flex items-center gap-8">
-          {["/", "/about", "/programs", "/gallery", "/contact"].map((path, i) => (
+          {["/", "/about", "/events", "/programs", "/gallery", "/contact"].map((path, i) => (
             <Link
               key={i}
               href={path}
               className={`transition-colors ${isLinkActive(path) ? "text-primary font-medium" : "hover:text-primary"}`}
             >
-              {path === "/" ? "Home" : path.slice(1).charAt(0).toUpperCase() + path.slice(2)}
+              {path === "/" ? "Home" : path === "/events" ? "Events" : path.slice(1).charAt(0).toUpperCase() + path.slice(2)}
             </Link>
           ))}
-          <Link href="/donation" target="_blank" rel="noopener noreferrer">
-            <Button className="tipac-gradient">Donate Now</Button>
+          <Link href="/tickets">
+            <Button className="tipac-gradient">Buy Ticket</Button>
           </Link>
         </div>
 
@@ -76,7 +76,7 @@ export function Navbar() {
             ref={menuRef}
             className="absolute top-full left-0 w-full bg-background shadow-md py-4 flex flex-col items-center gap-4 z-50"
           >
-            {["/", "/about", "/programs", "/gallery", "/contact"].map((path, i) => (
+            {["/", "/about", "/events", "/programs", "/gallery", "/contact"].map((path, i) => (
               <Link
                 key={i}
                 href={path}
@@ -85,17 +85,15 @@ export function Navbar() {
                 }`}
                 onClick={closeMobileMenu}
               >
-                {path === "/" ? "Home" : path.slice(1).charAt(0).toUpperCase() + path.slice(2)}
+                {path === "/" ? "Home" : path === "/events" ? "Events" : path.slice(1).charAt(0).toUpperCase() + path.slice(2)}
               </Link>
             ))}
             <Link
-              href="/donation"
+              href="/tickets"
               onClick={closeMobileMenu}
               className="w-48"
-              target="_blank"
-              rel="noopener noreferrer"
             >
-              <Button className="tipac-gradient w-full">Donate Now</Button>
+              <Button className="tipac-gradient w-full">Buy Ticket</Button>
             </Link>
           </div>
         )}
