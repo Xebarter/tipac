@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    serverComponentsExternalPackages: ['pdfmake', 'fontkit', 'pdfkit'],
+  },
   images: {
     unoptimized: true,
     domains: [
@@ -36,6 +39,22 @@ const nextConfig = {
   },
   eslint: {
     ignoreDuringBuilds: true,
+  },
+  webpack: (config) => {
+    // Handle the applyDecoratedDescriptor import issue by ignoring fontkit
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "fontkit": false,
+    };
+    
+    config.module.rules.push({
+      test: /\.m?js/,
+      resolve: {
+        fullySpecified: false,
+      },
+    });
+
+    return config;
   },
 };
 

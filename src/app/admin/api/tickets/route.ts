@@ -5,7 +5,16 @@ import { ObjectId } from "mongodb";
 const dbName = "TIPAC";
 const collectionName = "tickets";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Check authentication
+  const adminSession = req.cookies.get('admin_session');
+  if (!adminSession) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   try {
     const client = await getMongoClient();
     const db = client.db(dbName);
@@ -46,30 +55,50 @@ export async function GET() {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
+  // Check authentication
+  const adminSession = req.cookies.get('admin_session');
+  if (!adminSession) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   try {
+    const body = await req.json();
     const client = await getMongoClient();
     const db = client.db(dbName);
     const collection = db.collection(collectionName);
+
+    // Validate required fields
+    const { eventId, eventName, ticketType, price, quantity, purchaserName, purchaserEmail } = body;
     
-    const ticketData = await request.json();
-    
-    // Add timestamp
-    const ticketWithTimestamp = {
-      ...ticketData,
+    if (!eventId || !eventName || !ticketType || !price || !quantity || !purchaserName || !purchaserEmail) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    const ticketData = {
+      eventId: new ObjectId(eventId),
+      eventName,
+      ticketType,
+      price,
+      quantity,
+      purchaserName,
+      purchaserEmail,
       purchasedAt: new Date(),
       status: "confirmed"
     };
+
+    const result = await collection.insertOne(ticketData);
     
-    const result = await collection.insertOne(ticketWithTimestamp);
-    
-    return NextResponse.json(
-      { 
-        message: "Ticket created successfully", 
-        ticketId: result.insertedId.toString()
-      },
-      { status: 201 }
-    );
+    return NextResponse.json({ 
+      message: "Ticket created successfully",
+      ticketId: result.insertedId.toString()
+    });
   } catch (error) {
     console.error("Failed to create ticket:", error);
     return NextResponse.json(
@@ -79,13 +108,19 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function PUT(request: NextRequest) {
+export async function PUT(req: NextRequest) {
+  // Check authentication
+  const adminSession = req.cookies.get('admin_session');
+  if (!adminSession) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   try {
-    const client = await getMongoClient();
-    const db = client.db(dbName);
-    const collection = db.collection(collectionName);
-    
-    const { id, ...updateData } = await request.json();
+    const body = await req.json();
+    const { id, ...updateData } = body;
     
     if (!id) {
       return NextResponse.json(
@@ -93,15 +128,17 @@ export async function PUT(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
+    // Add updatedAt timestamp
+    updateData.updatedAt = new Date();
+
+    const client = await getMongoClient();
+    const db = client.db(dbName);
+    const collection = db.collection(collectionName);
+
     const result = await collection.updateOne(
       { _id: new ObjectId(id) },
-      { 
-        $set: { 
-          ...updateData, 
-          updatedAt: new Date() 
-        } 
-      }
+      { $set: updateData }
     );
     
     if (result.matchedCount === 0) {
@@ -110,11 +147,8 @@ export async function PUT(request: NextRequest) {
         { status: 404 }
       );
     }
-    
-    return NextResponse.json(
-      { message: "Ticket updated successfully" },
-      { status: 200 }
-    );
+
+    return NextResponse.json({ message: "Ticket updated successfully" });
   } catch (error) {
     console.error("Failed to update ticket:", error);
     return NextResponse.json(
@@ -124,14 +158,18 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
+export async function DELETE(req: NextRequest) {
+  // Check authentication
+  const adminSession = req.cookies.get('admin_session');
+  if (!adminSession) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   try {
-    const client = await getMongoClient();
-    const db = client.db(dbName);
-    const collection = db.collection(collectionName);
-    
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
+    const { id } = await req.json();
     
     if (!id) {
       return NextResponse.json(
@@ -139,7 +177,11 @@ export async function DELETE(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
+    const client = await getMongoClient();
+    const db = client.db(dbName);
+    const collection = db.collection(collectionName);
+
     const result = await collection.deleteOne({ _id: new ObjectId(id) });
     
     if (result.deletedCount === 0) {
@@ -148,11 +190,8 @@ export async function DELETE(request: NextRequest) {
         { status: 404 }
       );
     }
-    
-    return NextResponse.json(
-      { message: "Ticket deleted successfully" },
-      { status: 200 }
-    );
+
+    return NextResponse.json({ message: "Ticket deleted successfully" });
   } catch (error) {
     console.error("Failed to delete ticket:", error);
     return NextResponse.json(

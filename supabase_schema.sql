@@ -30,8 +30,37 @@ CREATE TABLE IF NOT EXISTS tickets (
   status TEXT DEFAULT 'confirmed',
   pesapal_transaction_id TEXT,
   pesapal_status TEXT,
-  price INTEGER DEFAULT 0
+  price INTEGER DEFAULT 0,
+  -- New fields for offline ticket support
+  purchase_channel TEXT DEFAULT 'online', -- 'online' or 'physical_batch'
+  batch_code TEXT,
+  is_active BOOLEAN DEFAULT true,
+  qr_code TEXT,
+  buyer_name TEXT,
+  buyer_phone TEXT,
+  used BOOLEAN DEFAULT false
 );
+
+-- Create batches table for tracking physical ticket batches
+CREATE TABLE IF NOT EXISTS batches (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  batch_code TEXT UNIQUE,
+  event_id UUID REFERENCES events(id),
+  num_tickets INTEGER,
+  is_active BOOLEAN DEFAULT true
+);
+
+-- Enable RLS on batches table
+ALTER TABLE batches ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for batches - Allow all operations to authenticated users
+CREATE POLICY "Allow authenticated users to manage batches"
+ON batches
+FOR ALL
+TO authenticated
+USING (true)
+WITH CHECK (true);
 
 -- Create contact_messages table
 CREATE TABLE IF NOT EXISTS contact_messages (

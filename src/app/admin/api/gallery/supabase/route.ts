@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from '@/lib/supabaseClient';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Check authentication
+  const adminSession = req.cookies.get('admin_session');
+  if (!adminSession) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   try {
     const { data, error } = await supabase
       .from('gallery_images')
@@ -26,6 +35,15 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  // Check authentication
+  const adminSession = request.cookies.get('admin_session');
+  if (!adminSession) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File;
@@ -57,10 +75,11 @@ export async function POST(request: NextRequest) {
     // Upload to Supabase storage
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExtension}`;
+    const filePath = `gallery/${fileName}`;
     
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('gallery')
-      .upload(fileName, file);
+      .upload(filePath, file);
 
     if (uploadError) {
       throw uploadError;
@@ -69,7 +88,7 @@ export async function POST(request: NextRequest) {
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
       .from('gallery')
-      .getPublicUrl(fileName);
+      .getPublicUrl(filePath);
 
     // Insert record into gallery_images table
     const { data: imageData, error: insertError } = await supabase
@@ -83,6 +102,8 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
+      // If database insert fails, clean up the uploaded file
+      await supabase.storage.from('gallery').remove([filePath]);
       throw insertError;
     }
 
@@ -103,9 +124,17 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  // Check authentication
+  const adminSession = request.cookies.get('admin_session');
+  if (!adminSession) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
+    const { id } = await request.json();
     
     if (!id) {
       return NextResponse.json(
@@ -135,7 +164,7 @@ export async function DELETE(request: NextRequest) {
     // Delete from storage
     const { error: deleteStorageError } = await supabase.storage
       .from('gallery')
-      .remove([image.filename]);
+      .remove([`gallery/${image.filename}`]);
 
     if (deleteStorageError) {
       throw deleteStorageError;

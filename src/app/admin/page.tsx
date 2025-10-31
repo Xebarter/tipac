@@ -7,130 +7,121 @@ import { supabase } from "@/lib/supabaseClient";
 import { Sidebar } from "./components/Sidebar";
 
 export default function AdminDashboard() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [events, setEvents] = useState<any[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [galleryImages, setGalleryImages] = useState<any[]>([]);
+  const [tickets, setTickets] = useState<any[]>([]);
   const router = useRouter();
 
-  // Simple authentication check
   useEffect(() => {
-    // Check for admin token in localStorage
-    const adminToken = localStorage.getItem("admin_token");
-    if (adminToken) {
-      setIsLoggedIn(true);
+    // Check if user is authenticated
+    const cookies = document.cookie.split("; ").reduce((acc, cookie) => {
+      const [name, value] = cookie.split("=");
+      acc[name] = value;
+      return acc;
+    }, {} as {[key: string]: string});
+    
+    if (!cookies['admin_session']) {
+      router.push('/admin/login');
+      return;
     }
-  }, []);
+    
+    fetchData();
+  }, [router]);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Simple authentication with hardcoded credentials
-    if (username === "Admin" && password === "Admin123") {
-      localStorage.setItem("admin_token", "admin_demo_token");
-      setIsLoggedIn(true);
-    } else {
-      alert("Invalid credentials. Username: Admin, Password: Admin123");
-    }
+  const fetchData = async () => {
+    // Fetch events count
+    const { count: eventsCount } = await supabase
+      .from("events")
+      .select("*", { count: "exact", head: true });
+
+    // Fetch unread messages count
+    const { count: messagesCount } = await supabase
+      .from("contact_messages")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "unread");
+
+    // Fetch gallery images count
+    const { count: galleryCount } = await supabase
+      .from("gallery_images")
+      .select("*", { count: "exact", head: true });
+
+    // Fetch tickets count
+    const { count: ticketsCount } = await supabase
+      .from("tickets")
+      .select("*", { count: "exact", head: true });
+
+    setEvents(Array(eventsCount).fill(null));
+    setMessages(Array(messagesCount).fill(null));
+    setGalleryImages(Array(galleryCount).fill(null));
+    setTickets(Array(ticketsCount).fill(null));
   };
 
-  if (!isLoggedIn) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="max-w-md w-full space-y-8 p-10 bg-card rounded-xl shadow-lg">
-          <div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-foreground">
-              Admin Login
-            </h2>
-          </div>
-          <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-            <div className="rounded-md shadow-sm space-y-4">
-              <div>
-                <label htmlFor="username" className="sr-only">Username</label>
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  required
-                  className="appearance-none rounded-md relative block w-full px-3 py-2 border border-input placeholder-muted-foreground text-foreground focus:outline-none focus:ring-ring focus:border-ring focus:z-10 sm:text-sm bg-background"
-                  placeholder="Username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                />
-              </div>
-              <div>
-                <label htmlFor="password" className="sr-only">Password</label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  className="appearance-none rounded-md relative block w-full px-3 py-2 border border-input placeholder-muted-foreground text-foreground focus:outline-none focus:ring-ring focus:border-ring focus:z-10 sm:text-sm bg-background"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring"
-              >
-                Sign in
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  }
+  const handleLogout = () => {
+    // Remove the admin session cookie
+    document.cookie = "admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    router.push('/admin/login');
+  };
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
+      <header className="bg-white shadow">
+        <div className="flex justify-between items-center px-8 py-4">
+          <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
+          <button 
+            onClick={handleLogout}
+            className="px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90"
+          >
+            Logout
+          </button>
+        </div>
+      </header>
+      
       <main className="flex-1 overflow-y-auto p-6 bg-background">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-3xl font-bold mb-6">Dashboard Overview</h1>
           
-          <DashboardOverview />
+          <DashboardOverview 
+            events={events} 
+            messages={messages} 
+            galleryImages={galleryImages} 
+            tickets={tickets} 
+          />
           
           <div className="mt-12">
             <h2 className="text-2xl font-semibold mb-4">Quick Actions</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Link 
                 href="/admin/messages" 
-                className="bg-card p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow border border-border"
+                className="bg-card p-6 rounded-lg shadow hover:shadow-md transition-shadow"
               >
-                <h3 className="text-lg font-semibold mb-2">Messages</h3>
-                <p className="text-muted-foreground">View and manage contact messages</p>
-              </Link>
-              
-              <Link 
-                href="/admin/gallery" 
-                className="bg-card p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow border border-border"
-              >
-                <h3 className="text-lg font-semibold mb-2">Gallery</h3>
-                <p className="text-muted-foreground">Manage gallery images</p>
+                <h3 className="text-lg font-medium mb-2">Messages</h3>
+                <p className="text-muted-foreground">View and manage messages</p>
               </Link>
               
               <Link 
                 href="/admin/events" 
-                className="bg-card p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow border border-border"
+                className="bg-card p-6 rounded-lg shadow hover:shadow-md transition-shadow"
               >
-                <h3 className="text-lg font-semibold mb-2">Events</h3>
+                <h3 className="text-lg font-medium mb-2">Events</h3>
                 <p className="text-muted-foreground">Manage events and participants</p>
               </Link>
               
-              <div className="bg-card p-6 rounded-xl shadow-md border border-border">
-                <h3 className="text-lg font-semibold mb-2">Tickets</h3>
-                <p className="text-muted-foreground mb-4">Manage event tickets</p>
-                <button 
-                  onClick={() => alert("Tickets management coming soon")}
-                  className="text-primary hover:underline"
-                >
-                  View Tickets
-                </button>
-              </div>
+              <Link 
+                href="/admin/gallery" 
+                className="bg-card p-6 rounded-lg shadow hover:shadow-md transition-shadow"
+              >
+                <h3 className="text-lg font-medium mb-2">Gallery</h3>
+                <p className="text-muted-foreground">Manage gallery images</p>
+              </Link>
+              
+              <Link 
+                href="/admin/tickets" 
+                className="bg-card p-6 rounded-lg shadow hover:shadow-md transition-shadow"
+              >
+                <h3 className="text-lg font-medium mb-2">Tickets</h3>
+                <p className="text-muted-foreground">View ticket sales and statistics</p>
+              </Link>
             </div>
           </div>
         </div>
@@ -139,85 +130,35 @@ export default function AdminDashboard() {
   );
 }
 
-function DashboardOverview() {
-  const [stats, setStats] = useState({
-    galleryImages: 0,
-    events: 0,
-    tickets: 0
-  });
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        // Try Supabase first
-        const { count: galleryCount, error: galleryError } = await supabase
-          .from('gallery_images')
-          .select('*', { count: 'exact', head: true });
-        
-        const { count: eventsCount, error: eventsError } = await supabase
-          .from('events')
-          .select('*', { count: 'exact', head: true });
-          
-        const { count: ticketsCount, error: ticketsError } = await supabase
-          .from('tickets')
-          .select('*', { count: 'exact', head: true });
-          
-        if (galleryError || eventsError || ticketsError) {
-          throw new Error('Supabase error');
-        }
-        
-        setStats({
-          galleryImages: galleryCount || 0,
-          events: eventsCount || 0,
-          tickets: ticketsCount || 0
-        });
-      } catch (error) {
-        console.error("Failed to fetch stats from Supabase:", error);
-        // Fallback to API
-        try {
-          // Fetch gallery image count
-          const galleryRes = await fetch("/admin/api/gallery");
-          const galleryData = await galleryRes.json();
-          
-          // Fetch events count
-          const eventsRes = await fetch("/admin/api/events");
-          const eventsData = await eventsRes.json();
-          
-          // Fetch tickets count
-          const ticketsRes = await fetch("/admin/api/tickets");
-          const ticketsData = await ticketsRes.json();
-          
-          setStats({
-            galleryImages: galleryData.images?.length || 0,
-            events: eventsData.events?.length || 0,
-            tickets: ticketsData.tickets?.length || 0
-          });
-        } catch (apiError) {
-          console.error("Failed to fetch stats from API:", apiError);
-        }
-      }
-    };
-    
-    fetchStats();
-  }, []);
+function DashboardOverview({ events, messages, galleryImages, tickets }: { 
+  events: any[], 
+  messages: any[], 
+  galleryImages: any[], 
+  tickets: any[] 
+}) {
+  const stats = [
+    { name: "Events", value: events.length, href: "/admin/events" },
+    { name: "Messages", value: messages.length, href: "/admin/messages" },
+    { name: "Gallery Images", value: galleryImages.length, href: "/admin/gallery" },
+    { name: "Tickets Sold", value: tickets.length, href: "/admin/tickets" },
+  ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div className="bg-card p-6 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-foreground">Gallery Images</h3>
-        <p className="text-3xl font-bold text-primary mt-2">{stats.galleryImages}</p>
-        <p className="text-muted-foreground mt-1">Total images</p>
-      </div>
-      <div className="bg-card p-6 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-foreground">Events</h3>
-        <p className="text-3xl font-bold text-primary mt-2">{stats.events}</p>
-        <p className="text-muted-foreground mt-1">Total events</p>
-      </div>
-      <div className="bg-card p-6 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-foreground">Tickets</h3>
-        <p className="text-3xl font-bold text-primary mt-2">{stats.tickets}</p>
-        <p className="text-muted-foreground mt-1">Total tickets</p>
-      </div>
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      {stats.map((stat, index) => (
+        <Link 
+          key={index} 
+          href={stat.href}
+          className="overflow-hidden rounded-lg bg-card shadow hover:shadow-md transition-shadow"
+        >
+          <div className="px-4 py-5 sm:p-6">
+            <dt className="text-base font-normal text-muted-foreground">{stat.name}</dt>
+            <dd className="mt-1 text-3xl font-semibold tracking-tight text-foreground">
+              {stat.value}
+            </dd>
+          </div>
+        </Link>
+      ))}
     </div>
   );
 }

@@ -161,7 +161,8 @@ export default function TicketsPage() {
             email: formData.email,
             quantity: quantity,
             status: 'confirmed',
-            price: getEventPrice(selectedEvent)
+            price: getEventPrice(selectedEvent),
+            purchase_channel: 'online' // Explicitly set purchase channel
           }])
           .select();
 

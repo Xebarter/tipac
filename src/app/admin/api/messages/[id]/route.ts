@@ -5,6 +5,15 @@ import { ObjectId } from "mongodb";
 const dbName = "TIPAC";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  // Check authentication
+  const adminSession = req.cookies.get('admin_session');
+  if (!adminSession) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   try {
     const { id } = params;
     const { read } = await req.json();
@@ -29,7 +38,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const result = await collection.updateOne(
       { _id: new ObjectId(id) },
-      { $set: { read } }
+      { $set: { read, status: read ? "read" : "unread", updatedAt: new Date() } }
     );
 
     if (result.matchedCount === 0) {
@@ -39,18 +48,26 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       );
     }
 
-    console.log(`Updated read status for message ${id} to ${read}`);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error updating message read status:", error);
+    console.error("Failed to update message:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to update message", details: String(error) },
+      { success: false, error: "Failed to update message" },
       { status: 500 }
     );
   }
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  // Check authentication
+  const adminSession = req.cookies.get('admin_session');
+  if (!adminSession) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   try {
     const { id } = params;
 
@@ -74,12 +91,11 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       );
     }
 
-    console.log(`Deleted message ${id}`);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting message:", error);
+    console.error("Failed to delete message:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to delete message", details: String(error) },
+      { success: false, error: "Failed to delete message" },
       { status: 500 }
     );
   }
