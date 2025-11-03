@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import ReactPlayer from "react-player";
+import ReactPlayer from "react-player/youtube";
 
 interface YouTubeVideo {
   id: string;
