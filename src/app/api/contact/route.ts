@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { getMongoClient } from "@/lib/mongodb";
 import validator from "validator";
+import { supabase } from "@/lib/supabaseClient";
 
 const dbName = "TIPAC";
 
@@ -56,7 +57,27 @@ export async function POST(req: NextRequest) {
     await collection.insertOne(sanitizedData);
     console.log("Message saved to MongoDB:", sanitizedData);
 
-    // 2. Send email
+    // 2. Save to Supabase
+    const { data: supabaseData, error: supabaseError } = await supabase
+      .from('contact_messages')
+      .insert([
+        {
+          name: sanitizedData.name,
+          email: sanitizedData.email,
+          subject: sanitizedData.subject,
+          message: sanitizedData.message,
+          created_at: sanitizedData.createdAt,
+          is_read: false
+        }
+      ]);
+
+    if (supabaseError) {
+      console.error("Error saving to Supabase:", supabaseError);
+    } else {
+      console.log("Message saved to Supabase:", supabaseData);
+    }
+
+    // 3. Send email
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {

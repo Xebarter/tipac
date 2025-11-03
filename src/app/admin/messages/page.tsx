@@ -12,13 +12,13 @@ import {
 } from "react-icons/fa";
 
 interface Message {
-  _id: string;
+  id: string;
   name: string;
   email: string;
   subject: string;
   message: string;
-  createdAt?: string;
-  read: boolean;
+  created_at?: string;
+  is_read: boolean;
 }
 
 export default function AdminMessagesPage() {
@@ -36,11 +36,9 @@ export default function AdminMessagesPage() {
         if (response.ok && data.messages) {
           const formattedMessages = data.messages.map((msg: any) => ({
             ...msg,
-            _id: msg._id.toString(),
-            createdAt: msg.createdAt
-              ? new Date(msg.createdAt).toISOString()
-              : undefined,
-            read: msg.read ?? false,
+            id: msg.id,
+            created_at: msg.created_at,
+            is_read: msg.is_read ?? false,
           }));
           setMessages(formattedMessages);
         } else {
@@ -57,14 +55,14 @@ export default function AdminMessagesPage() {
     fetchMessages();
   }, []);
 
-  const handleReadToggle = async (id: string, read: boolean) => {
+  const handleReadToggle = async (id: string, is_read: boolean) => {
     try {
       const response = await fetch(`/admin/api/messages/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ read: !read }),
+        body: JSON.stringify({ read: !is_read }),
       });
 
       const data = await response.json();
@@ -72,7 +70,7 @@ export default function AdminMessagesPage() {
       if (response.ok && data.success) {
         setMessages((prevMessages) =>
           prevMessages.map((msg) =>
-            msg._id === id ? { ...msg, read: !read } : msg
+            msg.id === id ? { ...msg, is_read: !is_read } : msg
           )
         );
       } else {
@@ -96,7 +94,7 @@ export default function AdminMessagesPage() {
 
       if (response.ok && data.success) {
         setMessages((prevMessages) =>
-          prevMessages.filter((msg) => msg._id !== id)
+          prevMessages.filter((msg) => msg.id !== id)
         );
       } else {
         setError(data.error || "Failed to delete message");
@@ -131,29 +129,29 @@ export default function AdminMessagesPage() {
         <div className="space-y-4">
           {messages.map((msg) => (
             <div
-              key={msg._id}
+              key={msg.id}
               className={`bg-white border border-gray-200 rounded-xl shadow-sm transition-transform hover:shadow-md ${
-                msg.read ? "opacity-70" : ""
+                msg.is_read ? "opacity-70" : ""
               }`}
             >
               <div
                 className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-2 cursor-pointer"
-                onClick={() => toggleMessage(msg._id)}
+                onClick={() => toggleMessage(msg.id)}
               >
                 <div className="flex items-center gap-4">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleReadToggle(msg._id, msg.read);
+                      handleReadToggle(msg.id, msg.is_read);
                     }}
                     className={`rounded-full p-2 ${
-                      msg.read
+                      msg.is_read
                         ? "bg-green-100 text-green-600"
                         : "bg-yellow-100 text-yellow-600"
                     } hover:scale-105 transition`}
-                    title={msg.read ? "Mark as unread" : "Mark as read"}
+                    title={msg.is_read ? "Mark as unread" : "Mark as read"}
                   >
-                    {msg.read ? <FaEnvelopeOpen /> : <FaEnvelope />}
+                    {msg.is_read ? <FaEnvelopeOpen /> : <FaEnvelope />}
                   </button>
 
                   <div className="space-y-1">
@@ -175,15 +173,15 @@ export default function AdminMessagesPage() {
 
                 <div className="flex items-center gap-4">
                   <div className="text-xs text-gray-500">
-                    {msg.createdAt &&
-                      format(new Date(msg.createdAt), "PPpp", {
+                    {msg.created_at &&
+                      format(new Date(msg.created_at), "PPpp", {
                         locale: enUS,
                       })}
                   </div>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDelete(msg._id);
+                      handleDelete(msg.id);
                     }}
                     className="text-red-500 hover:text-red-700"
                     title="Delete message"
@@ -193,12 +191,12 @@ export default function AdminMessagesPage() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      toggleMessage(msg._id);
+                      toggleMessage(msg.id);
                     }}
                     className="text-gray-500 hover:text-gray-800"
                     title="Toggle message"
                   >
-                    {expandedMessageId === msg._id ? (
+                    {expandedMessageId === msg.id ? (
                       <FaChevronUp />
                     ) : (
                       <FaChevronDown />
@@ -207,7 +205,7 @@ export default function AdminMessagesPage() {
                 </div>
               </div>
 
-              {expandedMessageId === msg._id && (
+              {expandedMessageId === msg.id && (
                 <div className="px-4 pb-4 text-gray-700 border-t border-gray-100">
                   <p className="whitespace-pre-line pt-2">{msg.message}</p>
                 </div>

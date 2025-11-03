@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMongoClient } from "@/lib/mongodb";
-import { ObjectId } from "mongodb";
-
-const dbName = "TIPAC";
+import { supabase } from "@/lib/supabaseClient";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   // Check authentication
@@ -18,13 +15,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const { id } = params;
     const { read } = await req.json();
 
-    if (!ObjectId.isValid(id)) {
-      return NextResponse.json(
-        { success: false, error: "Invalid message ID" },
-        { status: 400 }
-      );
-    }
-
     if (typeof read !== "boolean") {
       return NextResponse.json(
         { success: false, error: "Invalid read status" },
@@ -32,16 +22,20 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       );
     }
 
-    const client = await getMongoClient();
-    const db = client.db(dbName);
-    const collection = db.collection("contacts");
+    const { data, error } = await supabase
+      .from('contact_messages')
+      .update({ 
+        is_read: read,
+        updated_at: new Date()
+      })
+      .eq('id', id)
+      .select();
 
-    const result = await collection.updateOne(
-      { _id: new ObjectId(id) },
-      { $set: { read, status: read ? "read" : "unread", updatedAt: new Date() } }
-    );
+    if (error) {
+      throw error;
+    }
 
-    if (result.matchedCount === 0) {
+    if (data.length === 0) {
       return NextResponse.json(
         { success: false, error: "Message not found" },
         { status: 404 }
@@ -71,20 +65,16 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   try {
     const { id } = params;
 
-    if (!ObjectId.isValid(id)) {
-      return NextResponse.json(
-        { success: false, error: "Invalid message ID" },
-        { status: 400 }
-      );
+    const { data, error } = await supabase
+      .from('contact_messages')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      throw error;
     }
 
-    const client = await getMongoClient();
-    const db = client.db(dbName);
-    const collection = db.collection("contacts");
-
-    const result = await collection.deleteOne({ _id: new ObjectId(id) });
-
-    if (result.deletedCount === 0) {
+    if (data.length === 0) {
       return NextResponse.json(
         { success: false, error: "Message not found" },
         { status: 404 }

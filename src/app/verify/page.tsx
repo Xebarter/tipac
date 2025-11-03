@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Scanner } from "@yudiel/react-qr-scanner";
 
 export default function TicketScannerPage() {
   const [result, setResult] = useState<{ valid: boolean; message: string; ticket?: any } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ticketId, setTicketId] = useState("");
+  const [scanning, setScanning] = useState(false);
 
   // Verify ticket with the API
   const verifyTicket = async (id: string) => {
@@ -26,14 +28,92 @@ export default function TicketScannerPage() {
     }
   };
 
+  // Handle QR scan result
+  const handleScan = (detectedCodes: { rawValue: string }[]) => {
+    if (detectedCodes && detectedCodes.length > 0) {
+      const data = detectedCodes[0].rawValue;
+      if (data) {
+        setScanning(false);
+        verifyTicket(data);
+      }
+    }
+  };
+
+  // Mark ticket as used
+  const markAsUsed = async () => {
+    if (!result?.ticket?.id) return;
+    
+    try {
+      const response = await fetch(`/api/tickets/verify/${result.ticket.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ used: true })
+      });
+      
+      const data = await response.json();
+      
+      if (data.valid) {
+        setResult({
+          ...result,
+          ticket: {
+            ...result.ticket,
+            used: true
+          },
+          message: "Ticket marked as used successfully"
+        });
+      } else {
+        setError(data.message || "Failed to mark ticket as used");
+      }
+    } catch (err) {
+      setError("Failed to mark ticket as used");
+      console.error(err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black py-12 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-3xl font-bold text-white mb-4">Ticket Verification</h1>
           <p className="text-gray-400">
-            Manually enter ticket IDs to verify authenticity
+            Scan QR codes or manually enter ticket IDs to verify authenticity
           </p>
+        </div>
+
+        {/* QR Scanner Section */}
+        <div className="max-w-2xl mx-auto bg-gray-800/30 backdrop-blur-md rounded-xl border border-gray-700 p-6 mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-white">QR Code Scanner</h2>
+            <Button 
+              onClick={() => setScanning(!scanning)}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600"
+            >
+              {scanning ? "Stop Scanner" : "Start Scanner"}
+            </Button>
+          </div>
+          
+          {scanning && (
+            <div className="mt-4">
+              <Scanner
+                onScan={(result) => handleScan(result)}
+                onError={(error) => {
+                  console.error(error);
+                  setError("Failed to scan QR code");
+                }}
+                constraints={{ facingMode: "environment" }}
+                className="w-full"
+              />
+              <p className="text-gray-400 text-center mt-2">Point your camera at a QR code</p>
+            </div>
+          )}
+          
+          {!scanning && (
+            <p className="text-gray-400 text-center py-4">
+              Click "Start Scanner" to begin scanning QR codes
+            </p>
+          )}
         </div>
 
         <div className="max-w-2xl mx-auto bg-gray-800/30 backdrop-blur-md rounded-xl border border-gray-700 p-6">
@@ -91,7 +171,7 @@ export default function TicketScannerPage() {
                 )}
               </div>
               
-              <div className="ml-4">
+              <div className="ml-4 flex-1">
                 <h3 className={`text-lg font-medium ${
                   result.valid ? "text-green-300" : "text-red-300"
                 }`}>
@@ -118,7 +198,29 @@ export default function TicketScannerPage() {
                           <div className="text-white">{result.ticket.buyer_name}</div>
                         </>
                       )}
+                      
+                      <div className="text-gray-400">Status:</div>
+                      <div className={`font-medium ${result.ticket.used ? "text-red-400" : "text-green-400"}`}>
+                        {result.ticket.used ? "Used" : "Valid"}
+                      </div>
                     </div>
+                    
+                    {result.valid && !result.ticket.used && (
+                      <div className="mt-4">
+                        <Button 
+                          onClick={markAsUsed}
+                          className="bg-gradient-to-r from-green-600 to-teal-600"
+                        >
+                          Mark as Used
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {result.valid && result.ticket.used && (
+                      <div className="mt-4 p-2 bg-green-900/30 rounded text-green-300 text-center">
+                        Ticket has been marked as used
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

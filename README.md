@@ -11,6 +11,7 @@ Welcome to the official website for Theatre for Ignatius Peter And Charles (TIPA
 - MongoDB (for contact messages)
 - Supabase (for gallery images and events)
 - PesaPal API (for ticket payments)
+- YouTube Data API (for video integration)
 
 ## Getting Started
 
@@ -44,11 +45,21 @@ This application is optimized for deployment on Vercel. Follow these steps:
    - `PESAPAL_IPN_ID` - Your PesaPal IPN ID
    - `PESAPAL_BASE_URL` - PesaPal API base URL (https://pay.pesapal.com/v3 for production)
    - `SITE_URL` - Your website URL (e.g., https://yourdomain.com)
+   - `YOUTUBE_API_KEY` - Your YouTube Data API key (optional, for video integration)
 5. Click "Deploy" and your application will be live!
 
 ### Environment Variables
 
 See `.env.example` for all required environment variables.
+
+## YouTube Integration
+
+The website features a "Watch TIPAC" section that displays the latest videos from the TIPAC YouTube channel. To enable this feature:
+
+1. Obtain a YouTube Data API key (see [YOUTUBE_INTEGRATION.md](YOUTUBE_INTEGRATION.md) for detailed instructions)
+2. Add the `YOUTUBE_API_KEY` environment variable to your deployment
+
+If no API key is provided, the section will display mock data for development purposes.
 
 ## Ticketing System
 
@@ -86,3 +97,4 @@ To learn more about the technologies used:
 - [Supabase](https://supabase.io/)
 - [MongoDB](https://mongodb.com/)
 - [PesaPal API](https://developer.pesapal.com/)
+- [YouTube Data API](https://developers.google.com/youtube/v3)

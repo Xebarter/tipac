@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabaseClient";
+import { motion } from "framer-motion";
 
 interface Event {
   id: string;
@@ -17,6 +18,7 @@ export default function GenerateBatchTickets() {
   const [selectedEvent, setSelectedEvent] = useState("");
   const [numTickets, setNumTickets] = useState(10);
   const [batchCode, setBatchCode] = useState("");
+  const [price, setPrice] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -34,8 +36,8 @@ export default function GenerateBatchTickets() {
 
       if (error) throw error;
       setEvents(data || []);
-      
-      // Set default batch code with timestamp to ensure uniqueness
+
+      // Unique batch code with timestamp
       const dateStr = new Date().toISOString().slice(0, 19).replace(/[:T-]/g, "");
       const timestamp = Date.now();
       setBatchCode(`BATCH-${dateStr}-${timestamp}`);
@@ -54,13 +56,12 @@ export default function GenerateBatchTickets() {
     try {
       const response = await fetch("/api/tickets/generate-batch", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           event_id: selectedEvent,
           num_tickets: numTickets,
           batch_code: batchCode,
+          price: price,
         }),
       });
 
@@ -69,7 +70,7 @@ export default function GenerateBatchTickets() {
         throw new Error(errorData.error || "Failed to generate batch tickets");
       }
 
-      // Trigger download of the PDF
+      // Trigger PDF download
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -90,37 +91,57 @@ export default function GenerateBatchTickets() {
   };
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Generate Batch Tickets</h1>
-        <p className="text-gray-400">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-purple-950 py-10 px-6 flex flex-col items-center">
+      <motion.div
+        className="text-center mb-10"
+        initial={{ opacity: 0, y: -30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7 }}
+      >
+        <h1 className="text-4xl font-extrabold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+          Generate Batch Tickets
+        </h1>
+        <p className="text-gray-400 mt-2 text-sm">
           Create physical tickets for offline distribution
         </p>
-      </div>
+      </motion.div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-900/50 border border-red-700 rounded-lg">
-          <p className="text-red-200 text-center">{error}</p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 w-full max-w-2xl p-4 rounded-lg border border-red-700 bg-red-900/40 backdrop-blur-sm"
+        >
+          <p className="text-center text-red-200 font-medium">{error}</p>
+        </motion.div>
       )}
 
       {success && (
-        <div className="mb-6 p-4 bg-green-900/50 border border-green-700 rounded-lg">
-          <p className="text-green-200 text-center">{success}</p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 w-full max-w-2xl p-4 rounded-lg border border-green-700 bg-green-900/40 backdrop-blur-sm"
+        >
+          <p className="text-center text-green-200 font-medium">{success}</p>
+        </motion.div>
       )}
 
-      <div className="max-w-2xl bg-gray-800/50 border border-gray-700 rounded-xl p-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-2xl rounded-2xl bg-white/5 border border-white/10 p-8 shadow-2xl backdrop-blur-md"
+      >
+        <form onSubmit={handleSubmit} className="space-y-8">
           <div>
-            <Label htmlFor="event" className="text-gray-200">
+            <Label htmlFor="event" className="text-gray-300 text-sm font-medium">
               Event
             </Label>
             <select
               id="event"
               value={selectedEvent}
               onChange={(e) => setSelectedEvent(e.target.value)}
-              className="w-full mt-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full mt-2 bg-black/30 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
               required
             >
               <option value="">Select an event</option>
@@ -133,7 +154,7 @@ export default function GenerateBatchTickets() {
           </div>
 
           <div>
-            <Label htmlFor="numTickets" className="text-gray-200">
+            <Label htmlFor="numTickets" className="text-gray-300 text-sm font-medium">
               Number of Tickets
             </Label>
             <Input
@@ -143,36 +164,62 @@ export default function GenerateBatchTickets() {
               max="1000"
               value={numTickets}
               onChange={(e) => setNumTickets(parseInt(e.target.value) || 1)}
-              className="mt-1 bg-gray-900 border-gray-700 text-white"
+              className="mt-2 bg-black/30 border-gray-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
 
           <div>
-            <Label htmlFor="batchCode" className="text-gray-200">
+            <Label htmlFor="price" className="text-gray-300 text-sm font-medium">
+              Price per Ticket (UGX)
+            </Label>
+            <Input
+              id="price"
+              type="number"
+              min="0"
+              value={price}
+              onChange={(e) => setPrice(parseInt(e.target.value) || 0)}
+              className="mt-2 bg-black/30 border-gray-700 text-white focus:ring-2 focus:ring-blue-500"
+              required
+            />
+            <p className="text-xs text-gray-400 mt-1">Enter 0 for free tickets</p>
+          </div>
+
+          <div>
+            <Label htmlFor="batchCode" className="text-gray-300 text-sm font-medium">
               Batch Code
             </Label>
             <Input
               id="batchCode"
               value={batchCode}
               onChange={(e) => setBatchCode(e.target.value)}
-              className="mt-1 bg-gray-900 border-gray-700 text-white"
+              className="mt-2 bg-black/30 border-gray-700 text-white focus:ring-2 focus:ring-purple-500"
               required
             />
-            <p className="text-sm text-gray-400 mt-1">
+            <p className="text-xs text-gray-400 mt-1">
               A unique batch code is automatically generated. You can modify it if needed.
             </p>
           </div>
 
-          <Button
-            type="submit"
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
-            disabled={loading}
+          <motion.div
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ duration: 0.1 }}
           >
-            {loading ? "Generating..." : "Generate Batch Tickets"}
-          </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold py-3 rounded-xl shadow-lg transition-all"
+            >
+              {loading ? "Generating..." : "Generate Batch Tickets"}
+            </Button>
+          </motion.div>
         </form>
-      </div>
+      </motion.div>
+
+      <p className="text-gray-500 text-xs mt-8 text-center">
+        Powered by Supabase • Secure Ticket Management
+      </p>
     </div>
   );
 }

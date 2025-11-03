@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -22,26 +21,25 @@ export function Hero() {
   const [isUserInteracting, setIsUserInteracting] = useState(false);
   const [isLoadingInitial, setIsLoadingInitial] = useState(true);
 
-  // Fetch gallery images on mount
+  // Fetch gallery images
   useEffect(() => {
     let isMounted = true;
-
     async function fetchGalleryImages() {
       try {
         const { data, error: supabaseError } = await supabase
           .from('gallery_images')
           .select('*')
           .order('created_at', { ascending: false });
-          
+
         if (supabaseError) throw supabaseError;
-        
+
         if (isMounted) {
           if (data && data.length > 0) {
             const formattedImages = data.map(img => ({
               id: img.id,
               url: img.url,
-              alt: img.original_name 
-                ? `Performance at TIPAC theatre program, showcasing ${img.original_name}` 
+              alt: img.original_name
+                ? `Performance at TIPAC theatre program, showcasing ${img.original_name}`
                 : 'TIPAC performance image',
               filename: img.filename,
               original_name: img.original_name
@@ -62,16 +60,14 @@ export function Hero() {
     }
 
     fetchGalleryImages();
-
     return () => {
       isMounted = false;
     };
   }, []);
 
-  // Setup auto-rotation interval
+  // Auto-rotation
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-
     const startRotation = () => {
       if (galleryImages.length > 1 && !isUserInteracting) {
         interval = setInterval(() => {
@@ -79,20 +75,10 @@ export function Hero() {
         }, 5000);
       }
     };
-
-    const stopRotation = () => {
-      if (interval) {
-        clearInterval(interval);
-        interval = null;
-      }
-    };
-
     startRotation();
-
-    return () => stopRotation();
+    return () => interval && clearInterval(interval);
   }, [galleryImages.length, isUserInteracting]);
 
-  // Handle user interaction timeout
   const handleUserInteraction = useCallback(() => {
     setIsUserInteracting(true);
     setTimeout(() => setIsUserInteracting(false), 10000);
@@ -100,16 +86,14 @@ export function Hero() {
 
   const goToPrevious = () => {
     handleUserInteraction();
-    setCurrentImageIndex(prevIndex => 
+    setCurrentImageIndex(prevIndex =>
       prevIndex === 0 ? galleryImages.length - 1 : prevIndex - 1
     );
   };
 
   const goToNext = () => {
     handleUserInteraction();
-    setCurrentImageIndex(prevIndex => 
-      (prevIndex + 1) % galleryImages.length
-    );
+    setCurrentImageIndex(prevIndex => (prevIndex + 1) % galleryImages.length);
   };
 
   const goToIndex = (index: number) => {
@@ -132,19 +116,27 @@ export function Hero() {
     return (
       <section className="relative w-full h-screen flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
         <div className="text-center px-4 animate-fade-in">
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 drop-shadow-2xl">
-            TIPAC
-          </h1>
+          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 drop-shadow-2xl">TIPAC</h1>
           <p className="text-2xl md:text-3xl text-white/90 mb-10 max-w-2xl mx-auto leading-relaxed">
             Theatre Initiative for the Pearl of Africa Children
           </p>
-          <p className="text-lg text-white/70 mb-10">{error || 'No gallery images available at the moment.'}</p>
+          <p className="text-lg text-white/70 mb-10">
+            {error || 'No gallery images available at the moment.'}
+          </p>
           <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center">
-            <Button asChild size="lg" className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 font-bold shadow-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl">
-              <Link href="/events">Upcoming Events</Link>
+            <Button
+              asChild
+              size="lg"
+              className="sleek-btn amber"
+            >
+              <Link href="/tickets">Buy Ticket</Link>
             </Button>
-            <Button asChild size="lg" className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 font-bold shadow-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl">
-                <Link href="/tickets">Buy Ticket</Link>
+            <Button
+              asChild
+              size="lg"
+              className="sleek-btn blue"
+            >
+              <Link href="/events">Upcoming Events</Link>
             </Button>
           </div>
         </div>
@@ -155,83 +147,38 @@ export function Hero() {
   return (
     <>
       <Head>
-        <link 
+        <link
           rel="preload"
           href={galleryImages[currentImageIndex]?.url || '/images/fallback-placeholder.jpg'}
           as="image"
           fetchPriority="high"
         />
       </Head>
+
       <section className="relative w-full h-screen overflow-hidden">
+        {/* Background images */}
         <div className="absolute inset-0">
           {galleryImages.map((image, index) => (
-            <div 
+            <div
               key={image.id}
               className={`absolute inset-0 transition-all duration-1000 ease-in-out ${
                 index === currentImageIndex ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
               }`}
             >
-              <div className="relative w-full h-full">
-                <Image
-                  src={image.url}
-                  alt={image.alt || "TIPAC performance image"}
-                  fill
-                  className="object-cover"
-                  priority={index === currentImageIndex}
-                  sizes="100vw"
-                  onError={(e) => {
-                    e.currentTarget.src = '/placeholder-image.jpg';
-                  }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent"></div>
-              </div>
+              <Image
+                src={image.url}
+                alt={image.alt || 'TIPAC performance image'}
+                fill
+                className="object-cover"
+                priority={index === currentImageIndex}
+                sizes="100vw"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent"></div>
             </div>
           ))}
         </div>
-        
-        {/* Navigation Controls */}
-        {galleryImages.length > 1 && (
-          <>
-            {/* Navigation Arrows */}
-            <button 
-              onClick={goToPrevious}
-              className="absolute left-6 top-1/2 -translate-y-1/2 bg-black/40 backdrop-blur-sm text-white p-3 rounded-full hover:bg-black/60 hover:scale-110 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/50 shadow-lg z-20"
-              aria-label="Previous image"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            
-            <button 
-              onClick={goToNext}
-              className="absolute right-6 top-1/2 -translate-y-1/2 bg-black/40 backdrop-blur-sm text-white p-3 rounded-full hover:bg-black/60 hover:scale-110 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/50 shadow-lg z-20"
-              aria-label="Next image"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-            
-            {/* Image Indicators */}
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex space-x-3 z-20">
-              {galleryImages.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => goToIndex(index)}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/50 ${
-                    index === currentImageIndex 
-                      ? 'bg-white scale-125 shadow-md' 
-                      : 'bg-white/50 hover:bg-white/70 hover:scale-110'
-                  }`}
-                  aria-label={`Go to image ${index + 1} of ${galleryImages.length}`}
-                />
-              ))}
-            </div>
-          </>
-        )}
-        
-        {/* Content Overlay */}
+
+        {/* Content */}
         <div className="absolute inset-0 flex items-center justify-center text-center text-white z-10 px-4 animate-fade-in">
           <div className="max-w-4xl mx-auto">
             <h1 className="text-5xl md:text-7xl font-bold mb-6 drop-shadow-2xl leading-tight">
@@ -241,11 +188,11 @@ export function Hero() {
               Theatre Initiative for the Pearl of Africa Children
             </p>
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center">
-              <Button asChild size="lg" className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-sm sm:text-base md:text-lg px-3 sm:px-6 md:px-8 py-3 sm:py-4 font-bold shadow-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl min-h-12 sm:min-h-14">
-                <Link href="/events">Upcoming Events</Link>
-              </Button>
-              <Button asChild size="lg" className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-sm sm:text-base md:text-lg px-3 sm:px-6 md:px-8 py-3 sm:py-4 font-bold shadow-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl min-h-12 sm:min-h-14">
+              <Button asChild size="lg" className="sleek-btn amber">
                 <Link href="/tickets">Buy Ticket</Link>
+              </Button>
+              <Button asChild size="lg" className="sleek-btn blue">
+                <Link href="/events">Upcoming Events</Link>
               </Button>
             </div>
           </div>
@@ -265,6 +212,57 @@ export function Hero() {
         }
         .animate-fade-in {
           animation: fade-in 1s ease-out forwards;
+        }
+
+        .sleek-btn {
+          position: relative;
+          font-weight: 700;
+          padding: 1rem 2.5rem;
+          border-radius: 1.25rem;
+          overflow: hidden;
+          transition: all 0.3s ease;
+          backdrop-filter: blur(10px);
+          border: 2px solid rgba(255, 255, 255, 0.2);
+          box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          font-size: 1.1rem;
+        }
+
+        .sleek-btn::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0.3));
+          border-radius: inherit;
+          opacity: 0;
+          transition: opacity 0.4s ease;
+        }
+
+        .sleek-btn:hover::before {
+          opacity: 1;
+        }
+
+        .sleek-btn.amber {
+          background: linear-gradient(135deg, #ffc107, #ff6b00);
+          color: white;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+          box-shadow: 0 4px 25px rgba(255, 166, 0, 0.4);
+        }
+        .sleek-btn.amber:hover {
+          transform: translateY(-2px) scale(1.05);
+          box-shadow: 0 8px 35px rgba(255, 166, 0, 0.6);
+        }
+
+        .sleek-btn.blue {
+          background: linear-gradient(135deg, #6366f1, #3b82f6);
+          color: white;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+          box-shadow: 0 4px 25px rgba(59, 130, 246, 0.3);
+        }
+        .sleek-btn.blue:hover {
+          transform: translateY(-2px) scale(1.05);
+          box-shadow: 0 8px 35px rgba(59, 130, 246, 0.5);
         }
       `}</style>
     </>

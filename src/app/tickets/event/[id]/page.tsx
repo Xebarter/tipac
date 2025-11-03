@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 
 interface Event {
   id: string;
@@ -18,20 +18,20 @@ interface Event {
   description: string;
 }
 
-interface TicketType {
+interface Ticket {
   id: string;
   event_id: string;
-  name: string;
   price: number;
-  is_active: boolean;
+  status: string;
 }
 
-export default function TicketsPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [events, setEvents] = useState<Event[]>([]);
-  const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
-  const [selectedTicketType, setSelectedTicketType] = useState<string>("");
+export default function EventTicketsPage() {
+  const params = useParams();
+  const eventId = params.id as string;
+  
+  const [event, setEvent] = useState<Event | null>(null);
+  const [ticketPrice, setTicketPrice] = useState<number>(0);
+  const [ticketTypeId, setTicketTypeId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
   const [formData, setFormData] = useState({
     firstName: "",
@@ -48,73 +48,61 @@ export default function TicketsPage() {
     setIsClient(true);
   }, []);
 
-  // Fetch events and ticket types
+  // Fetch event and ticket info
   useEffect(() => {
-    if (!isClient) return;
+    if (!isClient || !eventId) return;
 
     const fetchData = async () => {
       try {
-        // Fetch events
-        const { data: eventsData, error: eventsError } = await supabase
+        // Fetch the specific event
+        const { data: eventData, error: eventError } = await supabase
           .from('events')
           .select('*')
+          .eq('id', eventId)
           .eq('is_published', true)
-          .order('date', { ascending: true });
+          .single();
 
-        if (eventsError) throw eventsError;
+        if (eventError) throw eventError;
+        
+        if (!eventData) {
+          setError("Event not found");
+          return;
+        }
 
-        // Fetch ticket types
+        setEvent(eventData);
+
+        // Fetch ticket price and type for this event from ticket_types table
         const { data: ticketTypesData, error: ticketTypesError } = await supabase
           .from('ticket_types')
-          .select('*')
+          .select('id, price')
+          .eq('event_id', eventId)
           .eq('is_active', true);
 
-        if (ticketTypesError) throw ticketTypesError;
-
-        setEvents(eventsData || []);
-        setTicketTypes(ticketTypesData || []);
-        
-        // Check if an event was passed as a query parameter
-        const eventIdFromQuery = searchParams?.get('event');
-        if (eventIdFromQuery) {
-          // Auto-select the first ticket type for this event if available
-          const firstTicketType = ticketTypesData?.find(t => t.event_id === eventIdFromQuery);
-          if (firstTicketType) {
-            setSelectedTicketType(firstTicketType.id);
-          }
-        } else if (ticketTypesData && ticketTypesData.length > 0) {
-          // Auto-select the first ticket type if available
-          setSelectedTicketType(ticketTypesData[0].id);
+        // If there's no ticket type data for this event, default to 0 (free)
+        if (ticketTypesError || !ticketTypesData || ticketTypesData.length === 0) {
+          setTicketPrice(0);
+          setTicketTypeId(null);
+        } else {
+          // Use the price and id of the first ticket type (in the future, we might want to show all types)
+          setTicketPrice(ticketTypesData[0].price);
+          setTicketTypeId(ticketTypesData[0].id);
         }
       } catch (err) {
         console.error("Error fetching data:", err);
-        setError("Failed to load events. Please try again later.");
+        setError("Failed to load event details. Please try again later.");
       }
     };
 
     fetchData();
-  }, [searchParams, isClient]);
+  }, [eventId, isClient]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const getTicketTypeById = (ticketTypeId: string) => {
-    return ticketTypes.find(t => t.id === ticketTypeId);
-  };
-
-  const getEventById = (eventId: string) => {
-    return events.find(event => event.id === eventId);
-  };
-
-  const getTicketTypesForEvent = (eventId: string) => {
-    return ticketTypes.filter(t => t.event_id === eventId && t.is_active);
-  };
-
   const getTotalPrice = () => {
-    const ticketType = getTicketTypeById(selectedTicketType);
-    return ticketType ? ticketType.price * quantity : 0;
+    return ticketPrice * quantity;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -124,8 +112,8 @@ export default function TicketsPage() {
 
     try {
       // Validation
-      if (!selectedTicketType) {
-        throw new Error("Please select a ticket type");
+      if (!eventId) {
+        throw new Error("Event not found");
       }
 
       if (quantity <= 0) {
@@ -134,11 +122,6 @@ export default function TicketsPage() {
 
       if (!formData.firstName || !formData.lastName || !formData.email) {
         throw new Error("Please fill in all required fields");
-      }
-
-      const ticketType = getTicketTypeById(selectedTicketType);
-      if (!ticketType) {
-        throw new Error("Selected ticket type not found");
       }
 
       // If there's a price, process payment with PesaPal
@@ -153,8 +136,9 @@ export default function TicketsPage() {
             email: formData.email,
             phoneNumber: formData.phone,
             amount: totalPrice.toString(),
-            eventId: ticketType.event_id,
-            quantity: quantity
+            eventId: eventId,
+            quantity: quantity,
+            ticketTypeId: ticketTypeId
           }),
         });
 
@@ -171,11 +155,12 @@ export default function TicketsPage() {
         const { data, error } = await supabase
           .from('tickets')
           .insert([{
-            event_id: ticketType.event_id,
+            event_id: eventId,
+            ticket_type_id: ticketTypeId,
             email: formData.email,
             quantity: quantity,
             status: 'confirmed',
-            price: ticketType.price,
+            price: ticketPrice,
             purchase_channel: 'online'
           }])
           .select();
@@ -183,7 +168,6 @@ export default function TicketsPage() {
         if (error) throw error;
 
         if (data && data[0]) {
-          const event = getEventById(ticketType.event_id);
           setSuccess(`Thank you! Your free ticket for ${event?.title} has been confirmed.`);
           
           // Reset form
@@ -206,7 +190,32 @@ export default function TicketsPage() {
 
   // Show loading state until client-side code is ready
   if (!isClient) {
-    return null; // Loading component will be shown instead
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="py-16 bg-gradient-to-b from-gray-900 to-black relative overflow-hidden">
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-red-900/50 border border-red-700 rounded-lg p-6">
+              <p className="text-red-200 text-center">{error}</p>
+              <div className="mt-6 text-center">
+                <Link href="/events">
+                  <Button className="bg-gradient-to-r from-purple-600 to-blue-600">
+                    Back to Events
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -234,121 +243,73 @@ export default function TicketsPage() {
           transition={{ duration: 0.8 }}
         >
           <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-4 bg-clip-text bg-gradient-to-r from-red-400 via-purple-400 to-blue-400">
-            Event Tickets
+            {event ? event.title : "Event Tickets"}
           </h2>
           <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-            Select an event and ticket type to purchase your tickets for TIPAC performances
+            {event ? "Purchase your tickets for this event" : "Select event and purchase your tickets"}
           </p>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-          {/* Events List with Ticket Types */}
-          <motion.div
-            className="lg:col-span-2 backdrop-blur-md bg-black/30 rounded-xl shadow-lg border border-gray-500/20 p-6 relative overflow-hidden"
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7 }}
-          >
-            <h3 className="text-2xl font-bold text-white mb-6">Available Events & Ticket Types</h3>
-            
-            {events.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-400 mb-4">No events available at the moment.</p>
-                <Link href="/events">
-                  <Button className="bg-gradient-to-r from-purple-600 to-blue-600">
-                    View All Events
-                  </Button>
-                </Link>
-              </div>
-            ) : (
-              <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2">
-                {events.map((event) => {
-                  const eventTicketTypes = getTicketTypesForEvent(event.id);
-                  
-                  return (
-                    <div key={event.id} className="border border-gray-700 rounded-xl bg-gray-800/20">
-                      <div className="p-4 border-b border-gray-700">
-                        <h4 className="font-bold text-white text-lg">{event.title}</h4>
-                        <div className="flex flex-wrap items-center gap-3 mt-2 text-sm">
-                          <span className="flex items-center text-gray-300">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            {new Date(event.date).toLocaleDateString("en-US", {
-                              weekday: "short",
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </span>
-                          <span className="flex items-center text-gray-300">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            {event.time}
-                          </span>
-                          <span className="flex items-center text-gray-300">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            {event.location}
-                          </span>
-                        </div>
-                        <p className="text-gray-400 mt-3 line-clamp-2">
-                          {event.description}
-                        </p>
+          {/* Event Details */}
+          {event && (
+            <motion.div
+              className="lg:col-span-2 backdrop-blur-md bg-black/30 rounded-xl shadow-lg border border-gray-500/20 p-6 relative overflow-hidden"
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.7 }}
+            >
+              <h3 className="text-2xl font-bold text-white mb-6">Event Details</h3>
+              
+              <div className="space-y-4">
+                <div className="p-5 rounded-xl border-2 border-purple-500 bg-gradient-to-r from-purple-900/30 to-blue-900/30 shadow-lg">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h4 className="font-bold text-white text-lg">{event.title}</h4>
+                      <div className="flex flex-wrap items-center gap-3 mt-2 text-sm">
+                        <span className="flex items-center text-gray-300">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          {new Date(event.date).toLocaleDateString("en-US", {
+                            weekday: "short",
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </span>
+                        <span className="flex items-center text-gray-300">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {event.time}
+                        </span>
+                        <span className="flex items-center text-gray-300">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          {event.location}
+                        </span>
                       </div>
-                      
-                      {eventTicketTypes.length > 0 ? (
-                        <div className="p-4 space-y-3">
-                          <h5 className="font-semibold text-gray-300">Available Ticket Types:</h5>
-                          <div className="space-y-2">
-                            {eventTicketTypes.map((ticketType) => {
-                              const isSelected = selectedTicketType === ticketType.id;
-                              
-                              return (
-                                <div 
-                                  key={ticketType.id}
-                                  className={`p-3 rounded-lg border cursor-pointer transition-all duration-300 ${
-                                    isSelected 
-                                      ? "border-purple-500 bg-gradient-to-r from-purple-900/30 to-blue-900/30" 
-                                      : "border-gray-600 hover:border-gray-500"
-                                  }`}
-                                  onClick={() => setSelectedTicketType(ticketType.id)}
-                                >
-                                  <div className="flex justify-between items-center">
-                                    <div>
-                                      <h6 className="font-medium text-white">{ticketType.name || "General Admission"}</h6>
-                                    </div>
-                                    <div className="text-right">
-                                      <p className="font-bold text-white">
-                                        {ticketType.price > 0 ? `UGX ${ticketType.price.toLocaleString()}` : "Free"}
-                                      </p>
-                                      {isSelected && (
-                                        <span className="inline-block mt-1 px-2 py-1 text-xs font-semibold text-purple-300 bg-purple-900/50 rounded-full">
-                                          Selected
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="p-4">
-                          <p className="text-gray-500 italic">No ticket types available for this event</p>
-                        </div>
-                      )}
+                      <p className="text-gray-400 mt-3">
+                        {event.description}
+                      </p>
                     </div>
-                  );
-                })}
+                    <div className="ml-4 text-right">
+                      <p className="font-bold text-lg text-white">
+                        {ticketPrice > 0 ? `UGX ${ticketPrice.toLocaleString()}` : "Free"}
+                      </p>
+                      <span className="inline-block mt-2 px-2 py-1 text-xs font-semibold text-purple-300 bg-purple-900/50 rounded-full">
+                        Selected
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
-          </motion.div>
+            </motion.div>
+          )}
 
           {/* Purchase Form */}
           <motion.div
@@ -388,32 +349,6 @@ export default function TicketsPage() {
             
             {!success && (
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <Label htmlFor="ticketType" className="text-gray-200 text-sm mb-1 block">
-                    Selected Ticket Type
-                  </Label>
-                  {selectedTicketType ? (
-                    <div className="p-4 bg-gray-800/50 border border-gray-600 rounded-lg">
-                      <h4 className="font-bold text-white">
-                        {getTicketTypeById(selectedTicketType)?.name || "General Admission"}
-                      </h4>
-                      <div className="flex flex-wrap items-center gap-2 mt-2 text-sm">
-                        <span className="text-gray-300">
-                          {getEventById(getTicketTypeById(selectedTicketType)?.event_id || "")?.title}
-                        </span>
-                        <span className="text-gray-400">•</span>
-                        <span className="font-bold text-white">
-                          {getTicketTypeById(selectedTicketType)?.price 
-                            ? `UGX ${getTicketTypeById(selectedTicketType)?.price.toLocaleString()}` 
-                            : "Free"}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-gray-400 text-sm">Please select a ticket type from the list</p>
-                  )}
-                </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="quantity" className="text-gray-200 text-sm">
                     Quantity
@@ -496,7 +431,7 @@ export default function TicketsPage() {
                       <p className="text-gray-200">Ticket Price:</p>
                     </div>
                     <p className="font-medium text-white">
-                      UGX {getTicketTypeById(selectedTicketType)?.price?.toLocaleString() || 0}
+                      UGX {ticketPrice.toLocaleString()}
                     </p>
                   </div>
                   <div className="flex justify-between items-center mb-2">
@@ -525,7 +460,7 @@ export default function TicketsPage() {
                   <Button
                     type="submit"
                     className="w-full h-12 text-base bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 text-white shadow-md hover:shadow-lg hover:opacity-90 transition-all duration-300 rounded-lg group relative overflow-hidden"
-                    disabled={loading || !selectedTicketType}
+                    disabled={loading || !event}
                   >
                     <span className="absolute inset-0 bg-gradient-to-r from-transparent to-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     {loading ? "Processing..." : getTotalPrice() > 0 ? "Proceed to Payment" : "Get Free Tickets"}

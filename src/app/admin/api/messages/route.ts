@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMongoClient } from "@/lib/mongodb";
-
-const dbName = "TIPAC";
+import { supabase } from "@/lib/supabaseClient";
 
 export async function GET(req: NextRequest) {
   // Check authentication
@@ -14,16 +12,16 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const client = await getMongoClient();
-    const db = client.db(dbName);
-    const collection = db.collection("contacts");
+    const { data: messages, error } = await supabase
+      .from('contact_messages')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    const messages = await collection
-      .find({})
-      .sort({ createdAt: -1 })
-      .toArray();
+    if (error) {
+      throw error;
+    }
 
-    console.log(`Fetched ${messages.length} messages from MongoDB`);
+    console.log(`Fetched ${messages.length} messages from Supabase`);
     return NextResponse.json({ messages });
   } catch (error) {
     console.error("Failed to fetch messages:", error);
@@ -55,16 +53,17 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    const client = await getMongoClient();
-    const db = client.db(dbName);
-    const collection = db.collection("contacts");
+    const { data, error } = await supabase
+      .from('contact_messages')
+      .update(updateData)
+      .eq('id', id)
+      .select();
 
-    const result = await collection.updateOne(
-      { _id: id },
-      { $set: updateData }
-    );
+    if (error) {
+      throw error;
+    }
     
-    if (result.matchedCount === 0) {
+    if (data.length === 0) {
       return NextResponse.json(
         { error: "Message not found" },
         { status: 404 }
