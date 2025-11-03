@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import ReactPlayer from "react-player/youtube";
+import ReactPlayer from "react-player";
 
 interface YouTubeVideo {
   id: string;
@@ -194,11 +194,18 @@ export function YouTubeVideos() {
                         onPause={() => setPlayingVideo(null)}
                         onEnded={() => setPlayingVideo(null)}
                         light={false}
+                        fallback={
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                            <p className="text-gray-500">Loading video...</p>
+                          </div>
+                        }
                         config={{
                           youtube: {
+                            embedOptions: {},
                             playerVars: {
                               modestbranding: 1,
                               rel: 0,
+                              origin: typeof window !== 'undefined' ? window.location.origin : ''
                             }
                           }
                         }}
@@ -206,6 +213,7 @@ export function YouTubeVideos() {
                     </div>
                   ) : (
                     <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img 
                         src={video.thumbnail} 
                         alt={video.title}
