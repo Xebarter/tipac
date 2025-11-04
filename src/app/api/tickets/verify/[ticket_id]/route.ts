@@ -39,10 +39,13 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
         message: "Ticket already used",
         ticket: {
           id: ticket.id,
-          event: ticket.events?.title,
-          date: ticket.events?.date,
-          location: ticket.events?.location,
-          purchase_channel: ticket.purchase_channel
+          event: {
+            title: ticket.events?.title,
+            date: ticket.events?.date,
+            location: ticket.events?.location
+          },
+          purchase_channel: ticket.purchase_channel,
+          used: ticket.used
         }
       });
     }
@@ -56,10 +59,13 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
           message: "Ticket not activated",
           ticket: {
             id: ticket.id,
-            event: ticket.events?.title,
-            date: ticket.events?.date,
-            location: ticket.events?.location,
-            purchase_channel: ticket.purchase_channel
+            event: {
+              title: ticket.events?.title,
+              date: ticket.events?.date,
+              location: ticket.events?.location
+            },
+            purchase_channel: ticket.purchase_channel,
+            used: ticket.used
           }
         });
       }
@@ -79,10 +85,13 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
           message: "Ticket batch has been deactivated",
           ticket: {
             id: ticket.id,
-            event: ticket.events?.title,
-            date: ticket.events?.date,
-            location: ticket.events?.location,
-            purchase_channel: ticket.purchase_channel
+            event: {
+              title: ticket.events?.title,
+              date: ticket.events?.date,
+              location: ticket.events?.location
+            },
+            purchase_channel: ticket.purchase_channel,
+            used: ticket.used
           }
         });
       }
@@ -112,7 +121,8 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
         },
         buyer_name: ticket.buyer_name,
         buyer_phone: ticket.buyer_phone,
-        purchase_channel: ticket.purchase_channel
+        purchase_channel: ticket.purchase_channel,
+        used: ticket.used
       }
     });
   } catch (error: any) {

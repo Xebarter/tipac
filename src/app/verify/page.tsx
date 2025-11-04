@@ -187,7 +187,7 @@ export default function TicketScannerPage() {
                       <div className="text-white">{result.ticket.id.substring(0, 8)}...</div>
                       
                       <div className="text-gray-400">Event:</div>
-                      <div className="text-white">{result.ticket.event}</div>
+                      <div className="text-white">{result.ticket.event?.title || result.ticket.event}</div>
                       
                       <div className="text-gray-400">Type:</div>
                       <div className="text-white capitalize">{result.ticket.purchase_channel?.replace('_', ' ') || 'Online'}</div>

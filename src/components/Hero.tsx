@@ -244,35 +244,38 @@ export function Hero() {
           opacity: 1;
         }
 
-        /* Buy Ticket (brighter, more prominent) */
-        .sleek-btn.amber {
-          /* brighter golden-orange to warm red gradient */
-          background: linear-gradient(135deg, #ffbf49 0%, #ff6b3a 60%, #ff2d00 100%);
-          color: white;
-          text-shadow: 0 1px 3px rgba(0,0,0,0.25);
-          box-shadow: 0 6px 32px rgba(255, 99, 31, 0.65), 0 1px 0 rgba(255,255,255,0.03) inset;
-          border: 1px solid rgba(255,255,255,0.12);
+        /* Buy Ticket (brightest, most prominent) */
+        .sleek-btn.amber, .sleek-btn.amber:where(*) {
+          /* vibrant coral-red to golden-yellow gradient - maximum brightness */
+          background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 30%, #ffa500 60%, #ffb700 100%) !important;
+          color: #ffffff !important;
+          text-shadow: 0 2px 8px rgba(255, 107, 53, 0.3), 0 1px 3px rgba(0,0,0,0.2);
+          box-shadow: 0 10px 40px 0 rgba(255, 107, 53, 0.9), 0 1px 0 rgba(255,255,255,0.1) inset;
+          border: 2px solid #ffffff;
+          filter: brightness(1.1) saturate(1.2);
+          font-weight: 700;
         }
         .sleek-btn.amber:hover {
-          transform: translateY(-3px) scale(1.06);
-          box-shadow: 0 12px 48px rgba(255, 99, 31, 0.8), 0 1px 0 rgba(255,255,255,0.05) inset;
-          filter: saturate(1.05) drop-shadow(0 6px 18px rgba(255, 99, 31, 0.25));
+          transform: translateY(-5px) scale(1.1) rotate(-1deg);
+          box-shadow: 0 18px 60px 0 rgba(255, 107, 53, 1), 0 1px 0 rgba(255,255,255,0.12) inset;
+          filter: brightness(1.18) saturate(1.28) drop-shadow(0 10px 28px rgba(255, 107, 53, 0.4));
         }
 
-        /* Upcoming Events (muted compared to Buy Ticket) */
-        .sleek-btn.blue {
-          /* slightly more muted blue gradient */
-          background: linear-gradient(135deg, #5b6ad8 0%, #4b7bd3 60%, #3b82f6 100%);
-          color: white;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.18);
-          box-shadow: 0 4px 20px rgba(59, 130, 246, 0.28);
-          border: 1px solid rgba(255,255,255,0.06);
-          opacity: 0.96;
+        /* Upcoming Events (bright, but secondary) */
+        .sleek-btn.blue, .sleek-btn.blue:where(*) {
+          /* vibrant cyan-blue to purple gradient - bright but less intense */
+          background: linear-gradient(135deg, #00d4ff 0%, #0099ff 40%, #5b5bff 80%, #8b5cf6 100%) !important;
+          color: #ffffff !important;
+          text-shadow: 0 1px 4px rgba(0, 153, 255, 0.2), 0 1px 2px rgba(0,0,0,0.15);
+          box-shadow: 0 8px 32px rgba(0, 153, 255, 0.5), 0 1px 0 rgba(255,255,255,0.08) inset;
+          border: 2px solid #ffffff;
+          filter: brightness(1.05) saturate(1.15);
+          font-weight: 600;
         }
         .sleek-btn.blue:hover {
-          transform: translateY(-2px) scale(1.04);
-          box-shadow: 0 8px 30px rgba(59, 130, 246, 0.45);
-          filter: saturate(0.98);
+          transform: translateY(-4px) scale(1.08) rotate(1deg);
+          box-shadow: 0 14px 48px rgba(0, 153, 255, 0.65);
+          filter: brightness(1.12) saturate(1.22);
         }
       `}</style>
     </>
