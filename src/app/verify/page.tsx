@@ -65,12 +65,15 @@ export default function TicketScannerPage() {
           },
           message: "Ticket marked as used successfully"
         });
+        return true; // Successfully marked as used
       } else {
         setError(data.message || "Failed to mark ticket as used");
+        return false;
       }
     } catch (err) {
       setError("Failed to mark ticket as used");
       console.error(err);
+      return false;
     }
   };
 
@@ -83,8 +86,14 @@ export default function TicketScannerPage() {
 
   // Mark as used and close popup
   const handleMarkAsUsed = async () => {
-    await markAsUsed();
-    // Keep the popup open to show success message
+    const success = await markAsUsed();
+    if (success) {
+      // Wait a moment to show the success message, then close the popup
+      setTimeout(() => {
+        closePopup();
+      }, 1500);
+    }
+    // If not successful, keep the popup open to show the error
   };
 
   return (
@@ -244,15 +253,7 @@ export default function TicketScannerPage() {
                     </Button>
                   </div>
                   
-                  {/* Success Message After Marking as Used */}
-                  {result.ticket.used && (
-                    <div className="mt-4 p-3 bg-green-900/50 rounded-lg flex items-center">
-                      <svg className="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                      </svg>
-                      <span className="text-green-300">Ticket marked as used successfully!</span>
-                    </div>
-                  )}
+                  {/* Success Message After Marking as Used - removed as we now close the popup */}
                 </div>
               )}
               

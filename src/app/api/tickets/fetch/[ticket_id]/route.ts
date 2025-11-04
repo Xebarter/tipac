@@ -61,7 +61,7 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
       name: sponsor.sponsors?.name || ''
     })) || [];
 
-    // Format the response data
+    // Format the response data to match what the PDF generator expects
     const ticketData = {
       id: ticket.id,
       event: {
@@ -72,11 +72,10 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
         organizer_logo_url: ticket.events?.organizer_logo_url || null,
         sponsor_logos: sponsorLogos
       },
-      ticket_type: ticket.ticket_types?.name || 'General Admission',
-      buyer_name: ticket.buyer_name,
-      buyer_phone: ticket.buyer_phone,
-      purchase_channel: ticket.purchase_channel,
-      confirmation_code: ticket.pesapal_transaction_id || null
+      buyer_name: ticket.buyer_name || '',
+      buyer_phone: ticket.buyer_phone || '',
+      purchase_channel: ticket.purchase_channel || 'online',
+      confirmation_code: ticket.pesapal_transaction_id || ticket.confirmation_code || null
     };
 
     return NextResponse.json(ticketData);

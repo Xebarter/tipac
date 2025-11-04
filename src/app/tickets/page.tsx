@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { generateTicketPDF } from "@/lib/ticketGenerator";
+import { generateTicketPDF, generateMultiTicketPDF } from "@/lib/ticketGenerator";
 
 interface Event {
   id: string;
@@ -46,7 +46,7 @@ interface TicketFormProps {
   loading: boolean;
   selectedTicketType: string;
   downloadableTickets: any[];
-  onDownloadTicket: (ticket: any) => Promise<void>;
+  onDownloadTicket: (ticket: any, ticketNumber?: number, totalTickets?: number) => Promise<void>;
   onDownloadAll: () => Promise<void>;
   onClose: () => void;
   quantity: number;
@@ -89,14 +89,14 @@ const TicketForm: React.FC<TicketFormProps> = ({
 
             <div className="text-xs text-gray-600 mt-4 mb-2 font-medium">Your Tickets:</div>
             <div className="space-y-2 max-h-32 overflow-y-auto">
-              {downloadableTickets.map((t) => (
+              {downloadableTickets.map((t, index) => (
                 <div key={t.id} className="flex items-center justify-between gap-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-100">
                   <div>
                     <div className="font-medium text-gray-800 text-sm">#{t.id.substring(0, 8)}</div>
                     <div className="text-xs text-gray-600">{t.event.title}</div>
                   </div>
                   <Button
-                    onClick={() => onDownloadTicket(t)}
+                    onClick={() => onDownloadTicket(t, index + 1, downloadableTickets.length)}
                     className="text-xs px-3 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg shadow"
                   >
                     Download
@@ -218,21 +218,21 @@ const TicketForm: React.FC<TicketFormProps> = ({
               {getTicketTypeById(selectedTicketType)?.name || "Not selected"}
             </p>
           </div>
-          
+
           <div className="flex justify-between items-center mb-3 text-sm">
             <p className="text-gray-600">Unit Price:</p>
             <p className="font-medium text-gray-900">
               UGX {getTicketTypeById(selectedTicketType)?.price?.toLocaleString() || 0}
             </p>
           </div>
-          
+
           <div className="flex justify-between items-center mb-3 text-sm">
             <p className="text-gray-600">Quantity:</p>
             <p className="font-medium text-gray-900">
               {quantity}
             </p>
           </div>
-          
+
           <div className="flex justify-between items-center pt-4 border-t border-purple-200 text-base">
             <p className="text-gray-800 font-bold">Total:</p>
             <p className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
@@ -313,7 +313,7 @@ export default function TicketsPage() {
   // Scroll to selected event when it changes
   useEffect(() => {
     if (!isClient) return;
-    
+
     const eventIdFromQuery = searchParams?.get('event');
     if (eventIdFromQuery) {
       // Wait a bit for the DOM to be ready
@@ -399,18 +399,24 @@ export default function TicketsPage() {
     return ticketType ? ticketType.price * quantity : 0;
   }, [selectedTicketType, quantity, getTicketTypeById]);
 
-  const downloadTicket = useCallback(async (ticket: any) => {
+  const downloadTicket = useCallback(async (ticket: any, ticketNumber?: number, totalTickets?: number) => {
     try {
+      // Add ticket number information to ticket data if provided
+      const ticketData = ticketNumber !== undefined && totalTickets !== undefined
+        ? { ...ticket, ticketNumber, totalTickets }
+        : ticket;
+
       // Generate the PDF directly without any delay
-      const blob = await generateTicketPDF(ticket);
+      const blob = await generateTicketPDF(ticketData);
 
       // Create object URL and trigger download immediately
       const url = URL.createObjectURL(blob);
 
       // Use feature-detection: if anchor download is supported, use it; otherwise open in new tab (Safari fallback)
       const a = document.createElement("a");
+      const ticketLabel = ticketNumber !== undefined ? `ticket-${ticketNumber}` : `ticket-${ticket.id.substring(0, 8)}`;
       a.href = url;
-      a.download = `tipac-ticket-${ticket.id.substring(0, 8)}.pdf`;
+      a.download = `tipac-${ticketLabel}.pdf`;
       a.rel = "noopener noreferrer";
 
       const supportsDownload = typeof a.download !== "undefined";
@@ -441,17 +447,64 @@ export default function TicketsPage() {
     }
   }, []);
 
+  // New function to download all tickets in a single PDF
+  const downloadAllTickets = useCallback(async (tickets: any[]) => {
+    try {
+      // Generate a single PDF with all tickets
+      const blob = await generateMultiTicketPDF(tickets);
+
+      // Create object URL and trigger download immediately
+      const url = URL.createObjectURL(blob);
+
+      // Use feature-detection: if anchor download is supported, use it; otherwise open in new tab (Safari fallback)
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `tipac-${tickets.length}-tickets.pdf`;
+      a.rel = "noopener noreferrer";
+
+      const supportsDownload = typeof a.download !== "undefined";
+
+      if (supportsDownload) {
+        // Append to body and click
+        document.body.appendChild(a);
+        // Try to trigger click in a microtask to stay within user-initiated gesture context where possible
+        await Promise.resolve();
+        a.click();
+        document.body.removeChild(a);
+      } else {
+        // Fallback: open the PDF in a new tab (some Safari versions ignore download on blob URLs)
+        const newWindow = window.open(url, "_blank", "noopener,noreferrer");
+        if (!newWindow) {
+          // If popup blocked, try setting location.href as last resort
+          window.location.href = url;
+        }
+      }
+
+      // Revoke object URL shortly after to allow the browser to finish the download
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } catch (error) {
+      console.error("Error generating multi-ticket PDF:", error);
+      throw error;
+    }
+  }, []);
+
   const onDownloadAll = useCallback(async () => {
-    // Attempt to re-download all tickets sequentially
-    for (let i = 0; i < downloadableTickets.length; i++) {
-      try {
-        if (i > 0) await new Promise((res) => setTimeout(res, 500));
-        await downloadTicket(downloadableTickets[i]);
-      } catch (err) {
-        console.error('Manual download failed for', downloadableTickets[i].id, err);
+    // Download all tickets in a single PDF
+    try {
+      await downloadAllTickets(downloadableTickets);
+    } catch (err) {
+      console.error('Manual download failed', err);
+      // Fallback to individual downloads
+      for (let i = 0; i < downloadableTickets.length; i++) {
+        try {
+          if (i > 0) await new Promise((res) => setTimeout(res, 500));
+          await downloadTicket(downloadableTickets[i], i + 1, downloadableTickets.length);
+        } catch (err) {
+          console.error('Manual download failed for', downloadableTickets[i].id, err);
+        }
       }
     }
-  }, [downloadableTickets, downloadTicket]);
+  }, [downloadableTickets, downloadTicket, downloadAllTickets]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -511,19 +564,21 @@ export default function TicketsPage() {
         // Redirect to PesaPal payment page
         window.location.href = data.url;
       } else {
-        // For free tickets, create ticket directly
+        // For free tickets, create tickets directly (one record per ticket)
+        const ticketsToInsert = Array(quantity).fill(null).map(() => ({
+          event_id: ticketType.event_id,
+          email: formData.email,
+          quantity: 1, // Each record represents one ticket
+          status: 'confirmed',
+          price: ticketType.price,
+          purchase_channel: 'online',
+          buyer_name: `${formData.firstName} ${formData.lastName}`,
+          buyer_phone: normalizedPhone
+        }));
+
         const { data, error } = await supabase
           .from('tickets')
-          .insert([{
-            event_id: ticketType.event_id,
-            email: formData.email,
-            quantity: quantity,
-            status: 'confirmed',
-            price: ticketType.price,
-            purchase_channel: 'online',
-            buyer_name: `${formData.firstName} ${formData.lastName}`,
-            buyer_phone: normalizedPhone
-          }])
+          .insert(ticketsToInsert)
           .select();
 
         if (error) throw error;
@@ -535,7 +590,7 @@ export default function TicketsPage() {
           const createdRows = Array.isArray(data) ? data : [data[0]];
 
           // Build ticket objects to download
-          const ticketsToDownload = createdRows.map((row: any) => ({
+          const ticketsToDownload = createdRows.map((row: any, index: number) => ({
             id: row.id,
             event: {
               title: event?.title || "",
@@ -549,17 +604,23 @@ export default function TicketsPage() {
 
           // Attempt to download each ticket sequentially with a small delay to avoid browser throttling
           let allDownloadsSucceeded = true;
-          for (let i = 0; i < ticketsToDownload.length; i++) {
-            try {
-              // Small delay between downloads to reduce chance of browser blocking
-              if (i > 0) await new Promise((res) => setTimeout(res, 500));
-              await downloadTicket(ticketsToDownload[i]);
-            } catch (downloadError) {
-              console.error('Download failed for ticket', ticketsToDownload[i].id, downloadError);
-              allDownloadsSucceeded = false;
+          try {
+            // Try to download all tickets in a single PDF
+            await downloadAllTickets(ticketsToDownload);
+          } catch (downloadError) {
+            console.error('Multi-ticket download failed, falling back to individual downloads', downloadError);
+            // Fallback to individual downloads
+            for (let i = 0; i < ticketsToDownload.length; i++) {
+              try {
+                // Small delay between downloads to reduce chance of browser blocking
+                if (i > 0) await new Promise((res) => setTimeout(res, 500));
+                await downloadTicket(ticketsToDownload[i], i + 1, ticketsToDownload.length);
+              } catch (downloadError) {
+                console.error('Download failed for ticket', ticketsToDownload[i].id, downloadError);
+                allDownloadsSucceeded = false;
+              }
             }
           }
-
 
           if (allDownloadsSucceeded) {
             setSuccess(`Thank you! Your free ticket for ${event?.title} has been confirmed. The ticket should be downloading now. Check your downloads folder.`);
@@ -631,7 +692,7 @@ export default function TicketsPage() {
   return (
     <section className="py-8 sm:py-12 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 min-h-screen relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.1)_0%,transparent_70%)] pointer-events-none" />
-      
+
       {/* Decorative elements */}
       <div className="absolute top-0 left-0 w-72 h-72 bg-gradient-to-r from-purple-400/20 to-indigo-400/20 rounded-full blur-3xl pointer-events-none -translate-x-1/2 -translate-y-1/2" />
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-r from-pink-400/20 to-rose-400/20 rounded-full blur-3xl pointer-events-none translate-x-1/2 translate-y-1/2" />
@@ -703,12 +764,12 @@ export default function TicketsPage() {
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.5 }}
-                      animate={isSelected ? { 
+                      animate={isSelected ? {
                         scale: [1, 1.02, 1],
                         transition: { duration: 0.5 }
                       } : {}}
                     >
-                      <div 
+                      <div
                         className={`p-5 sm:p-6 border-b border-gray-100 ${isSelected ? 'bg-gradient-to-r from-purple-100/50 to-pink-100/50' : 'bg-gradient-to-r from-purple-50/50 to-pink-50/50'}`}
                       >
                         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -770,8 +831,8 @@ export default function TicketsPage() {
                                 <motion.div
                                   key={ticketType.id}
                                   className={`group p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 relative overflow-hidden ${selectedTicketType === ticketType.id
-                                      ? "border-purple-500 bg-gradient-to-br from-purple-50/70 via-pink-50/70 to-rose-50/70 shadow-md ring-2 ring-purple-500/20"
-                                      : "border-gray-200 bg-white hover:border-purple-300 hover:shadow-md hover:bg-gradient-to-br hover:from-purple-50/30 hover:to-pink-50/30"
+                                    ? "border-purple-500 bg-gradient-to-br from-purple-50/70 via-pink-50/70 to-rose-50/70 shadow-md ring-2 ring-purple-500/20"
+                                    : "border-gray-200 bg-white hover:border-purple-300 hover:shadow-md hover:bg-gradient-to-br hover:from-purple-50/30 hover:to-pink-50/30"
                                     }`}
                                   whileHover={{ y: -3, scale: 1.02 }}
                                   whileTap={{ scale: 0.98 }}
@@ -786,8 +847,8 @@ export default function TicketsPage() {
                                   <div className="relative flex justify-between items-start">
                                     <div className="flex items-center space-x-3">
                                       <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-medium shadow-lg ring-1 ring-white/20 ${ticketType.price > 0
-                                          ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500'
-                                          : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500'
+                                        ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500'
+                                        : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500'
                                         }`}>
                                         {ticketType.price > 0 ? (
                                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -855,11 +916,11 @@ export default function TicketsPage() {
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Ticket Information</h2>
               <div className="bg-gradient-to-r from-purple-500 to-pink-500 w-9 h-9 rounded-lg flex items-center justify-center shadow">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
             </div>
-            
+
             <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-5 mb-6 border border-purple-100 shadow-sm">
               <div className="flex items-start">
                 <div className="mr-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg p-2 shadow">
@@ -872,7 +933,7 @@ export default function TicketsPage() {
                 </p>
               </div>
             </div>
-            
+
             <TicketForm
               formData={formData}
               onInputChange={handleInputChange}

@@ -17,7 +17,7 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
       .from('tickets')
       .select(`
         *,
-        events(title, date, location)
+        events(title, date, location, organizer_name, organizer_logo_url, sponsor_logos)
       `)
       .eq('id', ticketId)
       .single();
@@ -42,10 +42,16 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
           event: {
             title: ticket.events?.title,
             date: ticket.events?.date,
-            location: ticket.events?.location
+            location: ticket.events?.location,
+            organizer_name: ticket.events?.organizer_name,
+            organizer_logo_url: ticket.events?.organizer_logo_url,
+            sponsor_logos: ticket.events?.sponsor_logos
           },
+          buyer_name: ticket.buyer_name,
+          buyer_phone: ticket.buyer_phone,
           purchase_channel: ticket.purchase_channel,
-          used: ticket.used
+          used: ticket.used,
+          confirmation_code: ticket.confirmation_code
         }
       });
     }
@@ -62,10 +68,16 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
             event: {
               title: ticket.events?.title,
               date: ticket.events?.date,
-              location: ticket.events?.location
+              location: ticket.events?.location,
+              organizer_name: ticket.events?.organizer_name,
+              organizer_logo_url: ticket.events?.organizer_logo_url,
+              sponsor_logos: ticket.events?.sponsor_logos
             },
+            buyer_name: ticket.buyer_name,
+            buyer_phone: ticket.buyer_phone,
             purchase_channel: ticket.purchase_channel,
-            used: ticket.used
+            used: ticket.used,
+            confirmation_code: ticket.confirmation_code
           }
         });
       }
@@ -88,10 +100,16 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
             event: {
               title: ticket.events?.title,
               date: ticket.events?.date,
-              location: ticket.events?.location
+              location: ticket.events?.location,
+              organizer_name: ticket.events?.organizer_name,
+              organizer_logo_url: ticket.events?.organizer_logo_url,
+              sponsor_logos: ticket.events?.sponsor_logos
             },
+            buyer_name: ticket.buyer_name,
+            buyer_phone: ticket.buyer_phone,
             purchase_channel: ticket.purchase_channel,
-            used: ticket.used
+            used: ticket.used,
+            confirmation_code: ticket.confirmation_code
           }
         });
       }
@@ -117,12 +135,16 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
         event: {
           title: ticket.events?.title,
           date: ticket.events?.date,
-          location: ticket.events?.location
+          location: ticket.events?.location,
+          organizer_name: ticket.events?.organizer_name,
+          organizer_logo_url: ticket.events?.organizer_logo_url,
+          sponsor_logos: ticket.events?.sponsor_logos
         },
         buyer_name: ticket.buyer_name,
         buyer_phone: ticket.buyer_phone,
         purchase_channel: ticket.purchase_channel,
-        used: ticket.used
+        used: ticket.used,
+        confirmation_code: ticket.confirmation_code
       }
     });
   } catch (error: any) {
