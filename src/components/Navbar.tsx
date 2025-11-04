@@ -20,7 +20,14 @@ export function Navbar() {
     setIsMobileMenuOpen(false);
   };
 
-  const isLinkActive = (path: string) => pathname === path;
+  const isLinkActive = (path: string) => {
+    // If the link is an anchor to the home page (e.g. '/#upcoming-events'),
+    // consider it active when we're on the home pathname ('/').
+    if (path.startsWith("/#")) {
+      return pathname === "/";
+    }
+    return pathname === path;
+  };
 
   // Close the menu when clicking outside
   useEffect(() => {
@@ -56,13 +63,20 @@ export function Navbar() {
 
         {/* Desktop Links */}
         <div className="hidden md:flex items-center gap-8">
-          {["/", "/about", "/events", "/programs", "/gallery", "/contact"].map((path, i) => (
+          {[
+            { path: "/", label: "Home" },
+            { path: "/about", label: "About" },
+            { path: "/#upcoming-events", label: "Events" },
+            { path: "/programs", label: "Programs" },
+            { path: "/gallery", label: "Gallery" },
+            { path: "/contact", label: "Contact" },
+          ].map((item, i) => (
             <Link
               key={i}
-              href={path}
-              className={`transition-colors ${isLinkActive(path) ? "text-primary font-medium" : "hover:text-primary"}`}
+              href={item.path}
+              className={`transition-colors ${isLinkActive(item.path) ? "text-primary font-medium" : "hover:text-primary"}`}
             >
-              {path === "/" ? "Home" : path === "/events" ? "Events" : path.slice(1).charAt(0).toUpperCase() + path.slice(2)}
+              {item.label}
             </Link>
           ))}
           <Link href="/tickets">
@@ -76,16 +90,22 @@ export function Navbar() {
             ref={menuRef}
             className="absolute top-full left-0 w-full bg-background shadow-md py-4 flex flex-col items-center gap-4 z-50"
           >
-            {["/", "/about", "/events", "/programs", "/gallery", "/contact"].map((path, i) => (
+            {[
+              { path: "/", label: "Home" },
+              { path: "/about", label: "About" },
+              { path: "/#upcoming-events", label: "Events" },
+              { path: "/programs", label: "Programs" },
+              { path: "/gallery", label: "Gallery" },
+              { path: "/contact", label: "Contact" },
+            ].map((item, i) => (
               <Link
                 key={i}
-                href={path}
-                className={`transition-colors block py-2 ${
-                  isLinkActive(path) ? "text-primary font-medium" : "hover:text-primary"
-                }`}
+                href={item.path}
+                className={`transition-colors block py-2 ${isLinkActive(item.path) ? "text-primary font-medium" : "hover:text-primary"
+                  }`}
                 onClick={closeMobileMenu}
               >
-                {path === "/" ? "Home" : path === "/events" ? "Events" : path.slice(1).charAt(0).toUpperCase() + path.slice(2)}
+                {item.label}
               </Link>
             ))}
             <Link

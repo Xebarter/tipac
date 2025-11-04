@@ -310,6 +310,22 @@ export default function TicketsPage() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  // Scroll to selected event when it changes
+  useEffect(() => {
+    if (!isClient) return;
+    
+    const eventIdFromQuery = searchParams?.get('event');
+    if (eventIdFromQuery) {
+      // Wait a bit for the DOM to be ready
+      setTimeout(() => {
+        const element = document.getElementById(`event-${eventIdFromQuery}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+  }, [searchParams, isClient]);
+
   // Fetch events and ticket types
   useEffect(() => {
     if (!isClient) return;
@@ -676,22 +692,39 @@ export default function TicketsPage() {
               <div className="space-y-5 max-h-[60vh] sm:max-h-[500px] overflow-y-auto pr-0 sm:pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 {events.map((event) => {
                   const eventTicketTypes = getTicketTypesForEvent(event.id);
+                  const isSelected = searchParams?.get('event') === event.id;
 
                   return (
                     <motion.div
+                      id={`event-${event.id}`}
                       key={event.id}
-                      className="border border-gray-200 rounded-2xl bg-white/70 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden backdrop-blur-sm"
+                      className={`border border-gray-200 rounded-2xl bg-white/70 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden backdrop-blur-sm ${isSelected ? 'ring-4 ring-purple-500/30 -m-1 relative' : ''}`}
                       initial={{ opacity: 0, y: 10 }}
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.5 }}
+                      animate={isSelected ? { 
+                        scale: [1, 1.02, 1],
+                        transition: { duration: 0.5 }
+                      } : {}}
                     >
-                      <div className="p-5 sm:p-6 border-b border-gray-100 bg-gradient-to-r from-purple-50/50 to-pink-50/50">
+                      <div 
+                        className={`p-5 sm:p-6 border-b border-gray-100 ${isSelected ? 'bg-gradient-to-r from-purple-100/50 to-pink-100/50' : 'bg-gradient-to-r from-purple-50/50 to-pink-50/50'}`}
+                      >
                         <div className="flex flex-wrap items-start justify-between gap-3">
-                          <h3 className="font-bold text-gray-900 text-lg sm:text-xl">{event.title}</h3>
-                          <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap shadow">
-                            {new Date(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                          </span>
+                          <h3 className={`font-bold text-gray-900 text-lg sm:text-xl ${isSelected ? 'text-purple-700' : ''}`}>
+                            {event.title}
+                          </h3>
+                          <div className="flex gap-2">
+                            {isSelected && (
+                              <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap shadow">
+                                Selected
+                              </span>
+                            )}
+                            <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap shadow">
+                              {new Date(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            </span>
+                          </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-gray-600">
                           <div className="flex items-center">
@@ -796,7 +829,7 @@ export default function TicketsPage() {
                           <div className="text-center py-4">
                             <p className="text-gray-500 italic text-sm flex items-center justify-center">
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                               </svg>
                               No ticket types available for this event
                             </p>

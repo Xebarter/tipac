@@ -100,19 +100,26 @@ export default function EventsPage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+          <div className={`grid gap-8 ${events.length === 1 
+              ? 'grid-cols-1' 
+              : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+            } max-w-7xl mx-auto`}>
             {events.map((event) => (
               <motion.div
                 key={event.id}
-                className="bg-gray-800/30 backdrop-blur-md rounded-2xl overflow-hidden border border-gray-700/50 shadow-xl hover:shadow-2xl transition-all duration-500 group"
+                className={`bg-gray-800/30 backdrop-blur-md rounded-2xl overflow-hidden border border-gray-700/50 shadow-xl hover:shadow-2xl transition-all duration-500 group ${events.length === 1 
+                    ? 'lg:max-w-4xl lg:mx-auto lg:flex lg:flex-col' 
+                    : ''}`}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.7 }}
-                whileHover={{ y: -10 }}
+                whileHover={{ y: events.length === 1 ? -15 : -10 }}
               >
                 {/* Event Image */}
-                <div className="relative h-48 overflow-hidden">
+                <div className={`relative overflow-hidden ${events.length === 1 
+                    ? 'lg:h-96' 
+                    : 'h-48'}`}>
                   {event.image_url ? (
                     <img 
                       src={event.image_url} 
@@ -120,8 +127,12 @@ export default function EventsPage() {
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-r from-purple-900/50 to-blue-900/50 flex items-center justify-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className={`w-full h-full bg-gradient-to-r from-purple-900/50 to-blue-900/50 flex items-center justify-center ${events.length === 1 
+                        ? '' 
+                        : ''}`}>
+                      <svg xmlns="http://www.w3.org/2000/svg" className={`text-gray-600 ${events.length === 1 
+                          ? 'h-24 w-24 lg:h-32 lg:w-32' 
+                          : 'h-16 w-16'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                     </div>
@@ -139,43 +150,49 @@ export default function EventsPage() {
                 </div>
                 
                 {/* Event Details */}
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-xl font-bold text-white group-hover:text-purple-300 transition-colors">
+                <div className={`p-6 ${events.length === 1 ? 'lg:p-10 lg:flex lg:flex-col' : ''}`}>
+                  <div className={`flex justify-between items-start mb-3 ${events.length === 1 ? 'lg:mb-6' : ''}`}>
+                    <h3 className={`text-white group-hover:text-purple-300 transition-colors ${events.length === 1 
+                        ? 'text-2xl lg:text-3xl' 
+                        : 'text-xl'} font-bold`}>
                       {event.title}
                     </h3>
                     <div className="text-right">
-                      <p className="text-sm font-semibold text-purple-300">{event.time}</p>
+                      <p className={`font-semibold text-purple-300 ${events.length === 1 
+                          ? 'text-lg lg:text-xl' 
+                          : 'text-sm'}`}>{event.time}</p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center text-gray-400 text-sm mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className={`flex items-center text-gray-400 ${events.length === 1 
+                      ? 'text-base lg:text-lg lg:mb-2' 
+                      : 'text-sm mb-4'}`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className={`mr-2 ${events.length === 1 
+                        ? 'h-5 w-5 lg:h-6 lg:w-6' 
+                        : 'h-4 w-4'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                     <span className="truncate">{event.location}</span>
                   </div>
                   
-                  <p className="text-gray-300 mb-6 line-clamp-3">
+                  <p className={`text-gray-300 ${events.length === 1 
+                      ? 'lg:text-lg lg:mb-8' 
+                      : 'mb-6 line-clamp-3'}`}>
                     {event.description}
                   </p>
                   
-                  <div className="flex justify-between items-center">
-                    <Link href={`/tickets/event/${event.id}`}>
+                  <div className={`${events.length === 1 ? 'lg:mt-auto' : ''}`}>
+                    <Link href={`/tickets?event=${event.id}`}>
                       <Button 
                         size="sm" 
-                        className="bg-gradient-to-r from-purple-600 to-blue-600 hover:opacity-90 text-sm font-medium px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105"
+                        className={`bg-gradient-to-r from-purple-600 to-blue-600 hover:opacity-90 font-medium rounded-lg transition-all duration-300 transform hover:scale-105 ${events.length === 1 
+                            ? 'text-base lg:text-lg lg:px-8 lg:py-3' 
+                            : 'text-sm px-4 py-2'}`}
                       >
                         Get Tickets
                       </Button>
                     </Link>
-                    <span className="text-xs text-gray-500">
-                      {new Date(event.date).toLocaleDateString("en-US", { 
-                        month: "short", 
-                        day: "numeric" 
-                      })}
-                    </span>
                   </div>
                 </div>
               </motion.div>
