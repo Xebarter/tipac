@@ -4,7 +4,7 @@
   "installCommand": "npm install",
   "devCommand": "next dev",
   "framework": "nextjs",
-  "environments": {
+  "env": {
     "NODE_ENV": "production"
   },
   "build": {
