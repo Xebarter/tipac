@@ -7,6 +7,7 @@ interface Ticket {
   id: string;
   created_at: string;
   event_id: string;
+  ticket_type_id: string | null;
   email: string;
   quantity: number;
   status: string;

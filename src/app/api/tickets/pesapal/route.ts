@@ -66,7 +66,8 @@ async function getAccessToken() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { firstName, lastName, email, phoneNumber, amount, eventId, quantity } = await req.json();
+    const body = await req.json();
+    const { firstName, lastName, email, phoneNumber, amount, eventId, quantity } = body;
 
     if (!firstName || !lastName || !email || !amount || !eventId || !quantity) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -76,6 +77,9 @@ export async function POST(req: NextRequest) {
       throw new Error("Missing PESAPAL_IPN_ID environment variable");
     }
 
+    // Log the incoming request for debugging
+    console.log("[PESAPAL REQUEST BODY]", body);
+
     // First, create a ticket record with pending status
     const { data: ticketData, error: ticketError } = await supabase
       .from('tickets')
@@ -84,12 +88,16 @@ export async function POST(req: NextRequest) {
         email: email,
         quantity: quantity,
         status: 'pending',
-        price: Math.round(parseFloat(amount) / quantity) // Calculate price per ticket
+        price: Math.round(parseFloat(amount) / quantity), // Calculate price per ticket
+        purchase_channel: 'online',
+        buyer_name: `${firstName} ${lastName}`,
+        buyer_phone: phoneNumber
       }])
       .select()
       .single();
 
     if (ticketError) {
+      console.error("[TICKET CREATION ERROR]", ticketError);
       throw new Error(`Failed to create ticket record: ${ticketError.message}`);
     }
 
@@ -132,8 +140,16 @@ export async function POST(req: NextRequest) {
     console.log("[SUBMIT ORDER RESPONSE] Body:", responseBody);
 
     if (!res.ok) {
-      const errData = JSON.parse(responseBody);
-      console.error("[PESAPAL SUBMIT ERROR]", res.status, errData);
+      let errorMessage = `Failed to submit payment request: ${res.status}`;
+      
+      try {
+        const errData = JSON.parse(responseBody);
+        console.error("[PESAPAL SUBMIT ERROR]", res.status, errData);
+        errorMessage = `Payment request failed: ${errData.message || errData.error || JSON.stringify(errData)}`;
+      } catch (parseError) {
+        console.error("[ERROR PARSING RESPONSE]", parseError);
+        errorMessage = `Payment request failed with status ${res.status}: ${responseBody.substring(0, 200)}`;
+      }
       
       // Update ticket status to failed
       await supabase
@@ -141,10 +157,17 @@ export async function POST(req: NextRequest) {
         .update({ status: 'failed' })
         .eq('id', ticketData.id);
       
-      throw new Error(`Failed to submit payment request: ${res.status} - ${JSON.stringify(errData)}`);
+      throw new Error(errorMessage);
     }
 
-    const data = JSON.parse(responseBody);
+    let data;
+    try {
+      data = JSON.parse(responseBody);
+    } catch (parseError) {
+      console.error("[ERROR PARSING SUCCESS RESPONSE]", parseError);
+      throw new Error(`Invalid response from payment processor: ${responseBody.substring(0, 200)}`);
+    }
+    
     console.log("[PESAPAL PAYMENT REDIRECT]", data);
 
     if (!data.redirect_url) {
@@ -161,7 +184,15 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: data.redirect_url });
   } catch (error: any) {
-    console.error("[PESAPAL TICKET PAYMENT ERROR]", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[PESAPAL TICKET PAYMENT ERROR]", error);
+    let errorMessage = "Failed to process payment";
+    
+    if (error && typeof error === 'object' && Object.keys(error).length > 0) {
+      errorMessage = error.message || JSON.stringify(error);
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    }
+    
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

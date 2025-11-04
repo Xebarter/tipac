@@ -15,10 +15,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get event details
+    // Get event details including organizer and sponsor information
     const { data: eventData, error: eventError } = await supabase
       .from('events')
-      .select('title, date, location')
+      .select('title, date, location, organizer_name, organizer_logo_url, sponsor_logos')
       .eq('id', event_id)
       .single();
 
@@ -135,6 +135,19 @@ async function generateTicketsPDF(tickets: any[], batchCode: string, event: any,
   doc.fontSize(20).text('TIPAC Batch Tickets', { align: 'center' });
   doc.moveDown();
   
+  // Add organizer information if available
+  if (event.organizer_logo_url) {
+    try {
+      doc.fontSize(10).text('Organized by:', 50, doc.y, { continued: true });
+      doc.text(event.organizer_name || 'Event Organizer', { underline: true });
+      doc.moveDown(0.5);
+    } catch (err) {
+      // If image loading fails, just show the name
+      doc.fontSize(10).text('Organized by: ' + (event.organizer_name || 'Event Organizer'), { underline: true });
+      doc.moveDown(0.5);
+    }
+  }
+  
   // Add event information
   doc.fontSize(14).text('Event Details:', { underline: true });
   doc.moveDown(0.5);
@@ -147,6 +160,19 @@ async function generateTicketsPDF(tickets: any[], batchCode: string, event: any,
     doc.fontSize(12).text(`Price per Ticket: ${price > 0 ? `UGX ${price.toLocaleString()}` : 'Free'}`);
   }
   doc.moveDown(2);
+  
+  // Add sponsor information if available
+  if (event.sponsor_logos && event.sponsor_logos.length > 0) {
+    doc.fontSize(14).text('Sponsors:', { underline: true });
+    doc.moveDown(0.5);
+    
+    // List sponsors
+    event.sponsor_logos.forEach((sponsor: any) => {
+      doc.fontSize(10).text(`• ${sponsor.name || 'Sponsor'}`);
+    });
+    
+    doc.moveDown(2);
+  }
   
   // Add ticket information
   doc.fontSize(14).text('Tickets:', { underline: true });

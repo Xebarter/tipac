@@ -105,12 +105,14 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
       message: "Valid ticket",
       ticket: {
         id: ticket.id,
-        event: ticket.events?.title,
-        date: ticket.events?.date,
-        location: ticket.events?.location,
-        purchase_channel: ticket.purchase_channel,
+        event: {
+          title: ticket.events?.title,
+          date: ticket.events?.date,
+          location: ticket.events?.location
+        },
         buyer_name: ticket.buyer_name,
-        buyer_phone: ticket.buyer_phone
+        buyer_phone: ticket.buyer_phone,
+        purchase_channel: ticket.purchase_channel
       }
     });
   } catch (error: any) {

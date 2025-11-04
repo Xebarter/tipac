@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { generateTicketPDF } from "@/lib/ticketGenerator";
 
 interface Event {
   id: string;
@@ -42,6 +43,7 @@ export default function TicketsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [downloadableTickets, setDownloadableTickets] = useState<any[]>([]);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -73,7 +75,7 @@ export default function TicketsPage() {
 
         setEvents(eventsData || []);
         setTicketTypes(ticketTypesData || []);
-        
+
         // Check if an event was passed as a query parameter
         const eventIdFromQuery = searchParams?.get('event');
         if (eventIdFromQuery) {
@@ -117,6 +119,48 @@ export default function TicketsPage() {
     return ticketType ? ticketType.price * quantity : 0;
   };
 
+  const downloadTicket = async (ticket: any) => {
+    try {
+      // Generate the PDF directly without any delay
+      const blob = await generateTicketPDF(ticket);
+
+      // Create object URL and trigger download immediately
+      const url = URL.createObjectURL(blob);
+
+      // Use feature-detection: if anchor download is supported, use it; otherwise open in new tab (Safari fallback)
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `tipac-ticket-${ticket.id.substring(0, 8)}.pdf`;
+      a.rel = "noopener noreferrer";
+
+      const supportsDownload = typeof a.download !== "undefined";
+
+      if (supportsDownload) {
+        // Append to body and click
+        document.body.appendChild(a);
+        // Try to trigger click in a microtask to stay within user-initiated gesture context where possible
+        await Promise.resolve();
+        a.click();
+        document.body.removeChild(a);
+      } else {
+        // Fallback: open the PDF in a new tab (some Safari versions ignore download on blob URLs)
+        const newWindow = window.open(url, "_blank", "noopener,noreferrer");
+        if (!newWindow) {
+          // If popup blocked, try setting location.href as last resort
+          window.location.href = url;
+        }
+      }
+
+      // Revoke object URL shortly after to allow the browser to finish the download
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } catch (error) {
+      console.error("Error generating ticket PDF:", error);
+      // Even if PDF generation fails, we still want to show success message
+      // The PDF generation can be attempted again manually
+      throw error; // Re-throw to be caught by caller for better error handling
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -132,8 +176,16 @@ export default function TicketsPage() {
         throw new Error("Quantity must be at least 1");
       }
 
-      if (!formData.firstName || !formData.lastName || !formData.email) {
+      // Ensure required fields are present
+      if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone) {
         throw new Error("Please fill in all required fields");
+      }
+
+      // Normalize and validate phone number: must be exactly 10 digits starting with 07
+      const normalizedPhone = formData.phone.replace(/\s+/g, "");
+      const phoneRegex = /^07[0-9]{8}$/;
+      if (!phoneRegex.test(normalizedPhone)) {
+        throw new Error("Phone number must be in the format 07xxxxxxxx (10 digits, starting with 07)");
       }
 
       const ticketType = getTicketTypeById(selectedTicketType);
@@ -151,7 +203,7 @@ export default function TicketsPage() {
             firstName: formData.firstName,
             lastName: formData.lastName,
             email: formData.email,
-            phoneNumber: formData.phone,
+            phoneNumber: normalizedPhone,
             amount: totalPrice.toString(),
             eventId: ticketType.event_id,
             quantity: quantity
@@ -176,7 +228,9 @@ export default function TicketsPage() {
             quantity: quantity,
             status: 'confirmed',
             price: ticketType.price,
-            purchase_channel: 'online'
+            purchase_channel: 'online',
+            buyer_name: `${formData.firstName} ${formData.lastName}`,
+            buyer_phone: normalizedPhone
           }])
           .select();
 
@@ -184,8 +238,46 @@ export default function TicketsPage() {
 
         if (data && data[0]) {
           const event = getEventById(ticketType.event_id);
-          setSuccess(`Thank you! Your free ticket for ${event?.title} has been confirmed.`);
-          
+
+          // supabase may return an array of created rows (when multiple inserted) or a single row inside data[0]
+          const createdRows = Array.isArray(data) ? data : [data[0]];
+
+          // Build ticket objects to download
+          const ticketsToDownload = createdRows.map((row: any) => ({
+            id: row.id,
+            event: {
+              title: event?.title || "",
+              date: event?.date || "",
+              location: event?.location || ""
+            },
+            buyer_name: `${formData.firstName} ${formData.lastName}`,
+            buyer_phone: formData.phone,
+            purchase_channel: 'online'
+          }));
+
+          // Attempt to download each ticket sequentially with a small delay to avoid browser throttling
+          let allDownloadsSucceeded = true;
+          for (let i = 0; i < ticketsToDownload.length; i++) {
+            try {
+              // Small delay between downloads to reduce chance of browser blocking
+              if (i > 0) await new Promise((res) => setTimeout(res, 500));
+              await downloadTicket(ticketsToDownload[i]);
+            } catch (downloadError) {
+              console.error('Download failed for ticket', ticketsToDownload[i].id, downloadError);
+              allDownloadsSucceeded = false;
+            }
+          }
+
+
+          if (allDownloadsSucceeded) {
+            setSuccess(`Thank you! Your free ticket for ${event?.title} has been confirmed. The ticket should be downloading now. Check your downloads folder.`);
+          } else {
+            setSuccess(`Thank you! Your free ticket for ${event?.title} has been confirmed. There was an issue automatically downloading one or more tickets — you can download them manually below or from your confirmation email.`);
+          }
+
+          // Keep the tickets available for manual download in the UI
+          setDownloadableTickets(ticketsToDownload);
+
           // Reset form
           setFormData({
             firstName: "",
@@ -197,8 +289,28 @@ export default function TicketsPage() {
         }
       }
     } catch (err: any) {
-      setError(err.message || "Failed to process ticket purchase");
       console.error("Ticket purchase error:", err);
+      let errorMessage = "Failed to process ticket purchase";
+
+      if (err && typeof err === 'object') {
+        if (err.message) {
+          errorMessage = err.message;
+        } else if (Object.keys(err).length === 0) {
+          // Handle empty error object case
+          errorMessage = "An unexpected error occurred. Please try again.";
+        } else {
+          // Try to stringify non-empty objects
+          try {
+            errorMessage = JSON.stringify(err);
+          } catch (stringifyErr) {
+            errorMessage = "An unknown error occurred";
+          }
+        }
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -251,7 +363,7 @@ export default function TicketsPage() {
             transition={{ duration: 0.7 }}
           >
             <h3 className="text-2xl font-bold text-white mb-6">Available Events & Ticket Types</h3>
-            
+
             {events.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-400 mb-4">No events available at the moment.</p>
@@ -265,7 +377,7 @@ export default function TicketsPage() {
               <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2">
                 {events.map((event) => {
                   const eventTicketTypes = getTicketTypesForEvent(event.id);
-                  
+
                   return (
                     <div key={event.id} className="border border-gray-700 rounded-xl bg-gray-800/20">
                       <div className="p-4 border-b border-gray-700">
@@ -296,53 +408,47 @@ export default function TicketsPage() {
                             {event.location}
                           </span>
                         </div>
-                        <p className="text-gray-400 mt-3 line-clamp-2">
-                          {event.description}
-                        </p>
                       </div>
-                      
-                      {eventTicketTypes.length > 0 ? (
-                        <div className="p-4 space-y-3">
-                          <h5 className="font-semibold text-gray-300">Available Ticket Types:</h5>
-                          <div className="space-y-2">
-                            {eventTicketTypes.map((ticketType) => {
-                              const isSelected = selectedTicketType === ticketType.id;
-                              
-                              return (
-                                <div 
+
+                      <div className="p-4">
+                        <p className="text-gray-400 text-sm mb-4">{event.description}</p>
+
+                        {eventTicketTypes.length > 0 ? (
+                          <div className="space-y-3">
+                            <h5 className="font-semibold text-gray-300">Available Ticket Types:</h5>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {eventTicketTypes.map((ticketType) => (
+                                <motion.div
                                   key={ticketType.id}
-                                  className={`p-3 rounded-lg border cursor-pointer transition-all duration-300 ${
-                                    isSelected 
-                                      ? "border-purple-500 bg-gradient-to-r from-purple-900/30 to-blue-900/30" 
-                                      : "border-gray-600 hover:border-gray-500"
-                                  }`}
+                                  className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 ${selectedTicketType === ticketType.id
+                                    ? "border-blue-500 bg-blue-500/10"
+                                    : "border-gray-600 hover:border-gray-500 bg-gray-800/30"
+                                    }`}
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
                                   onClick={() => setSelectedTicketType(ticketType.id)}
                                 >
-                                  <div className="flex justify-between items-center">
+                                  <div className="flex justify-between items-start">
                                     <div>
-                                      <h6 className="font-medium text-white">{ticketType.name || "General Admission"}</h6>
-                                    </div>
-                                    <div className="text-right">
-                                      <p className="font-bold text-white">
+                                      <h6 className="font-medium text-white">{ticketType.name}</h6>
+                                      <p className="text-sm text-gray-400">
                                         {ticketType.price > 0 ? `UGX ${ticketType.price.toLocaleString()}` : "Free"}
                                       </p>
-                                      {isSelected && (
-                                        <span className="inline-block mt-1 px-2 py-1 text-xs font-semibold text-purple-300 bg-purple-900/50 rounded-full">
-                                          Selected
-                                        </span>
-                                      )}
                                     </div>
+                                    {selectedTicketType === ticketType.id && (
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                      </svg>
+                                    )}
                                   </div>
-                                </div>
-                              );
-                            })}
+                                </motion.div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="p-4">
-                          <p className="text-gray-500 italic">No ticket types available for this event</p>
-                        </div>
-                      )}
+                        ) : (
+                          <p className="text-gray-500 italic">No ticket types available for this event.</p>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -358,137 +464,149 @@ export default function TicketsPage() {
             viewport={{ once: true }}
             transition={{ duration: 0.7 }}
           >
-            <h3 className="text-2xl font-bold text-white mb-6">Purchase Tickets</h3>
-            
-            {error && (
-              <div className="bg-red-900/50 border border-red-700 rounded-lg p-3 mb-4">
-                <p className="text-red-200 text-center">{error}</p>
-              </div>
-            )}
-            
-            {success && (
-              <div className="bg-green-900/50 border border-green-700 rounded-lg p-3 mb-4">
-                <p className="text-green-200 text-center">{success}</p>
-                
-                <div className="mt-4 flex gap-3">
-                  <Button 
-                    onClick={() => setSuccess(null)}
-                    className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600"
-                  >
-                    Buy More Tickets
-                  </Button>
-                  <Link href="/">
-                    <Button className="flex-1 bg-gradient-to-r from-gray-600 to-gray-800">
-                      Return Home
-                    </Button>
-                  </Link>
+            <h3 className="text-2xl font-bold text-white mb-6">Ticket Information</h3>
+
+            {success ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500/30">
+                  <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
                 </div>
+                <p className="text-gray-300 mb-6">{success}</p>
+                {downloadableTickets && downloadableTickets.length > 0 && (
+                  <div className="mb-4">
+                    <Button
+                      onClick={async () => {
+                        // Attempt to re-download all tickets sequentially
+                        for (let i = 0; i < downloadableTickets.length; i++) {
+                          try {
+                            if (i > 0) await new Promise((res) => setTimeout(res, 500));
+                            await downloadTicket(downloadableTickets[i]);
+                          } catch (err) {
+                            console.error('Manual download failed for', downloadableTickets[i].id, err);
+                          }
+                        }
+                      }}
+                      className="mb-3 bg-gradient-to-r from-green-500 to-emerald-500"
+                    >
+                      Download Tickets
+                    </Button>
+
+                    <div className="text-sm text-gray-400 mt-2 space-y-2">
+                      {downloadableTickets.map((t) => (
+                        <div key={t.id} className="flex items-center justify-center gap-3">
+                          <span className="font-mono text-sm text-gray-200">{t.id.substring(0, 8)}</span>
+                          <Button
+                            onClick={() => downloadTicket(t)}
+                            className="text-sm px-3 py-1 bg-gray-800/60"
+                          >
+                            Download
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  onClick={() => {
+                    setSuccess(null);
+                    setDownloadableTickets([]);
+                  }}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600"
+                >
+                  Get More Tickets
+                </Button>
               </div>
-            )}
-            
-            {!success && (
+            ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <Label htmlFor="ticketType" className="text-gray-200 text-sm mb-1 block">
-                    Selected Ticket Type
-                  </Label>
-                  {selectedTicketType ? (
-                    <div className="p-4 bg-gray-800/50 border border-gray-600 rounded-lg">
-                      <h4 className="font-bold text-white">
-                        {getTicketTypeById(selectedTicketType)?.name || "General Admission"}
-                      </h4>
-                      <div className="flex flex-wrap items-center gap-2 mt-2 text-sm">
-                        <span className="text-gray-300">
-                          {getEventById(getTicketTypeById(selectedTicketType)?.event_id || "")?.title}
-                        </span>
-                        <span className="text-gray-400">•</span>
-                        <span className="font-bold text-white">
-                          {getTicketTypeById(selectedTicketType)?.price 
-                            ? `UGX ${getTicketTypeById(selectedTicketType)?.price.toLocaleString()}` 
-                            : "Free"}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-gray-400 text-sm">Please select a ticket type from the list</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="quantity" className="text-gray-200 text-sm">
-                    Quantity
+                  <Label htmlFor="firstName" className="text-gray-200 mb-2 block">
+                    First Name <span className="text-red-500">*</span>
                   </Label>
                   <Input
-                    id="quantity"
-                    type="number"
-                    min="1"
-                    max="10"
-                    value={quantity}
-                    onChange={(e) => setQuantity(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
-                    className="bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-10 rounded-lg"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName" className="text-gray-200 text-sm">
-                      First Name *
-                    </Label>
-                    <Input
-                      id="firstName"
-                      name="firstName"
-                      value={formData.firstName}
-                      onChange={handleInputChange}
-                      placeholder="John"
-                      className="bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-10 rounded-lg"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName" className="text-gray-200 text-sm">
-                      Last Name *
-                    </Label>
-                    <Input
-                      id="lastName"
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                      placeholder="Doe"
-                      className="bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-10 rounded-lg"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-gray-200 text-sm">
-                    Email *
-                  </Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
+                    id="firstName"
+                    name="firstName"
+                    value={formData.firstName}
                     onChange={handleInputChange}
-                    placeholder="john@example.com"
+                    placeholder="John"
                     className="bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-10 rounded-lg"
                     required
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-gray-200 text-sm">
-                    Phone Number (Optional)
+                <div>
+                  <Label htmlFor="lastName" className="text-gray-200 mb-2 block">
+                    Last Name <span className="text-red-500">*</span>
                   </Label>
                   <Input
+                    id="lastName"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleInputChange}
+                    placeholder="Doe"
+                    className="bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-10 rounded-lg"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="email" className="text-gray-200 mb-2 block">
+                    Email Address
+                  </Label>
+                  <Input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="john.doe@example.com"
+                    className="bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-10 rounded-lg"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="phone" className="text-gray-200 mb-2 block">
+                    Phone Number <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    type="tel"
+                    inputMode="numeric"
                     id="phone"
                     name="phone"
                     value={formData.phone}
                     onChange={handleInputChange}
-                    placeholder="+256123456789"
+                    placeholder="07xxxxxxxx"
+                    pattern="^07[0-9]{8}$"
+                    maxLength={10}
                     className="bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-10 rounded-lg"
+                    required
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Format: 07xxxxxxxx (10 digits)</p>
+                </div>
+
+                <div>
+                  <Label htmlFor="quantity" className="text-gray-200 mb-2 block">
+                    Quantity <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    type="number"
+                    id="quantity"
+                    min="1"
+                    max="10"
+                    value={quantity}
+                    onChange={(e) => setQuantity(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
+                    className="bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-10 rounded-lg"
+                    required
                   />
                 </div>
+
+                {error && (
+                  <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+                    <p className="text-red-300 text-sm">{error}</p>
+                  </div>
+                )}
 
                 <div className="p-4 bg-gray-800/30 rounded-lg border border-gray-700">
                   <div className="flex justify-between items-center mb-2">
@@ -531,7 +649,7 @@ export default function TicketsPage() {
                     {loading ? "Processing..." : getTotalPrice() > 0 ? "Proceed to Payment" : "Get Free Tickets"}
                   </Button>
                 </motion.div>
-                
+
                 <p className="text-xs text-gray-500 text-center">
                   By purchasing tickets, you agree to our terms and conditions
                 </p>
@@ -539,7 +657,7 @@ export default function TicketsPage() {
             )}
           </motion.div>
         </div>
-        
+
         <motion.div
           className="text-center mt-12"
           initial={{ opacity: 0, y: 20 }}

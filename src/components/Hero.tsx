@@ -76,7 +76,11 @@ export function Hero() {
       }
     };
     startRotation();
-    return () => interval && clearInterval(interval);
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
   }, [galleryImages.length, isUserInteracting]);
 
   const handleUserInteraction = useCallback(() => {
@@ -123,18 +127,16 @@ export function Hero() {
           <p className="text-lg text-white/70 mb-10">
             {error || 'No gallery images available at the moment.'}
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center w-full max-w-md mx-auto">
             <Button
               asChild
-              size="lg"
-              className="sleek-btn amber"
+              className="sleek-btn amber flex-1 max-w-[200px] mx-auto sm:mx-0"
             >
               <Link href="/tickets">Buy Ticket</Link>
             </Button>
             <Button
               asChild
-              size="lg"
-              className="sleek-btn blue"
+              className="sleek-btn blue flex-1 max-w-[200px] mx-auto sm:mx-0"
             >
               <Link href="/events">Upcoming Events</Link>
             </Button>
@@ -161,9 +163,8 @@ export function Hero() {
           {galleryImages.map((image, index) => (
             <div
               key={image.id}
-              className={`absolute inset-0 transition-all duration-1000 ease-in-out ${
-                index === currentImageIndex ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
-              }`}
+              className={`absolute inset-0 transition-all duration-1000 ease-in-out ${index === currentImageIndex ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
+                }`}
             >
               <Image
                 src={image.url}
@@ -180,18 +181,18 @@ export function Hero() {
 
         {/* Content */}
         <div className="absolute inset-0 flex items-center justify-center text-center text-white z-10 px-4 animate-fade-in">
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-4xl mx-auto flex flex-col items-center" style={{ marginTop: '20%' }}>
             <h1 className="text-5xl md:text-7xl font-bold mb-6 drop-shadow-2xl leading-tight">
               TIPAC
             </h1>
             <p className="text-2xl md:text-3xl mb-10 drop-shadow-xl leading-relaxed text-white/90">
               Theatre Initiative for the Pearl of Africa Children
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center">
-              <Button asChild size="lg" className="sleek-btn amber">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center w-full max-w-md">
+              <Button asChild className="sleek-btn amber flex-1 max-w-[200px] mx-auto sm:mx-0">
                 <Link href="/tickets">Buy Ticket</Link>
               </Button>
-              <Button asChild size="lg" className="sleek-btn blue">
+              <Button asChild className="sleek-btn blue flex-1 max-w-[200px] mx-auto sm:mx-0">
                 <Link href="/events">Upcoming Events</Link>
               </Button>
             </div>
@@ -243,26 +244,35 @@ export function Hero() {
           opacity: 1;
         }
 
+        /* Buy Ticket (brighter, more prominent) */
         .sleek-btn.amber {
-          background: linear-gradient(135deg, #ffc107, #ff6b00);
+          /* brighter golden-orange to warm red gradient */
+          background: linear-gradient(135deg, #ffbf49 0%, #ff6b3a 60%, #ff2d00 100%);
           color: white;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-          box-shadow: 0 4px 25px rgba(255, 166, 0, 0.4);
+          text-shadow: 0 1px 3px rgba(0,0,0,0.25);
+          box-shadow: 0 6px 32px rgba(255, 99, 31, 0.65), 0 1px 0 rgba(255,255,255,0.03) inset;
+          border: 1px solid rgba(255,255,255,0.12);
         }
         .sleek-btn.amber:hover {
-          transform: translateY(-2px) scale(1.05);
-          box-shadow: 0 8px 35px rgba(255, 166, 0, 0.6);
+          transform: translateY(-3px) scale(1.06);
+          box-shadow: 0 12px 48px rgba(255, 99, 31, 0.8), 0 1px 0 rgba(255,255,255,0.05) inset;
+          filter: saturate(1.05) drop-shadow(0 6px 18px rgba(255, 99, 31, 0.25));
         }
 
+        /* Upcoming Events (muted compared to Buy Ticket) */
         .sleek-btn.blue {
-          background: linear-gradient(135deg, #6366f1, #3b82f6);
+          /* slightly more muted blue gradient */
+          background: linear-gradient(135deg, #5b6ad8 0%, #4b7bd3 60%, #3b82f6 100%);
           color: white;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-          box-shadow: 0 4px 25px rgba(59, 130, 246, 0.3);
+          text-shadow: 0 1px 2px rgba(0,0,0,0.18);
+          box-shadow: 0 4px 20px rgba(59, 130, 246, 0.28);
+          border: 1px solid rgba(255,255,255,0.06);
+          opacity: 0.96;
         }
         .sleek-btn.blue:hover {
-          transform: translateY(-2px) scale(1.05);
-          box-shadow: 0 8px 35px rgba(59, 130, 246, 0.5);
+          transform: translateY(-2px) scale(1.04);
+          box-shadow: 0 8px 30px rgba(59, 130, 246, 0.45);
+          filter: saturate(0.98);
         }
       `}</style>
     </>

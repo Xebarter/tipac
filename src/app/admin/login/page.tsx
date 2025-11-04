@@ -20,7 +20,7 @@ export default function AdminLogin() {
       router.push("/admin");
       router.refresh();
     } else {
-      setError("Invalid credentials. Email: admin@tipac.com Password: Admin123");
+      setError("Invalid credentials. Please check your email and password.");
     }
   };
 
@@ -54,7 +54,7 @@ export default function AdminLogin() {
                 type="email"
                 required
                 className="appearance-none rounded-md relative block w-full px-3 py-2 border border-input placeholder-muted-foreground text-foreground focus:outline-none focus:ring-ring focus:border-ring focus:z-10 sm:text-sm bg-background"
-                placeholder="admin@tipac.com"
+                placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -70,7 +70,7 @@ export default function AdminLogin() {
                 autoComplete="current-password"
                 required
                 className="appearance-none rounded-md relative block w-full px-3 py-2 border border-input placeholder-muted-foreground text-foreground focus:outline-none focus:ring-ring focus:border-ring focus:z-10 sm:text-sm bg-background"
-                placeholder="Admin123"
+                placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />

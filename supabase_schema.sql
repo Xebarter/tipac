@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS tickets (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   event_id UUID REFERENCES events(id),
+  ticket_type_id UUID REFERENCES ticket_types(id),
   email TEXT,
   quantity INTEGER DEFAULT 1,
   status TEXT DEFAULT 'confirmed',

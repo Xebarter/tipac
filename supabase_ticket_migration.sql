@@ -1,6 +1,10 @@
 -- Migration script to add new fields for offline ticket support
 -- This script should be run on the Supabase database
 
+-- Add ticket_type_id column to tickets table
+ALTER TABLE tickets 
+ADD COLUMN IF NOT EXISTS ticket_type_id UUID REFERENCES ticket_types(id);
+
 -- Add new columns to tickets table
 ALTER TABLE tickets 
 ADD COLUMN IF NOT EXISTS purchase_channel TEXT DEFAULT 'online'; -- 'online' or 'physical_batch'

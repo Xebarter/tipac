@@ -21,6 +21,7 @@ interface Event {
 interface Ticket {
   id: string;
   event_id: string;
+  ticket_type_id: string | null;
   price: number;
   status: string;
 }

@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import ReactPlayer from "react-player";
 
 interface YouTubeVideo {
   id: string;
@@ -16,7 +15,6 @@ export function YouTubeVideos() {
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [playingVideo, setPlayingVideo] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchVideos = async () => {
@@ -100,10 +98,6 @@ export function YouTubeVideos() {
     fetchVideos();
   }, []);
 
-  const handlePlayVideo = (videoId: string) => {
-    setPlayingVideo(videoId === playingVideo ? null : videoId);
-  };
-
   // Error state with retry option
   if (error) {
     return (
@@ -176,74 +170,73 @@ export function YouTubeVideos() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className={`grid gap-8 max-w-4xl mx-auto ${
+            videos.length === 1 
+              ? 'grid-cols-1' 
+              : 'grid-cols-1 md:grid-cols-2'
+          }`}>
             {videos.map((video) => (
-              <div 
+              <Link 
                 key={video.id}
-                className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group border border-gray-100"
+                href={`https://www.youtube.com/watch?v=${video.id}`} 
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group border border-gray-100 block ${
+                  videos.length === 1 
+                    ? 'lg:max-w-4xl lg:mx-auto' 
+                    : ''
+                }`}
               >
-                <div className="relative h-48 overflow-hidden">
-                  {playingVideo === video.id ? (
-                    <div className="w-full h-full">
-                      <ReactPlayer
-                        url={`https://www.youtube.com/watch?v=${video.id}`}
-                        width="100%"
-                        height="100%"
-                        controls={true}
-                        playing={true}
-                        onPause={() => setPlayingVideo(null)}
-                        onEnded={() => setPlayingVideo(null)}
-                        light={false}
-                        fallback={
-                          <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                            <p className="text-gray-500">Loading video...</p>
-                          </div>
-                        }
-                        config={{
-                          youtube: {
-                            embedOptions: {},
-                            playerVars: {
-                              modestbranding: 1,
-                              rel: 0,
-                              origin: typeof window !== 'undefined' ? window.location.origin : ''
-                            }
-                          }
-                        }}
-                      />
+                <div className={`relative overflow-hidden ${
+                  videos.length === 1 
+                    ? 'lg:h-96' 
+                    : 'h-48'
+                }`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img 
+                    src={video.thumbnail} 
+                    alt={video.title}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    onError={(e) => {
+                      // Fallback image if thumbnail fails to load
+                      e.currentTarget.src = "https://via.placeholder.com/320x180?text=Video+Thumbnail";
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900/70 to-transparent"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className={`bg-red-600 rounded-full p-4 transform transition-transform duration-300 group-hover:scale-110 ${
+                      videos.length === 1 
+                        ? 'lg:p-6' 
+                        : ''
+                    }`}>
+                      <svg xmlns="http://www.w3.org/2000/svg" className={`text-white ${
+                        videos.length === 1 
+                          ? 'h-8 w-8 lg:h-12 lg:w-12' 
+                          : 'h-8 w-8'
+                      }`} viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                      </svg>
                     </div>
-                  ) : (
-                    <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img 
-                        src={video.thumbnail} 
-                        alt={video.title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        onError={(e) => {
-                          // Fallback image if thumbnail fails to load
-                          e.currentTarget.src = "https://via.placeholder.com/320x180?text=Video+Thumbnail";
-                        }}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-gray-900/70 to-transparent"></div>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <button
-                          onClick={() => handlePlayVideo(video.id)}
-                          className="bg-red-600 rounded-full p-4 transform transition-transform duration-300 group-hover:scale-110"
-                          aria-label={`Watch ${video.title}`}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      </div>
-                    </>
-                  )}
+                  </div>
                 </div>
                 
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
+                <div className={`p-6 ${
+                  videos.length === 1 
+                    ? 'lg:p-10' 
+                    : ''
+                }`}>
+                  <h3 className={`font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 ${
+                    videos.length === 1 
+                      ? 'text-xl lg:text-3xl' 
+                      : 'text-xl'
+                  }`}>
                     {video.title}
                   </h3>
-                  <p className="text-gray-500 text-sm mt-2">
+                  <p className={`text-gray-500 mt-2 ${
+                    videos.length === 1 
+                      ? 'text-base lg:text-lg' 
+                      : 'text-sm'
+                  }`}>
                     {new Date(video.publishedAt).toLocaleDateString("en-US", { 
                       month: "long", 
                       day: "numeric", 
@@ -251,7 +244,7 @@ export function YouTubeVideos() {
                     })}
                   </p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

@@ -11,8 +11,9 @@ const ADMIN_PASSWORD = 'Admin123';
 export function middleware(request: NextRequest) {
   // Check if the request is for a protected path
   const isProtectedPath = protectedPaths.some(path => 
-    request.nextUrl.pathname.startsWith(path) && 
-    !request.nextUrl.pathname.startsWith('/admin/login')
+    (request.nextUrl.pathname.startsWith(path) && 
+    !request.nextUrl.pathname.startsWith('/admin/login')) ||
+    request.nextUrl.pathname === '/admin'
   );
 
   // If it's not a protected path, continue
@@ -38,5 +39,6 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/admin/:path*',
+    '/admin'
   ],
 };

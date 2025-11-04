@@ -10,25 +10,25 @@ export async function GET() {
   try {
     // Try to get YouTube API key from environment variables
     const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
-    
+
     if (!YOUTUBE_API_KEY) {
       // If no API key, return mock data
       console.warn("No YOUTUBE_API_KEY found, returning mock data");
       const videos = [
         {
-          id: "J---aiyznGQ",
-          title: "TIPAC Performance Highlights",
-          thumbnail: "https://img.youtube.com/vi/J---aiyznGQ/maxresdefault.jpg",
+          id: "8EVuKfbqMtQ",
+          title: "TIPAC Performance",
+          thumbnail: "https://img.youtube.com/vi/8EVuKfbqMtQ/maxresdefault.jpg",
           publishedAt: "2023-06-15T10:00:00Z"
         },
         {
-          id: "dQw4w9WgXcQ",
-          title: "Behind the Scenes at TIPAC",
-          thumbnail: "https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg",
+          id: "8EVuKfbqMtQ",
+          title: "TIPAC Show",
+          thumbnail: "https://img.youtube.com/vi/8EVuKfbqMtQ/maxresdefault.jpg",
           publishedAt: "2023-05-20T14:30:00Z"
         }
       ];
-      
+
       return NextResponse.json({ videos });
     }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
 import { supabase } from '@/lib/supabaseClient';
 
 interface Event {
@@ -13,6 +14,9 @@ interface Event {
   location: string;
   image_url: string | null;
   is_published: boolean;
+  organizer_name?: string;
+  organizer_logo_url?: string;
+  sponsor_logos?: Array<{ url: string; name: string }>;
 }
 
 // Add the TicketType interface for event ticket types
@@ -41,7 +45,7 @@ export default function AdminEventsManagement() {
   const [success, setSuccess] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  const [showTicketForm, setShowTicketForm] = useState<{eventId: string, show: boolean} | null>(null);
+  const [showTicketForm, setShowTicketForm] = useState<{ eventId: string, show: boolean } | null>(null);
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
   const [newTicketType, setNewTicketType] = useState({
     name: '',
@@ -49,7 +53,7 @@ export default function AdminEventsManagement() {
     is_active: true
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Form state for new event
   const [newEvent, setNewEvent] = useState({
     title: '',
@@ -58,14 +62,25 @@ export default function AdminEventsManagement() {
     time: '',
     location: '',
     image_url: '',
-    is_published: true
+    is_published: true,
+    organizer_name: '',
+    organizer_logo_url: '',
+    sponsor_logos: [] as Array<{ url: string; name: string }>
   });
+
+  // File upload states
+  const [organizerLogoFile, setOrganizerLogoFile] = useState<File | null>(null);
+  const [sponsorLogoFiles, setSponsorLogoFiles] = useState<Map<number, File>>(new Map());
+
+  // File upload states for editing events
+  const [editingOrganizerLogoFile, setEditingOrganizerLogoFile] = useState<File | null>(null);
+  const [editingSponsorLogoFiles, setEditingSponsorLogoFiles] = useState<Map<number, File>>(new Map());
 
   // State for ticket types during event creation
   const [eventTicketTypes, setEventTicketTypes] = useState<NewTicketType[]>([
     { name: '', price: 0, is_active: true }
   ]);
-  
+
   // Load events
   const loadEvents = useCallback(async () => {
     try {
@@ -76,7 +91,7 @@ export default function AdminEventsManagement() {
         .order('date', { ascending: false });
 
       if (error) throw error;
-      
+
       setEvents(data || []);
       setError(null);
     } catch (err) {
@@ -96,7 +111,7 @@ export default function AdminEventsManagement() {
         .order('name', { ascending: true });
 
       if (error) throw error;
-      
+
       setTicketTypes(data || []);
     } catch (err) {
       console.error("Error loading ticket types:", err);
@@ -111,7 +126,7 @@ export default function AdminEventsManagement() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
     const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
-    
+
     setNewEvent(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
@@ -122,7 +137,7 @@ export default function AdminEventsManagement() {
   const handleTicketTypeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
     const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
-    
+
     setNewTicketType(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : (name === 'price' ? Number(value) : value)
@@ -175,7 +190,7 @@ export default function AdminEventsManagement() {
       setEventTicketTypes([{ name: '', price: 0, is_active: true }]);
       return;
     }
-    
+
     const updatedTicketTypes = [...eventTicketTypes];
     updatedTicketTypes.splice(index, 1);
     setEventTicketTypes(updatedTicketTypes);
@@ -185,7 +200,7 @@ export default function AdminEventsManagement() {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `events/${Math.random()}.${fileExt}`;
-      
+
       const { data, error } = await supabase.storage
         .from('gallery')
         .upload(fileName, file, {
@@ -206,84 +221,78 @@ export default function AdminEventsManagement() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!newEvent.title || !newEvent.date || !newEvent.location) {
-      setError("Please fill in all required fields.");
-      return;
-    }
-    
-    // Validate ticket types
-    const validTicketTypes = eventTicketTypes.filter(ticket => ticket.name.trim() !== '');
-    if (validTicketTypes.some(ticket => ticket.price < 0)) {
-      setError("Ticket prices must be zero or positive.");
-      return;
-    }
-    
+    setIsSubmitting(true);
+    setError(null);
+
     try {
-      setIsSubmitting(true);
-      setError(null);
-      
-      // Handle image upload if a file is selected
-      let imageUrl = newEvent.image_url;
-      if (fileInputRef.current?.files?.[0]) {
-        imageUrl = await uploadImage(fileInputRef.current.files[0]);
+      // Validate required fields
+      if (!newEvent.title.trim() || !newEvent.date || !newEvent.location.trim()) {
+        throw new Error('Title, date, and location are required');
       }
-      
+
+      // Upload organizer logo if file is selected
+      let organizerLogoUrl = newEvent.organizer_logo_url;
+      if (organizerLogoFile) {
+        organizerLogoUrl = await uploadImage(organizerLogoFile);
+      }
+
+      // Upload sponsor logos if files are selected
+      const updatedSponsors = [...newEvent.sponsor_logos];
+      for (let i = 0; i < updatedSponsors.length; i++) {
+        const file = sponsorLogoFiles.get(i);
+        if (file) {
+          const url = await uploadImage(file);
+          updatedSponsors[i].url = url;
+        }
+      }
+
       const eventData = {
-        ...newEvent,
-        image_url: imageUrl || null
+        title: newEvent.title.trim(),
+        description: newEvent.description.trim(),
+        date: newEvent.date,
+        time: newEvent.time,
+        location: newEvent.location.trim(),
+        image_url: newEvent.image_url || null,
+        is_published: newEvent.is_published,
+        organizer_name: newEvent.organizer_name || null,
+        organizer_logo_url: organizerLogoUrl || null,
+        sponsor_logos: updatedSponsors.length > 0 ? updatedSponsors : null
       };
-      
-      // Insert the event
-      const { data: eventDataResult, error: eventError } = await supabase
+
+      const { data, error } = await supabase
         .from('events')
-        .insert([eventData])
-        .select();
-      
-      if (eventError) throw eventError;
-      
-      const createdEvent = eventDataResult[0];
-      
-      // Create ticket types for the event if any are provided
-      if (validTicketTypes.length > 0) {
-        const ticketTypesData = validTicketTypes.map(ticketType => ({
-          event_id: createdEvent.id,
-          name: ticketType.name,
-          price: ticketType.price,
-          is_active: ticketType.is_active
+        .insert(eventData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Create ticket types if provided
+      if (eventTicketTypes.some(type => type.name.trim())) {
+        const validTicketTypes = eventTicketTypes.filter(type => type.name.trim());
+        const ticketTypesData = validTicketTypes.map(type => ({
+          event_id: data.id,
+          name: type.name.trim(),
+          price: type.price,
+          is_active: type.is_active
         }));
-        
+
         const { error: ticketTypeError } = await supabase
           .from('ticket_types')
           .insert(ticketTypesData);
-          
+
         if (ticketTypeError) throw ticketTypeError;
       }
-      
-      setSuccess("Event created successfully!");
-      setNewEvent({
-        title: '',
-        description: '',
-        date: '',
-        time: '',
-        location: '',
-        image_url: '',
-        is_published: true
-      });
-      setEventTicketTypes([{ name: '', price: 0, is_active: true }]);
-      setPreviewUrl(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+
+      setSuccess('Event created successfully!');
       setShowCreateForm(false);
-      
-      // Reload events and ticket types
-      await loadEvents();
-      await loadTicketTypes();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An unknown error occurred");
+      resetForm();
+      loadEvents();
+    } catch (err: any) {
+      console.error('Error creating event:', err);
+      setError(err.message || 'Failed to create event. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -325,9 +334,9 @@ export default function AdminEventsManagement() {
         price: 0,
         is_active: true
       });
-      
+
       setShowTicketForm(null);
-      
+
       // Reload ticket types
       await loadTicketTypes();
     } catch (err) {
@@ -347,11 +356,11 @@ export default function AdminEventsManagement() {
         .from('events')
         .delete()
         .eq('id', id);
-      
+
       if (error) throw error;
-      
+
       setSuccess("Event deleted successfully!");
-      
+
       // Reload events
       await loadEvents();
     } catch (err) {
@@ -360,7 +369,7 @@ export default function AdminEventsManagement() {
   };
 
   // Handle editing an existing event
-  const handleEditEvent = (event: Event) => {
+  const startEditingEvent = (event: Event) => {
     setEditingEvent(event);
     setNewEvent({
       title: event.title,
@@ -369,97 +378,70 @@ export default function AdminEventsManagement() {
       time: event.time || '',
       location: event.location,
       image_url: event.image_url || '',
-      is_published: event.is_published
+      is_published: event.is_published,
+      organizer_name: event.organizer_name || '',
+      organizer_logo_url: event.organizer_logo_url || '',
+      sponsor_logos: event.sponsor_logos || []
     });
     setShowCreateForm(true);
-    
+
     // Reset ticket types for this event
     setEventTicketTypes([{ name: '', price: 0, is_active: true }]);
   };
 
   // Handle updating an existing event
-  const handleUpdateEvent = async (e: React.FormEvent) => {
+  const handleEditEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!newEvent.title || !newEvent.date || !newEvent.location) {
-      setError("Please fill in all required fields.");
-      return;
-    }
-    
-    if (!editingEvent) {
-      setError("No event selected for editing.");
-      return;
-    }
-    
-    // Validate ticket types
-    const validTicketTypes = eventTicketTypes.filter(ticket => ticket.name.trim() !== '');
-    if (validTicketTypes.some(ticket => ticket.price < 0)) {
-      setError("Ticket prices must be zero or positive.");
-      return;
-    }
-    
+    if (!editingEvent) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
     try {
-      setIsSubmitting(true);
-      setError(null);
-      
-      // Handle image upload if a file is selected
-      let imageUrl = newEvent.image_url;
-      if (fileInputRef.current?.files?.[0]) {
-        imageUrl = await uploadImage(fileInputRef.current.files[0]);
+      // Upload organizer logo if file is selected
+      let organizerLogoUrl = editingEvent.organizer_logo_url;
+      if (editingOrganizerLogoFile) {
+        organizerLogoUrl = await uploadImage(editingOrganizerLogoFile);
       }
-      
-      const eventData = {
-        ...newEvent,
-        image_url: imageUrl || null
-      };
-      
-      // Update the event
-      const { error: eventError } = await supabase
+
+      // Upload sponsor logos if files are selected
+      const updatedSponsors = [...(editingEvent.sponsor_logos || [])];
+      for (let i = 0; i < updatedSponsors.length; i++) {
+        const file = editingSponsorLogoFiles.get(i);
+        if (file) {
+          const url = await uploadImage(file);
+          updatedSponsors[i].url = url;
+        }
+      }
+
+      const { data, error } = await supabase
         .from('events')
-        .update(eventData)
-        .eq('id', editingEvent.id);
-      
-      if (eventError) throw eventError;
-      
-      // Create ticket types for the event if any are provided
-      if (validTicketTypes.length > 0) {
-        const ticketTypesData = validTicketTypes.map(ticketType => ({
-          event_id: editingEvent.id,
-          name: ticketType.name,
-          price: ticketType.price,
-          is_active: ticketType.is_active
-        }));
-        
-        const { error: ticketTypeError } = await supabase
-          .from('ticket_types')
-          .insert(ticketTypesData);
-          
-        if (ticketTypeError) throw ticketTypeError;
-      }
-      
-      setSuccess("Event updated successfully!");
+        .update({
+          title: editingEvent.title.trim(),
+          description: editingEvent.description.trim(),
+          date: editingEvent.date,
+          time: editingEvent.time,
+          location: editingEvent.location.trim(),
+          image_url: editingEvent.image_url || null,
+          is_published: editingEvent.is_published,
+          organizer_name: editingEvent.organizer_name || null,
+          organizer_logo_url: organizerLogoUrl || null,
+          sponsor_logos: updatedSponsors && updatedSponsors.length > 0 ? updatedSponsors : null
+        })
+        .eq('id', editingEvent.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setSuccess('Event updated successfully!');
       setEditingEvent(null);
-      setNewEvent({
-        title: '',
-        description: '',
-        date: '',
-        time: '',
-        location: '',
-        image_url: '',
-        is_published: true
-      });
-      setEventTicketTypes([{ name: '', price: 0, is_active: true }]);
-      setPreviewUrl(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-      setShowCreateForm(false);
-      
-      // Reload events and ticket types
-      await loadEvents();
-      await loadTicketTypes();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An unknown error occurred");
+      setEditingOrganizerLogoFile(null);
+      setEditingSponsorLogoFiles(new Map());
+      loadEvents();
+    } catch (err: any) {
+      console.error('Error updating event:', err);
+      setError(err.message || 'Failed to update event. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -499,6 +481,33 @@ export default function AdminEventsManagement() {
       });
     }
   };
+
+  const resetForm = () => {
+    setNewEvent({
+      title: '',
+      description: '',
+      date: '',
+      time: '',
+      location: '',
+      image_url: '',
+      is_published: true,
+      organizer_name: '',
+      organizer_logo_url: '',
+      sponsor_logos: []
+    });
+    setEventTicketTypes([{ name: '', price: 0, is_active: true }]);
+    setPreviewUrl(null);
+    setOrganizerLogoFile(null);
+    setSponsorLogoFiles(new Map());
+  };
+
+  // Clean up file states when editing modal is closed
+  useEffect(() => {
+    if (!editingEvent) {
+      setEditingOrganizerLogoFile(null);
+      setEditingSponsorLogoFiles(new Map());
+    }
+  }, [editingEvent]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -555,7 +564,7 @@ export default function AdminEventsManagement() {
             <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-6">
               {editingEvent ? "Edit Event" : "Create New Event"}
             </h2>
-            <form onSubmit={editingEvent ? handleUpdateEvent : handleSubmit} className="space-y-6">
+            <form onSubmit={editingEvent ? handleEditEvent : handleCreateEvent} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -572,7 +581,7 @@ export default function AdminEventsManagement() {
                     required
                   />
                 </div>
-                
+
                 <div>
                   <label htmlFor="date" className="block text-sm font-semibold text-gray-700 mb-2">
                     Event Date *
@@ -587,7 +596,7 @@ export default function AdminEventsManagement() {
                     required
                   />
                 </div>
-                
+
                 <div>
                   <label htmlFor="time" className="block text-sm font-semibold text-gray-700 mb-2">
                     Event Time
@@ -601,7 +610,7 @@ export default function AdminEventsManagement() {
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                   />
                 </div>
-                
+
                 <div>
                   <label htmlFor="location" className="block text-sm font-semibold text-gray-700 mb-2">
                     Location *
@@ -617,25 +626,25 @@ export default function AdminEventsManagement() {
                     required
                   />
                 </div>
-                
+
                 <div className="md:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Event Image
                   </label>
                   {previewUrl && (
                     <div className="mb-4">
-                      <img 
-                        src={previewUrl} 
-                        alt="Preview" 
+                      <img
+                        src={previewUrl}
+                        alt="Preview"
                         className="w-full h-48 sm:h-52 object-cover rounded-lg shadow-sm"
                       />
                     </div>
                   )}
                   {editingEvent && editingEvent.image_url && !previewUrl && (
                     <div className="mb-4">
-                      <img 
-                        src={editingEvent.image_url} 
-                        alt="Current" 
+                      <img
+                        src={editingEvent.image_url}
+                        alt="Current"
                         className="w-full h-48 sm:h-52 object-cover rounded-lg shadow-sm"
                       />
                     </div>
@@ -649,7 +658,7 @@ export default function AdminEventsManagement() {
                   />
                   <p className="mt-2 text-sm text-gray-500">Upload an image (max 5MB) or enter URL below</p>
                 </div>
-                
+
                 <div>
                   <label htmlFor="image_url" className="block text-sm font-semibold text-gray-700 mb-2">
                     Image URL
@@ -665,7 +674,7 @@ export default function AdminEventsManagement() {
                   />
                   <p className="mt-2 text-sm text-gray-500">If both image and URL are provided, uploaded image will be used</p>
                 </div>
-                
+
                 <div className="flex items-center">
                   <input
                     id="is_published"
@@ -679,7 +688,7 @@ export default function AdminEventsManagement() {
                     Publish immediately
                   </label>
                 </div>
-                
+
                 <div className="md:col-span-2">
                   <label htmlFor="description" className="block text-sm font-semibold text-gray-700 mb-2">
                     Description
@@ -695,7 +704,145 @@ export default function AdminEventsManagement() {
                   />
                 </div>
               </div>
-              
+
+              {/* Organizer Information */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-3">Organizer Information</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Organizer Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newEvent.organizer_name}
+                      onChange={(e) => setNewEvent({ ...newEvent, organizer_name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Enter organizer name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Organizer Logo URL
+                    </label>
+                    <input
+                      type="text"
+                      value={newEvent.organizer_logo_url}
+                      onChange={(e) => setNewEvent({ ...newEvent, organizer_logo_url: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Enter organizer logo URL"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Organizer Logo Upload
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setOrganizerLogoFile(e.target.files?.[0] || null)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <p className="mt-1 text-sm text-gray-500">Upload organizer logo image (optional)</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sponsor Logos */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-3">Sponsor Logos</h3>
+                <div className="space-y-4">
+                  {newEvent.sponsor_logos.map((sponsor, index) => (
+                    <div key={index} className="border border-gray-200 rounded-md p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Sponsor Name
+                          </label>
+                          <input
+                            type="text"
+                            value={sponsor.name}
+                            onChange={(e) => {
+                              const updatedSponsors = [...newEvent.sponsor_logos];
+                              updatedSponsors[index].name = e.target.value;
+                              setNewEvent({ ...newEvent, sponsor_logos: updatedSponsors });
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Sponsor name"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Sponsor Logo URL
+                          </label>
+                          <input
+                            type="text"
+                            value={sponsor.url}
+                            onChange={(e) => {
+                              const updatedSponsors = [...newEvent.sponsor_logos];
+                              updatedSponsors[index].url = e.target.value;
+                              setNewEvent({ ...newEvent, sponsor_logos: updatedSponsors });
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Sponsor logo URL"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Sponsor Logo Upload
+                          </label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              if (e.target.files?.[0]) {
+                                const newMap = new Map(sponsorLogoFiles);
+                                newMap.set(index, e.target.files[0]);
+                                setSponsorLogoFiles(newMap);
+                              }
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          />
+                          <p className="mt-1 text-sm text-gray-500">Upload sponsor logo image (optional)</p>
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updatedSponsors = [...newEvent.sponsor_logos];
+                            updatedSponsors.splice(index, 1);
+                            setNewEvent({ ...newEvent, sponsor_logos: updatedSponsors });
+
+                            // Clean up file reference
+                            const newMap = new Map(sponsorLogoFiles);
+                            newMap.delete(index);
+                            setSponsorLogoFiles(newMap);
+                          }}
+                          className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+                        >
+                          Remove Sponsor
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewEvent({
+                        ...newEvent,
+                        sponsor_logos: [...newEvent.sponsor_logos, { name: '', url: '' }]
+                      });
+                    }}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  >
+                    Add Sponsor
+                  </button>
+                </div>
+              </div>
+
               {/* Ticket Types Section */}
               <div className="border-t border-gray-200 pt-6">
                 <div className="flex items-center justify-between mb-4">
@@ -711,7 +858,7 @@ export default function AdminEventsManagement() {
                     Add Ticket Type
                   </button>
                 </div>
-                
+
                 <div className="space-y-4">
                   {eventTicketTypes.map((ticketType, index) => (
                     <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 bg-gray-50 rounded-lg">
@@ -727,7 +874,7 @@ export default function AdminEventsManagement() {
                           placeholder="e.g., General Admission, VIP"
                         />
                       </div>
-                      
+
                       <div className="md:col-span-3">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Price (UGX)
@@ -741,7 +888,7 @@ export default function AdminEventsManagement() {
                           placeholder="0 for free"
                         />
                       </div>
-                      
+
                       <div className="md:col-span-3 flex items-center">
                         <label className="flex items-center">
                           <input
@@ -753,7 +900,7 @@ export default function AdminEventsManagement() {
                           <span className="ml-2 text-sm text-gray-700">Active</span>
                         </label>
                       </div>
-                      
+
                       <div className="md:col-span-1 flex items-center">
                         <button
                           type="button"
@@ -768,14 +915,14 @@ export default function AdminEventsManagement() {
                     </div>
                   ))}
                 </div>
-                
+
                 <p className="mt-2 text-sm text-gray-500">
-                  {editingEvent 
-                    ? "Add new ticket types for this event. Existing ticket types will not be affected." 
+                  {editingEvent
+                    ? "Add new ticket types for this event. Existing ticket types will not be affected."
                     : "Create different ticket types for this event. You can add more ticket types later if needed."}
                 </p>
               </div>
-              
+
               <div className="pt-6 border-t border-gray-200 flex justify-end gap-3">
                 <button
                   type="button"
@@ -789,7 +936,10 @@ export default function AdminEventsManagement() {
                       time: '',
                       location: '',
                       image_url: '',
-                      is_published: true
+                      is_published: true,
+                      organizer_name: '',
+                      organizer_logo_url: '',
+                      sponsor_logos: []
                     });
                     setEventTicketTypes([{ name: '', price: 0, is_active: true }]);
                     setPreviewUrl(null);
@@ -833,7 +983,7 @@ export default function AdminEventsManagement() {
             <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">All Events</h2>
             <p className="text-gray-500 text-sm mt-1">{events.length} events found</p>
           </div>
-          
+
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -908,11 +1058,10 @@ export default function AdminEventsManagement() {
                           <div className="text-sm text-gray-500 truncate max-w-32">{event.location}</div>
                         </td>
                         <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            event.is_published 
-                              ? "bg-green-100 text-green-800" 
+                          <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${event.is_published
+                              ? "bg-green-100 text-green-800"
                               : "bg-yellow-100 text-yellow-800"
-                          }`}>
+                            }`}>
                             {event.is_published ? "Published" : "Draft"}
                           </span>
                         </td>
@@ -933,15 +1082,15 @@ export default function AdminEventsManagement() {
                           )}
                         </td>
                         <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
-                            onClick={() => handleEditEvent(event)}
+                          <Link
+                            href={`/admin/events/${event.id}`}
                             className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1.5 transition-colors duration-200 mr-2"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                             <span className="hidden sm:inline">Edit</span>
-                          </button>
+                          </Link>
                           <button
                             onClick={() => handleDeleteEvent(event.id)}
                             className="inline-flex items-center gap-1 text-red-600 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-red-500 rounded-md p-1.5 transition-colors duration-200"
@@ -950,7 +1099,7 @@ export default function AdminEventsManagement() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                             <span className="hidden sm:inline">Delete</span>
-                        </button>
+                          </button>
                         </td>
                       </tr>
                     );
@@ -960,7 +1109,294 @@ export default function AdminEventsManagement() {
             </div>
           )}
         </div>
-        
+
+        {/* Edit Event Modal */}
+        {editingEvent && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-2xl w-full max-h-screen overflow-y-auto">
+              <div className="p-6">
+                <h2 className="text-2xl font-bold mb-4">Edit Event</h2>
+
+                {error && (
+                  <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+                    {error}
+                  </div>
+                )}
+
+                <form onSubmit={handleEditEvent}>
+                  {/* Basic Event Fields */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Title *
+                      </label>
+                      <input
+                        type="text"
+                        value={editingEvent.title}
+                        onChange={(e) => setEditingEvent({ ...editingEvent, title: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Location *
+                      </label>
+                      <input
+                        type="text"
+                        value={editingEvent.location}
+                        onChange={(e) => setEditingEvent({ ...editingEvent, location: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Date *
+                      </label>
+                      <input
+                        type="date"
+                        value={editingEvent.date}
+                        onChange={(e) => setEditingEvent({ ...editingEvent, date: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Time
+                      </label>
+                      <input
+                        type="time"
+                        value={editingEvent.time}
+                        onChange={(e) => setEditingEvent({ ...editingEvent, time: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      value={editingEvent.description}
+                      onChange={(e) => setEditingEvent({ ...editingEvent, description: e.target.value })}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Image URL
+                    </label>
+                    <input
+                      type="text"
+                      value={editingEvent.image_url || ''}
+                      onChange={(e) => setEditingEvent({ ...editingEvent, image_url: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="https://example.com/image.jpg"
+                    />
+                  </div>
+
+                  {/* Organizer Information */}
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-3">Organizer Information</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Organizer Name
+                        </label>
+                        <input
+                          type="text"
+                          value={editingEvent.organizer_name || ''}
+                          onChange={(e) => setEditingEvent({ ...editingEvent, organizer_name: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Enter organizer name"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Organizer Logo URL
+                        </label>
+                        <input
+                          type="text"
+                          value={editingEvent.organizer_logo_url || ''}
+                          onChange={(e) => setEditingEvent({ ...editingEvent, organizer_logo_url: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Enter organizer logo URL"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Organizer Logo Upload
+                        </label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setEditingOrganizerLogoFile(e.target.files?.[0] || null)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <p className="mt-1 text-sm text-gray-500">Upload organizer logo image (optional)</p>
+                        {editingEvent.organizer_logo_url && (
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-600">Current logo:</p>
+                            <img
+                              src={editingEvent.organizer_logo_url}
+                              alt="Organizer logo"
+                              className="h-16 mt-1"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sponsor Logos */}
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-3">Sponsor Logos</h3>
+                    <div className="space-y-4">
+                      {(editingEvent.sponsor_logos || []).map((sponsor, index) => (
+                        <div key={index} className="border border-gray-200 rounded-md p-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Sponsor Name
+                              </label>
+                              <input
+                                type="text"
+                                value={sponsor.name}
+                                onChange={(e) => {
+                                  const updatedSponsors = [...(editingEvent.sponsor_logos || [])];
+                                  updatedSponsors[index].name = e.target.value;
+                                  setEditingEvent({ ...editingEvent, sponsor_logos: updatedSponsors });
+                                }}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Sponsor name"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Sponsor Logo URL
+                              </label>
+                              <input
+                                type="text"
+                                value={sponsor.url}
+                                onChange={(e) => {
+                                  const updatedSponsors = [...(editingEvent.sponsor_logos || [])];
+                                  updatedSponsors[index].url = e.target.value;
+                                  setEditingEvent({ ...editingEvent, sponsor_logos: updatedSponsors });
+                                }}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Sponsor logo URL"
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Sponsor Logo Upload
+                              </label>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                  if (e.target.files?.[0]) {
+                                    const newMap = new Map(editingSponsorLogoFiles);
+                                    newMap.set(index, e.target.files[0]);
+                                    setEditingSponsorLogoFiles(newMap);
+                                  }
+                                }}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                              />
+                              <p className="mt-1 text-sm text-gray-500">Upload sponsor logo image (optional)</p>
+                              {sponsor.url && (
+                                <div className="mt-2">
+                                  <p className="text-sm text-gray-600">Current logo:</p>
+                                  <img
+                                    src={sponsor.url}
+                                    alt={`Sponsor ${sponsor.name}`}
+                                    className="h-12 mt-1"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="mt-3">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updatedSponsors = [...(editingEvent.sponsor_logos || [])];
+                                updatedSponsors.splice(index, 1);
+                                setEditingEvent({ ...editingEvent, sponsor_logos: updatedSponsors });
+
+                                // Clean up file reference
+                                const newMap = new Map(editingSponsorLogoFiles);
+                                newMap.delete(index);
+                                setEditingSponsorLogoFiles(newMap);
+                              }}
+                              className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+                            >
+                              Remove Sponsor
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updatedSponsors = editingEvent.sponsor_logos || [];
+                          setEditingEvent({
+                            ...editingEvent,
+                            sponsor_logos: [...updatedSponsors, { name: '', url: '' }]
+                          });
+                        }}
+                        className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      >
+                        Add Sponsor
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={editingEvent.is_published}
+                        onChange={(e) => setEditingEvent({ ...editingEvent, is_published: e.target.checked })}
+                        className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                      />
+                      <span className="ml-2 text-sm text-gray-600">Published</span>
+                    </label>
+                  </div>
+
+                  <div className="flex justify-end space-x-3">
+                    <button
+                      type="button"
+                      onClick={() => setEditingEvent(null)}
+                      className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      disabled={isSubmitting}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md shadow-sm text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
