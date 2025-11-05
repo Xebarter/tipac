@@ -44,7 +44,7 @@ export async function POST(request: Request) {
         event_id,
         purchase_channel: 'physical_batch',
         status: 'confirmed', // Changed from 'valid' to 'confirmed' to match expected status
-        is_active: false, // Set to false by default - tickets need to be activated via admin
+        is_active: true, // Set to true by default for physical tickets to be valid at entrance
         batch_code,
         qr_code: qrCode,
         price: price || 0, // Add price to ticket data
