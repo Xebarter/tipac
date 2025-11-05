@@ -58,11 +58,12 @@ export async function POST(request: Request) {
         id: ticketId,
         event_id,
         purchase_channel: 'physical_batch',
-        status: 'confirmed',
-        is_active: true,
+        status: 'confirmed', // Changed from 'valid' to 'confirmed' to match expected status
+        is_active: true, // Set to true by default for physical tickets to be valid at entrance
         batch_code,
         qr_code: qrCode,
-        price: ticketPrice || 0,
+        price: ticketPrice || 0, // Use ticket type price or provided price
+        // Removed default buyer information since we don't want to track ownership
       });
     }
 
