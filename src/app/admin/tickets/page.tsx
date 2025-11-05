@@ -130,14 +130,39 @@ export default function AdminTicketsDashboard() {
       if (batchError) throw batchError;
       
       // Also update all tickets in this batch
+      const batch = batches.find(b => b.id === batchId);
+      if (batch) {
+        const { error: ticketsError } = await supabase
+          .from('tickets')
+          .update({ is_active: !currentStatus })
+          .eq('batch_code', batch.batch_code);
+        
+        if (ticketsError) throw ticketsError;
+      }
+      
+      setSuccess(`Batch ${!currentStatus ? 'activated' : 'deactivated'} successfully!`);
+      
+      // Reload data
+      await loadData();
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unknown error occurred");
+    }
+  };
+
+  const activateAllTicketsInBatch = async (batchId: string, batchCode: string) => {
+    try {
+      // Update all tickets in this batch to be active
       const { error: ticketsError } = await supabase
         .from('tickets')
-        .update({ is_active: !currentStatus })
-        .eq('batch_code', batches.find(b => b.id === batchId)?.batch_code);
+        .update({ is_active: true })
+        .eq('batch_code', batchCode);
       
       if (ticketsError) throw ticketsError;
       
-      setSuccess(`Batch ${!currentStatus ? 'activated' : 'deactivated'} successfully!`);
+      setSuccess(`All tickets in batch activated successfully!`);
       
       // Reload data
       await loadData();
@@ -488,16 +513,27 @@ export default function AdminTicketsDashboard() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
-                          onClick={() => toggleBatchStatus(batch.id, batch.is_active)}
-                          className={`inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                            batch.is_active
-                              ? "bg-red-600 hover:bg-red-700"
-                              : "bg-green-600 hover:bg-green-700"
-                          }`}
-                        >
-                          {batch.is_active ? "Deactivate" : "Activate"}
-                        </button>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => toggleBatchStatus(batch.id, batch.is_active)}
+                            className={`inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                              batch.is_active
+                                ? "bg-red-600 hover:bg-red-700"
+                                : "bg-green-600 hover:bg-green-700"
+                            }`}
+                          >
+                            {batch.is_active ? "Deactivate" : "Activate"}
+                          </button>
+                          
+                          {!batch.is_active && (
+                            <button
+                              onClick={() => activateAllTicketsInBatch(batch.id, batch.batch_code)}
+                              className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                              Activate Tickets
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

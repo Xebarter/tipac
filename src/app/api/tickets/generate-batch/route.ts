@@ -44,13 +44,14 @@ export async function POST(request: Request) {
         event_id,
         purchase_channel: 'physical_batch',
         status: 'confirmed', // Changed from 'valid' to 'confirmed' to match expected status
-        is_active: true, // Set to true since we're adding buyer info
+        is_active: false, // Set to false by default - tickets need to be activated via admin
         batch_code,
         qr_code: qrCode,
         price: price || 0, // Add price to ticket data
-        buyer_name: "Offline Buyer", // Add default buyer information
-        buyer_phone: "0000000000", // Add default phone
-        email: "offlinebuyer@gmail.com" // Add default email
+        // Remove default buyer information so tickets must be activated to be valid
+        // buyer_name: "Offline Buyer", // Add default buyer information
+        // buyer_phone: "0000000000", // Add default phone
+        // email: "offlinebuyer@gmail.com" // Add default email
       });
     }
 
@@ -213,7 +214,7 @@ async function generateTicketsPDF(tickets: any[], batchCode: string, event: any,
     doc.fontSize(10);
     doc.text(`Batch Code: ${ticket.batch_code}`, qrX + qrSize + 10, qrY);
     doc.text(`Status: confirmed`, qrX + qrSize + 10, qrY + 20);
-    doc.text(`Active: ${(ticket.is_active || ticket.buyer_name) ? 'Yes' : 'No'}`, qrX + qrSize + 10, qrY + 40);
+    doc.text(`Active: ${(ticket.is_active) ? 'Yes' : 'No'}`, qrX + qrSize + 10, qrY + 40);
     if (price !== undefined) {
       doc.text(`Price: ${price > 0 ? `UGX ${price.toLocaleString()}` : 'Free'}`, qrX + qrSize + 10, qrY + 60);
     }
