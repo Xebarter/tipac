@@ -14,6 +14,7 @@ interface Event {
   description: string;
   image_url: string | null;
   is_published: boolean;
+  sponsor_logos?: Array<{ name: string; url: string }> | null;
 }
 
 export function Events() {
@@ -35,7 +36,8 @@ export function Events() {
             location,
             description,
             image_url,
-            is_published
+            is_published,
+            sponsor_logos
           `)
           .eq("is_published", true)
           .gte("date", new Date().toISOString().split("T")[0]) // Only future events
@@ -250,6 +252,32 @@ export function Events() {
                       }`}>
                       {event.description}
                     </p>
+
+                    {/* Sponsor Logos Section */}
+                    {event.sponsor_logos && event.sponsor_logos.length > 0 && (
+                      <div className="mb-6">
+                        <div className="flex items-center mb-3">
+                          <div className="flex-grow border-t border-gray-200"></div>
+                          <span className="flex-shrink mx-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Sponsored by</span>
+                          <div className="flex-grow border-t border-gray-200"></div>
+                        </div>
+                        <div className="flex flex-wrap justify-center gap-4">
+                          {event.sponsor_logos.map((sponsor, idx) => (
+                            <div key={idx} className="flex items-center justify-center bg-gray-50 rounded-lg p-2 h-16 w-24 border border-gray-200">
+                              {sponsor.url ? (
+                                <img 
+                                  src={sponsor.url} 
+                                  alt={sponsor.name}
+                                  className="max-h-12 max-w-full object-contain"
+                                />
+                              ) : (
+                                <span className="text-gray-600 text-xs text-center font-medium">{sponsor.name}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     <div className={`${events.length === 1 ? 'lg:mt-auto' : ''}`}>
                       <Link href={`/tickets?event=${event.id}`}>
