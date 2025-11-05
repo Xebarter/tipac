@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,9 @@ export default function EditEvent() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     loadEventAndTickets();
@@ -68,6 +71,11 @@ export default function EditEvent() {
 
       if (eventError) throw eventError;
       setEvent(eventData);
+
+      // Set image preview if there's an existing image
+      if (eventData.image_url) {
+        setImagePreview(eventData.image_url);
+      }
 
       // Load ticket types
       const { data: ticketTypesData, error: ticketTypesError } = await supabase
@@ -120,6 +128,57 @@ export default function EditEvent() {
     }
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setError("Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("File too large. Maximum file size is 5MB.");
+      return;
+    }
+
+    setSelectedImage(file);
+    
+    // Generate preview
+    const preview = URL.createObjectURL(file);
+    setImagePreview(preview);
+    handleEventChange("image_url", preview);
+  };
+
+  const uploadImage = async (file: File): Promise<string> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `events/${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+      // Instead of checking if bucket exists, directly attempt to upload
+      // This avoids issues with listBuckets permissions or other problems
+      const { data, error } = await supabase.storage
+        .from('gallery')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('gallery')
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw new Error('Failed to upload image');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!event) return;
@@ -128,6 +187,13 @@ export default function EditEvent() {
       setIsSubmitting(true);
       setError(null);
       setSuccess(null);
+
+      let imageUrl = event.image_url;
+
+      // Upload image if a new one was selected
+      if (selectedImage) {
+        imageUrl = await uploadImage(selectedImage);
+      }
 
       // Update event details
       const { error: eventError } = await supabase
@@ -138,7 +204,7 @@ export default function EditEvent() {
           date: event.date,
           time: event.time,
           location: event.location,
-          image_url: event.image_url,
+          image_url: imageUrl,
           is_published: event.is_published,
           organizer_name: event.organizer_name,
           organizer_logo_url: event.organizer_logo_url,
@@ -182,6 +248,8 @@ export default function EditEvent() {
       setSuccess("Event and ticket types updated successfully!");
       // Reset new ticket types form
       setNewTicketTypes([{ name: "", price: 0, is_active: true }]);
+      // Reset image selection
+      setSelectedImage(null);
       // Reload data
       await loadEventAndTickets();
 
@@ -301,12 +369,42 @@ export default function EditEvent() {
               </div>
 
               <div>
-                <Label htmlFor="image_url">Image URL</Label>
-                <Input
-                  id="image_url"
-                  value={event.image_url || ""}
-                  onChange={(e) => handleEventChange("image_url", e.target.value)}
-                />
+                <Label htmlFor="image">Event Image</Label>
+                <div className="mt-2">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageChange}
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    className="hidden"
+                  />
+                  <div className="flex items-start gap-6">
+                    <Button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      variant="outline"
+                    >
+                      Choose Image
+                    </Button>
+                    {(imagePreview || event.image_url) && (
+                      <div className="flex flex-col">
+                        <div className="text-sm text-gray-500 mb-2">Preview:</div>
+                        <img
+                          src={imagePreview || event.image_url || ""}
+                          alt="Preview"
+                          className="w-32 h-32 object-cover rounded-md border"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-500 mt-2">
+                    JPEG, PNG, GIF, or WebP (max 5MB)
+                  </p>
+                </div>
               </div>
 
               <div>
@@ -399,37 +497,20 @@ export default function EditEvent() {
           <div className="bg-card rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Add New Ticket Types</h2>
-              <button
-                type="button"
-                onClick={addNewTicketType}
-                className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
+              <Button type="button" onClick={addNewTicketType} variant="outline" size="sm">
                 Add Ticket Type
-              </button>
+              </Button>
             </div>
 
             <div className="space-y-4">
               {newTicketTypes.map((ticketType, index) => (
-                <div
-                  key={index}
-                  className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 bg-gray-50 rounded-lg"
-                >
+                <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 bg-gray-50 rounded-lg">
                   <div className="md:col-span-5">
-                    <Label>Ticket Name</Label>
+                    <Label>Ticket Name *</Label>
                     <Input
                       value={ticketType.name}
-                      onChange={(e) =>
-                        handleNewTicketTypeChange(index, "name", e.target.value)
-                      }
-                      placeholder="e.g., General Admission, VIP"
+                      onChange={(e) => handleNewTicketTypeChange(index, "name", e.target.value)}
+                      required
                     />
                   </div>
 
@@ -439,10 +520,7 @@ export default function EditEvent() {
                       type="number"
                       min="0"
                       value={ticketType.price}
-                      onChange={(e) =>
-                        handleNewTicketTypeChange(index, "price", Number(e.target.value))
-                      }
-                      placeholder="0 for free"
+                      onChange={(e) => handleNewTicketTypeChange(index, "price", Number(e.target.value))}
                     />
                   </div>
 
@@ -451,9 +529,7 @@ export default function EditEvent() {
                       <input
                         type="checkbox"
                         checked={ticketType.is_active}
-                        onChange={(e) =>
-                          handleNewTicketTypeChange(index, "is_active", e.target.checked)
-                        }
+                        onChange={(e) => handleNewTicketTypeChange(index, "is_active", e.target.checked)}
                         className="h-4 w-4 text-blue-600"
                       />
                       <span className="ml-2">Active</span>
@@ -461,27 +537,21 @@ export default function EditEvent() {
                   </div>
 
                   <div className="md:col-span-1 flex items-center">
-                    <button
+                    <Button
                       type="button"
                       onClick={() => removeNewTicketType(index)}
-                      className="text-red-500 hover:text-red-700"
+                      variant="outline"
+                      size="sm"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </button>
+                      Remove
+                    </Button>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="flex justify-end space-x-4">
+          <div className="flex justify-end gap-4">
             <Button
               type="button"
               variant="outline"

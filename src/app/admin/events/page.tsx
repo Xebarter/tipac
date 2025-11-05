@@ -199,8 +199,10 @@ export default function AdminEventsManagement() {
   const uploadImage = async (file: File): Promise<string> => {
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `events/${Math.random()}.${fileExt}`;
+      const fileName = `events/${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
 
+      // Instead of checking if bucket exists, directly attempt to upload
+      // This avoids issues with listBuckets permissions or other problems
       const { data, error } = await supabase.storage
         .from('gallery')
         .upload(fileName, file, {
@@ -208,16 +210,19 @@ export default function AdminEventsManagement() {
           upsert: false
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Storage upload error:', error);
+        throw new Error(`Failed to upload image: ${error.message}`);
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from('gallery')
         .getPublicUrl(fileName);
 
       return publicUrl;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading image:', error);
-      throw new Error('Failed to upload image');
+      throw new Error(`Failed to upload image: ${error.message || error.toString()}`);
     }
   };
 

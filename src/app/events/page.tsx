@@ -15,6 +15,9 @@ interface Event {
   description: string;
   image_url: string | null;
   is_published: boolean;
+  organizer_name: string | null;
+  organizer_logo_url: string | null;
+  sponsor_logos: Array<{name: string, url: string}> | null;
 }
 
 export default function EventsPage() {
@@ -215,12 +218,54 @@ export default function EventsPage() {
                         : 'mb-6 line-clamp-3'}`}>
                       {event.description}
                     </p>
+
+                    {/* Organizer Information */}
+                    {(event.organizer_name || event.organizer_logo_url) && (
+                      <div className="mb-6">
+                        <h4 className="text-sm font-semibold text-gray-500 mb-2">Organized by</h4>
+                        <div className="flex items-center">
+                          {event.organizer_logo_url ? (
+                            <img 
+                              src={event.organizer_logo_url} 
+                              alt={event.organizer_name || "Organizer"}
+                              className="h-10 w-auto object-contain"
+                            />
+                          ) : (
+                            <span className="text-gray-700 font-medium">
+                              {event.organizer_name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sponsor Logos */}
+                    {event.sponsor_logos && event.sponsor_logos.length > 0 && (
+                      <div className="mb-6">
+                        <h4 className="text-sm font-semibold text-gray-500 mb-2">Sponsored by</h4>
+                        <div className="flex flex-wrap gap-3">
+                          {event.sponsor_logos.map((sponsor, idx) => (
+                            <div key={idx} className="bg-gray-100 rounded-lg p-2 flex items-center justify-center h-12 w-24">
+                              {sponsor.url ? (
+                                <img 
+                                  src={sponsor.url} 
+                                  alt={sponsor.name}
+                                  className="max-h-8 max-w-full object-contain"
+                                />
+                              ) : (
+                                <span className="text-gray-600 text-xs text-center">{sponsor.name}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     
                     <div className={`${events.length === 1 ? 'lg:mt-auto' : ''}`}>
                       <Link href={`/tickets?event=${event.id}`}>
                         <Button 
                           size="sm" 
-                          className={`bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-medium rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 ${events.length === 1
+                          className={`bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-medium rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 w-full ${events.length === 1
                               ? 'text-base lg:text-lg lg:px-8 lg:py-3'
                               : 'text-sm px-4 py-2'}`}
                         >

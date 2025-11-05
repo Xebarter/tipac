@@ -27,7 +27,16 @@ export function Events() {
         setLoading(true);
         const { data, error } = await supabase
           .from("events")
-          .select("*")
+          .select(`
+            id,
+            title,
+            date,
+            time,
+            location,
+            description,
+            image_url,
+            is_published
+          `)
           .eq("is_published", true)
           .gte("date", new Date().toISOString().split("T")[0]) // Only future events
           .order("date", { ascending: true })
@@ -163,13 +172,26 @@ export function Events() {
                       ? 'lg:h-96'
                       : 'h-48'
                     }`}>
-                    {event.image_url ? (
+                    {event.image_url && event.image_url.trim() !== '' ? (
                       <img
                         src={event.image_url}
                         alt={event.title}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        onError={(e) => {
+                          // Handle broken image links by hiding the image and showing the placeholder
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          // Find the parent div and add a class to show the placeholder
+                          const parentDiv = target.closest('div.relative');
+                          if (parentDiv) {
+                            parentDiv.classList.add('show-placeholder');
+                          }
+                        }}
                       />
-                    ) : (
+                    ) : null}
+                    
+                    {/* Fallback placeholder when there's no image or image fails to load */}
+                    {(!event.image_url || event.image_url.trim() === '') && (
                       <div className={`w-full h-full bg-gradient-to-r from-purple-500 to-pink-600 flex items-center justify-center ${events.length === 1
                           ? 'lg:h-96'
                           : ''
