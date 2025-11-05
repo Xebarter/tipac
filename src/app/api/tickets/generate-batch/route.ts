@@ -26,6 +26,21 @@ export async function POST(request: Request) {
       throw new Error(`Failed to fetch event details: ${eventError.message}`);
     }
 
+    // Get ticket type price if not provided
+    let ticketPrice = price || 0;
+    if (!price) {
+      const { data: ticketTypeData, error: ticketTypeError } = await supabase
+        .from('ticket_types')
+        .select('price')
+        .eq('event_id', event_id)
+        .eq('is_active', true)
+        .limit(1);
+        
+      if (!ticketTypeError && ticketTypeData && ticketTypeData.length > 0) {
+        ticketPrice = ticketTypeData[0].price;
+      }
+    }
+
     // Generate tickets
     const tickets = [];
     for (let i = 0; i < num_tickets; i++) {
@@ -47,11 +62,10 @@ export async function POST(request: Request) {
         is_active: true, // Set to true by default for physical tickets to be valid at entrance
         batch_code,
         qr_code: qrCode,
-        price: price || 0, // Add price to ticket data
-        // Remove default buyer information so tickets must be activated to be valid
-        // buyer_name: "Offline Buyer", // Add default buyer information
-        // buyer_phone: "0000000000", // Add default phone
-        // email: "offlinebuyer@gmail.com" // Add default email
+        price: ticketPrice || 0, // Use ticket type price or provided price
+        buyer_name: "Offline Buyer", // Add default buyer information
+        buyer_phone: "0000000000", // Add default phone
+        email: "offlinebuyer@gmail.com" // Add default email
       });
     }
 

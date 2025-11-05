@@ -13,12 +13,20 @@ interface Event {
   date: string;
 }
 
+interface TicketType {
+  id: string;
+  name: string;
+  price: number;
+  event_id: string;
+}
+
 export default function GenerateBatchTickets() {
   const [events, setEvents] = useState<Event[]>([]);
+  const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
   const [selectedEvent, setSelectedEvent] = useState("");
+  const [selectedTicketType, setSelectedTicketType] = useState("");
   const [numTickets, setNumTickets] = useState(10);
   const [batchCode, setBatchCode] = useState("");
-  const [price, setPrice] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -26,6 +34,15 @@ export default function GenerateBatchTickets() {
   useEffect(() => {
     fetchEvents();
   }, []);
+
+  useEffect(() => {
+    if (selectedEvent) {
+      fetchTicketTypes(selectedEvent);
+    } else {
+      setTicketTypes([]);
+      setSelectedTicketType("");
+    }
+  }, [selectedEvent]);
 
   const fetchEvents = async () => {
     try {
@@ -47,6 +64,30 @@ export default function GenerateBatchTickets() {
     }
   };
 
+  const fetchTicketTypes = async (eventId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("ticket_types")
+        .select("id, name, price, event_id")
+        .eq("event_id", eventId)
+        .eq("is_active", true)
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+      setTicketTypes(data || []);
+      
+      // Auto-select first ticket type if only one exists
+      if (data && data.length === 1) {
+        setSelectedTicketType(data[0].id);
+      } else {
+        setSelectedTicketType("");
+      }
+    } catch (err) {
+      console.error("Error fetching ticket types:", err);
+      setError("Failed to load ticket types");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -54,6 +95,10 @@ export default function GenerateBatchTickets() {
     setSuccess(null);
 
     try {
+      // Get selected ticket type price
+      const ticketType = ticketTypes.find(tt => tt.id === selectedTicketType);
+      const price = ticketType ? ticketType.price : 0;
+
       const response = await fetch("/api/tickets/generate-batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -170,19 +215,31 @@ export default function GenerateBatchTickets() {
           </div>
 
           <div>
-            <Label htmlFor="price" className="text-gray-300 text-sm font-medium">
-              Price per Ticket (UGX)
+            <Label htmlFor="ticketType" className="text-gray-300 text-sm font-medium">
+              Ticket Type
             </Label>
-            <Input
-              id="price"
-              type="number"
-              min="0"
-              value={price}
-              onChange={(e) => setPrice(parseInt(e.target.value) || 0)}
-              className="mt-2 bg-black/30 border-gray-700 text-white focus:ring-2 focus:ring-blue-500"
+            <select
+              id="ticketType"
+              value={selectedTicketType}
+              onChange={(e) => setSelectedTicketType(e.target.value)}
+              className="w-full mt-2 bg-black/30 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+              disabled={!selectedEvent || ticketTypes.length === 0}
               required
-            />
-            <p className="text-xs text-gray-400 mt-1">Enter 0 for free tickets</p>
+            >
+              <option value="">
+                {selectedEvent 
+                  ? (ticketTypes.length === 0 ? 'No active ticket types found' : 'Select a ticket type') 
+                  : 'Please select an event first'}
+              </option>
+              {ticketTypes.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.name} ({type.price.toLocaleString()} UGX)
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-400 mt-1">
+              Select the ticket type to generate. Price is automatically set based on selected type.
+            </p>
           </div>
 
           <div>
@@ -208,7 +265,7 @@ export default function GenerateBatchTickets() {
           >
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || !selectedEvent || !selectedTicketType}
               className="w-full bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold py-3 rounded-xl shadow-lg transition-all"
             >
               {loading ? "Generating..." : "Generate Batch Tickets"}
