@@ -71,7 +71,7 @@ export default function EventsPage() {
       
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
-          className="text-center mb-16"
+          className="text-center mb-12"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -82,10 +82,10 @@ export default function EventsPage() {
               Events
             </span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4 bg-clip-text bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500">
+          <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 bg-clip-text bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500">
             Upcoming Events
           </h1>
-          <p className="text-gray-600 max-w-2xl mx-auto text-lg">
+          <p className="text-gray-600 max-w-2xl mx-auto">
             Join us for our upcoming theatre performances, workshops, and cultural events.
           </p>
         </motion.div>
@@ -156,20 +156,28 @@ export default function EventsPage() {
                       ? 'lg:h-96'
                       : 'h-48'
                     }`}>
-                    {event.image_url ? (
-                      <img 
-                        src={event.image_url} 
+                    {event.image_url && event.image_url.trim() !== '' ? (
+                      <img
+                        src={event.image_url}
                         alt={event.title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const parentDiv = target.closest('div.relative');
+                          if (parentDiv) {
+                            parentDiv.classList.add('show-placeholder');
+                          }
+                        }}
                       />
-                    ) : (
+                    ) : null}
+                    
+                    {(!event.image_url || event.image_url.trim() === '') && (
                       <div className={`w-full h-full bg-gradient-to-r from-purple-500 to-pink-600 flex items-center justify-center ${events.length === 1
                           ? 'lg:h-96'
                           : ''
                         }`}>
-                        <svg xmlns="http://www.w3.org/2000/svg" className={`text-white ${events.length === 1
-                            ? 'h-24 w-24 lg:h-32 lg:w-32'
-                            : 'h-16 w-16'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                       </div>
@@ -242,18 +250,22 @@ export default function EventsPage() {
                     {/* Sponsor Logos */}
                     {event.sponsor_logos && event.sponsor_logos.length > 0 && (
                       <div className="mb-6">
-                        <h4 className="text-sm font-semibold text-gray-500 mb-2">Sponsored by</h4>
-                        <div className="flex flex-wrap gap-3">
+                        <div className="flex items-center mb-3">
+                          <div className="flex-grow border-t border-gray-200"></div>
+                          <span className="flex-shrink mx-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Sponsored by</span>
+                          <div className="flex-grow border-t border-gray-200"></div>
+                        </div>
+                        <div className="flex flex-wrap justify-center gap-4">
                           {event.sponsor_logos.map((sponsor, idx) => (
-                            <div key={idx} className="bg-gray-100 rounded-lg p-2 flex items-center justify-center h-12 w-24">
+                            <div key={idx} className="flex items-center justify-center bg-gray-50 rounded-lg p-2 h-16 w-24 border border-gray-200">
                               {sponsor.url ? (
                                 <img 
                                   src={sponsor.url} 
                                   alt={sponsor.name}
-                                  className="max-h-8 max-w-full object-contain"
+                                  className="max-h-12 max-w-full object-contain"
                                 />
                               ) : (
-                                <span className="text-gray-600 text-xs text-center">{sponsor.name}</span>
+                                <span className="text-gray-600 text-xs text-center font-medium">{sponsor.name}</span>
                               )}
                             </div>
                           ))}
@@ -281,14 +293,14 @@ export default function EventsPage() {
         )}
         
         <motion.div
-          className="text-center mt-16"
+          className="text-center mt-12"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
           <Link href="/">
-            <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-3 text-lg font-semibold rounded-xl">
+            <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-3 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl">
               Return Home
             </Button>
           </Link>
