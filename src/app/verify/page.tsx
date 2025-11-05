@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Scanner } from "@yudiel/react-qr-scanner";
 
@@ -10,6 +10,17 @@ export default function TicketScannerPage() {
   const [ticketId, setTicketId] = useState("");
   const [scanning, setScanning] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
+  const [recentlyMarkedUsedId, setRecentlyMarkedUsedId] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const extractTicketId = (rawValue: string) => {
     if (!rawValue) {
@@ -81,11 +92,14 @@ export default function TicketScannerPage() {
         return;
       }
 
+      setSuccessMessage(null);
+
       const response = await fetch(`/api/tickets/verify/${encodeURIComponent(normalizedId)}`);
       const data = await response.json();
       setResult(data);
       setError(null);
       setShowPopup(true); // Show popup when we have results
+      setRecentlyMarkedUsedId(null);
     } catch (err) {
       setError("Failed to verify ticket");
       console.error(err);
@@ -127,6 +141,15 @@ export default function TicketScannerPage() {
           },
           message: "Ticket marked as used successfully"
         });
+        setRecentlyMarkedUsedId(result.ticket.id);
+        setSuccessMessage("Ticket marked as used successfully");
+        if (successTimeoutRef.current) {
+          clearTimeout(successTimeoutRef.current);
+        }
+        successTimeoutRef.current = setTimeout(() => {
+          setSuccessMessage(null);
+          successTimeoutRef.current = null;
+        }, 4000);
         return true; // Successfully marked as used
       } else {
         setError(data.message || "Failed to mark ticket as used");
@@ -144,6 +167,7 @@ export default function TicketScannerPage() {
     setShowPopup(false);
     setResult(null);
     setScanning(true); // Automatically restart scanning
+    setRecentlyMarkedUsedId(null);
   };
 
   // Mark as used and close popup
@@ -167,6 +191,14 @@ export default function TicketScannerPage() {
             Scan QR codes or manually enter ticket IDs to verify authenticity
           </p>
         </div>
+
+        {successMessage && (
+          <div className="max-w-2xl mx-auto mb-8">
+            <div className="rounded-lg border border-green-700 bg-green-900/40 px-4 py-3 text-green-200 text-center">
+              {successMessage}
+            </div>
+          </div>
+        )}
 
         {/* QR Scanner Section */}
         <div 
@@ -320,7 +352,52 @@ export default function TicketScannerPage() {
               )}
               
               {/* Used Ticket Popup */}
-              {result.valid && result.ticket && result.ticket.used && (
+              {result.valid && result.ticket && result.ticket.used && recentlyMarkedUsedId === result.ticket.id && (
+                <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/30 border border-green-700 rounded-xl">
+                  <div className="flex items-start mb-4">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                    </div>
+                    <div className="ml-4 flex-1">
+                      <h3 className="text-xl font-bold text-green-300">Ticket Updated</h3>
+                      <p className="text-green-400">Marked as used successfully</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-900/50 rounded-lg p-4 mb-6">
+                    <h4 className="font-medium text-white mb-3 text-lg">Ticket Details</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">ID:</span>
+                        <span className="text-white font-mono">{result.ticket.id.substring(0, 8)}...</span>
+                      </div>
+
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Event:</span>
+                        <span className="text-white">{result.ticket.event?.title || result.ticket.event}</span>
+                      </div>
+
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Status:</span>
+                        <span className="text-green-400 font-medium">Marked as Used</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button 
+                      onClick={closePopup}
+                      className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600"
+                    >
+                      Done
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {result.valid && result.ticket && result.ticket.used && recentlyMarkedUsedId !== result.ticket.id && (
                 <div className="bg-gradient-to-br from-orange-900/30 to-amber-900/30 border border-orange-700 rounded-xl">
                   <div className="flex items-start mb-4">
                     <div className="flex-shrink-0 w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">

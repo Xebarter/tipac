@@ -103,17 +103,6 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
       console.log("Ticket passed batch check");
     }
 
-    // Mark ticket as used
-    const { error: updateError } = await supabase
-      .from('tickets')
-      .update({ used: true })
-      .eq('id', ticketId);
-
-    if (updateError) {
-      console.error("Failed to mark ticket as used:", updateError);
-      // Don't fail the verification just because we couldn't mark as used
-    }
-
     // Return success
     return NextResponse.json({
       valid: true,
