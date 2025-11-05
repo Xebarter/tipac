@@ -22,6 +22,10 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
       .eq('id', ticketId)
       .single();
 
+    console.log("Ticket verification request for ID:", ticketId);
+    console.log("Retrieved ticket:", ticket);
+    console.log("Ticket error:", error);
+
     if (error || !ticket) {
       return NextResponse.json(
         { 
@@ -58,8 +62,13 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
 
     // For physical tickets, check if active or has buyer information
     if (ticket.purchase_channel === 'physical_batch') {
+      console.log("Processing physical batch ticket");
+      console.log("Ticket is_active:", ticket.is_active);
+      console.log("Ticket buyer_name:", ticket.buyer_name);
+      
       // Check if the individual ticket is active OR has buyer information
       if (!ticket.is_active && !ticket.buyer_name) {
+        console.log("Ticket rejected: not active and no buyer info");
         return NextResponse.json({
           valid: false,
           message: "Ticket not activated",
@@ -82,6 +91,10 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
         });
       }
       
+      console.log("Ticket passed individual check");
+      console.log("Checking batch status");
+      console.log("Ticket batch_code:", ticket.batch_code);
+      
       // Check if the batch is active or ticket has buyer information
       const { data: batch, error: batchError } = await supabase
         .from('batches')
@@ -89,9 +102,13 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
         .eq('batch_code', ticket.batch_code)
         .single();
         
+      console.log("Batch data:", batch);
+      console.log("Batch error:", batchError);
+        
       if (batchError) {
         console.error("Error fetching batch:", batchError);
       } else if (!batch.is_active && !ticket.buyer_name) {
+        console.log("Ticket rejected: batch not active and no buyer info");
         return NextResponse.json({
           valid: false,
           message: "Ticket batch has been deactivated",
@@ -113,6 +130,8 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
           }
         });
       }
+      
+      console.log("Ticket passed batch check");
     }
 
     // Mark ticket as used
