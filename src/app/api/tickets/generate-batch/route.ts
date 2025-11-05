@@ -44,10 +44,13 @@ export async function POST(request: Request) {
         event_id,
         purchase_channel: 'physical_batch',
         status: 'valid',
-        is_active: true,
+        is_active: true, // Set to true since we're adding buyer info
         batch_code,
         qr_code: qrCode,
-        price: price || 0 // Add price to ticket data
+        price: price || 0, // Add price to ticket data
+        buyer_name: "Offline Buyer", // Add default buyer information
+        buyer_phone: "0000000000", // Add default phone
+        email: "offlinebuyer@gmail.com" // Add default email
       });
     }
 
@@ -63,7 +66,8 @@ export async function POST(request: Request) {
         .insert([{
           batch_code: attemptCount === 0 ? batch_code : `${batch_code}-${Date.now()}-${attemptCount}`,
           event_id,
-          num_tickets
+          num_tickets,
+          is_active: true // Ensure batch is active by default
         }])
         .select()
         .single();
@@ -209,7 +213,7 @@ async function generateTicketsPDF(tickets: any[], batchCode: string, event: any,
     doc.fontSize(10);
     doc.text(`Batch Code: ${ticket.batch_code}`, qrX + qrSize + 10, qrY);
     doc.text(`Status: ${ticket.status}`, qrX + qrSize + 10, qrY + 20);
-    doc.text(`Active: ${ticket.is_active ? 'Yes' : 'No'}`, qrX + qrSize + 10, qrY + 40);
+    doc.text(`Active: ${(ticket.is_active || ticket.buyer_name) ? 'Yes' : 'No'}`, qrX + qrSize + 10, qrY + 40);
     if (price !== undefined) {
       doc.text(`Price: ${price > 0 ? `UGX ${price.toLocaleString()}` : 'Free'}`, qrX + qrSize + 10, qrY + 60);
     }

@@ -407,11 +407,11 @@ export default function AdminTicketsDashboard() {
                           </span>
                           {ticket.purchase_channel === 'physical_batch' && (
                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              ticket.is_active 
+                              ticket.is_active || ticket.buyer_name 
                                 ? "bg-green-100 text-green-800" 
                                 : "bg-red-100 text-red-800"
                             }`}>
-                              {ticket.is_active ? "Active" : "Inactive"}
+                              {ticket.is_active || ticket.buyer_name ? "Active" : "Inactive"}
                             </span>
                           )}
                         </div>

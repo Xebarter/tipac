@@ -750,16 +750,29 @@ export default function TicketsPage() {
                 </Link>
               </div>
             ) : (
-              <div className="space-y-5 max-h-[60vh] sm:max-h-[500px] overflow-y-auto pr-0 sm:pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                {events.map((event) => {
+              <div className="space-y-5">
+                {events.map((event, index) => {
                   const eventTicketTypes = getTicketTypesForEvent(event.id);
                   const isSelected = searchParams?.get('event') === event.id;
+                  
+                  // Define color schemes for events
+                  const colorSchemes = [
+                    { from: 'from-purple-100/50', to: 'to-pink-100/50', border: 'border-purple-500/30', ring: 'ring-purple-500/30', text: 'text-purple-700' },
+                    { from: 'from-blue-100/50', to: 'to-cyan-100/50', border: 'border-blue-500/30', ring: 'ring-blue-500/30', text: 'text-blue-700' },
+                    { from: 'from-green-100/50', to: 'to-emerald-100/50', border: 'border-green-500/30', ring: 'ring-green-500/30', text: 'text-green-700' },
+                    { from: 'from-yellow-100/50', to: 'to-amber-100/50', border: 'border-yellow-500/30', ring: 'ring-yellow-500/30', text: 'text-yellow-700' },
+                    { from: 'from-rose-100/50', to: 'to-pink-100/50', border: 'border-rose-500/30', ring: 'ring-rose-500/30', text: 'text-rose-700' },
+                    { from: 'from-indigo-100/50', to: 'to-violet-100/50', border: 'border-indigo-500/30', ring: 'ring-indigo-500/30', text: 'text-indigo-700' },
+                  ];
+                  
+                  // Get color scheme based on event index
+                  const colorScheme = colorSchemes[index % colorSchemes.length];
 
                   return (
                     <motion.div
                       id={`event-${event.id}`}
                       key={event.id}
-                      className={`border border-gray-200 rounded-2xl bg-white/70 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden backdrop-blur-sm ${isSelected ? 'ring-4 ring-purple-500/30 -m-1 relative' : ''}`}
+                      className={`border border-gray-200 rounded-2xl bg-white/70 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden backdrop-blur-sm ${isSelected ? `ring-4 ${colorScheme.ring} -m-1 relative` : ''}`}
                       initial={{ opacity: 0, y: 10 }}
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
@@ -770,10 +783,10 @@ export default function TicketsPage() {
                       } : {}}
                     >
                       <div
-                        className={`p-5 sm:p-6 border-b border-gray-100 ${isSelected ? 'bg-gradient-to-r from-purple-100/50 to-pink-100/50' : 'bg-gradient-to-r from-purple-50/50 to-pink-50/50'}`}
+                        className={`p-5 sm:p-6 border-b border-gray-100 ${isSelected ? `bg-gradient-to-r ${colorScheme.from} ${colorScheme.to}` : 'bg-gradient-to-r from-purple-50/50 to-pink-50/50'}`}
                       >
                         <div className="flex flex-wrap items-start justify-between gap-3">
-                          <h3 className={`font-bold text-gray-900 text-lg sm:text-xl ${isSelected ? 'text-purple-700' : ''}`}>
+                          <h3 className={`font-bold text-gray-900 text-lg sm:text-xl ${isSelected ? colorScheme.text : ''}`}>
                             {event.title}
                           </h3>
                           <div className="flex gap-2">
@@ -790,7 +803,7 @@ export default function TicketsPage() {
                         <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-gray-600">
                           <div className="flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
                             </svg>
                             {new Date(event.date).toLocaleDateString("en-US", {
                               weekday: "short",
@@ -1018,12 +1031,12 @@ export default function TicketsPage() {
           viewport={{ once: true }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          <Link href="/events">
-            <Button className="bg-gradient-to-r from-gray-800 to-gray-900 text-white shadow-lg hover:shadow-xl hover:from-gray-900 hover:to-black transition-all duration-300 px-6 py-3 text-base rounded-xl">
+          <Link href="/">
+            <Button className="bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg hover:shadow-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 px-6 py-3 text-base rounded-xl">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
-              View All Events
+              Return to Home Page
             </Button>
           </Link>
         </motion.div>

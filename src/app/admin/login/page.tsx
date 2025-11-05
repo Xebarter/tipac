@@ -25,10 +25,10 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="max-w-md w-full space-y-8 p-10 bg-card rounded-xl shadow-lg">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md space-y-8 p-6 sm:p-10 bg-card rounded-xl shadow-lg">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-foreground">
+          <h2 className="mt-6 text-center text-2xl sm:text-3xl font-extrabold text-foreground">
             Admin Login
           </h2>
           <p className="mt-2 text-center text-sm text-muted-foreground">
@@ -53,8 +53,8 @@ export default function AdminLogin() {
                 name="email"
                 type="email"
                 required
-                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-input placeholder-muted-foreground text-foreground focus:outline-none focus:ring-ring focus:border-ring focus:z-10 sm:text-sm bg-background"
-                placeholder="Email"
+                className="appearance-none rounded-md relative block w-full px-3 py-3 sm:py-2 border border-input placeholder-muted-foreground text-foreground focus:outline-none focus:ring-ring focus:border-ring focus:z-10 text-base sm:text-sm bg-background"
+                placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -69,7 +69,7 @@ export default function AdminLogin() {
                 type="password"
                 autoComplete="current-password"
                 required
-                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-input placeholder-muted-foreground text-foreground focus:outline-none focus:ring-ring focus:border-ring focus:z-10 sm:text-sm bg-background"
+                className="appearance-none rounded-md relative block w-full px-3 py-3 sm:py-2 border border-input placeholder-muted-foreground text-foreground focus:outline-none focus:ring-ring focus:border-ring focus:z-10 text-base sm:text-sm bg-background"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -80,7 +80,7 @@ export default function AdminLogin() {
           <div>
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring"
+              className="group relative w-full flex justify-center py-3 sm:py-2 px-4 border border-transparent text-base sm:text-sm font-medium rounded-md text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring"
             >
               Sign in
             </button>
