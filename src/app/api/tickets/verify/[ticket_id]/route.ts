@@ -60,42 +60,12 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
       });
     }
 
-    // For physical tickets, check if active or has buyer information
+    // For physical tickets, check only if the batch is active
     if (ticket.purchase_channel === 'physical_batch') {
       console.log("Processing physical batch ticket");
-      console.log("Ticket is_active:", ticket.is_active);
-      console.log("Ticket buyer_name:", ticket.buyer_name);
-      
-      // Check if the individual ticket is active OR has buyer information
-      if (!ticket.is_active && !ticket.buyer_name) {
-        console.log("Ticket rejected: not active and no buyer info");
-        return NextResponse.json({
-          valid: false,
-          message: "Ticket not activated",
-          ticket: {
-            id: ticket.id,
-            event: {
-              title: ticket.events?.title,
-              date: ticket.events?.date,
-              location: ticket.events?.location,
-              organizer_name: ticket.events?.organizer_name,
-              organizer_logo_url: ticket.events?.organizer_logo_url,
-              sponsor_logos: ticket.events?.sponsor_logos
-            },
-            buyer_name: ticket.buyer_name,
-            buyer_phone: ticket.buyer_phone,
-            purchase_channel: ticket.purchase_channel,
-            used: ticket.used,
-            confirmation_code: ticket.confirmation_code
-          }
-        });
-      }
-      
-      console.log("Ticket passed individual check");
-      console.log("Checking batch status");
       console.log("Ticket batch_code:", ticket.batch_code);
       
-      // Check if the batch is active or ticket has buyer information
+      // Check if the batch is active
       const { data: batch, error: batchError } = await supabase
         .from('batches')
         .select('is_active')
@@ -107,8 +77,7 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
         
       if (batchError) {
         console.error("Error fetching batch:", batchError);
-      } else if (!batch.is_active && !ticket.buyer_name) {
-        console.log("Ticket rejected: batch not active and no buyer info");
+      } else if (!batch.is_active) {
         return NextResponse.json({
           valid: false,
           message: "Ticket batch has been deactivated",

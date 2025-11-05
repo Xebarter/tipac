@@ -58,30 +58,10 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
 
     // For physical tickets, check if active or has buyer information
     if (ticket.purchase_channel === 'physical_batch') {
-      if (!ticket.is_active && !ticket.buyer_name) {
-        return NextResponse.json({
-          valid: false,
-          message: "Ticket not activated",
-          ticket: {
-            id: ticket.id,
-            event: {
-              title: ticket.events?.title,
-              date: ticket.events?.date,
-              location: ticket.events?.location,
-              organizer_name: ticket.events?.organizer_name,
-              organizer_logo_url: ticket.events?.organizer_logo_url,
-              sponsor_logos: ticket.events?.sponsor_logos
-            },
-            buyer_name: ticket.buyer_name,
-            buyer_phone: ticket.buyer_phone,
-            purchase_channel: ticket.purchase_channel,
-            used: ticket.used,
-            confirmation_code: ticket.confirmation_code
-          }
-        });
-      }
+      // Removed activation checks since we don't want to track ownership
+      // All batch tickets are valid regardless of activation status
       
-      // Check if the batch is active or ticket has buyer information
+      // Check if the batch is active
       const { data: batch, error: batchError } = await supabase
         .from('batches')
         .select('is_active')
@@ -90,7 +70,7 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
         
       if (batchError) {
         console.error("Error fetching batch:", batchError);
-      } else if (!batch.is_active && !ticket.buyer_name) {
+      } else if (!batch.is_active) {
         return NextResponse.json({
           valid: false,
           message: "Ticket batch has been deactivated",

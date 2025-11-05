@@ -58,14 +58,11 @@ export async function POST(request: Request) {
         id: ticketId,
         event_id,
         purchase_channel: 'physical_batch',
-        status: 'confirmed', // Changed from 'valid' to 'confirmed' to match expected status
-        is_active: true, // Set to true by default for physical tickets to be valid at entrance
+        status: 'confirmed',
+        is_active: true,
         batch_code,
         qr_code: qrCode,
-        price: ticketPrice || 0, // Use ticket type price or provided price
-        buyer_name: "Offline Buyer", // Add default buyer information
-        buyer_phone: "0000000000", // Add default phone
-        email: "offlinebuyer@gmail.com" // Add default email
+        price: ticketPrice || 0,
       });
     }
 
