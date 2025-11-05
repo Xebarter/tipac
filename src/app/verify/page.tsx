@@ -11,15 +11,77 @@ export default function TicketScannerPage() {
   const [scanning, setScanning] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
 
+  const extractTicketId = (rawValue: string) => {
+    if (!rawValue) {
+      return { error: "Please enter a ticket ID" } as const;
+    }
+
+    let value = rawValue.trim();
+    if (!value) {
+      return { error: "Please enter a ticket ID" } as const;
+    }
+
+    try {
+      value = decodeURIComponent(value);
+    } catch (err) {
+      // Ignore decode errors and fall back to raw value
+    }
+
+    const trimmed = value.trim();
+
+    const tryParseJson = (input: string) => {
+      try {
+        return JSON.parse(input);
+      } catch (err) {
+        return null;
+      }
+    };
+
+    const parsedJson = trimmed.startsWith("{") && trimmed.endsWith("}") ? tryParseJson(trimmed) : null;
+
+    if (parsedJson && typeof parsedJson === "object") {
+      const ticketIdFromJson = (parsedJson as Record<string, unknown>).ticket_id ?? (parsedJson as Record<string, unknown>).id;
+      if (typeof ticketIdFromJson === "string" && ticketIdFromJson.trim()) {
+        return { ticketId: ticketIdFromJson.trim() } as const;
+      }
+    }
+
+    if (trimmed.includes("ticket_id")) {
+      const match = trimmed.match(/[\"']?ticket[_-]?id[\"'\s:=]+([0-9a-fA-F-]{8,})/i);
+      if (match && match[1]) {
+        return { ticketId: match[1] } as const;
+      }
+
+      try {
+        const params = new URLSearchParams(trimmed);
+        const fromParams = params.get("ticket_id");
+        if (fromParams && fromParams.trim()) {
+          return { ticketId: fromParams.trim() } as const;
+        }
+      } catch (err) {
+        // Ignore query parsing issues
+      }
+    }
+
+    const sanitized = trimmed.replace(/^"|"$/g, "");
+    if (!sanitized) {
+      return { error: "Unable to extract ticket ID from QR data" } as const;
+    }
+
+    return { ticketId: sanitized } as const;
+  };
+
   // Verify ticket with the API
   const verifyTicket = async (id: string) => {
     try {
-      if (!id) {
-        setError("Please enter a ticket ID");
+      const { ticketId: normalizedId, error: extractionError } = extractTicketId(id);
+
+      if (extractionError) {
+        setError(extractionError);
         return;
       }
-      
-      const response = await fetch(`/api/tickets/verify/${id}`);
+
+      const response = await fetch(`/api/tickets/verify/${encodeURIComponent(normalizedId)}`);
       const data = await response.json();
       setResult(data);
       setError(null);
