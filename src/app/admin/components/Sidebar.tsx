@@ -15,7 +15,7 @@ export default function Sidebar() {
     { name: "Messages", href: "/admin/messages" },
     // New ticket management features
     { name: "Generate Batch Tickets", href: "/admin/tickets/generate" },
-    { name: "Verify Tickets", href: "/verify" },
+    { name: "Verify Tickets", href: "/admin/verify" },
   ];
 
   const handleLogout = async () => {

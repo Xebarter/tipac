@@ -3,17 +3,44 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { Menu, X } from "lucide-react";
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen((prev) => !prev);
+  };
+
+  useEffect(() => {
+    const routesToPrefetch = ["/", "/about", "/programs", "/gallery", "/contact", "/tickets"];
+    routesToPrefetch.forEach((route) => {
+      try {
+        router.prefetch(route);
+      } catch {
+        // Prefetch failures are non-blocking; ignore to keep navigation responsive.
+      }
+    });
+  }, [router]);
+
+  const handleNavClick = (path: string) => (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (path.startsWith("/#") && pathname === "/") {
+      event.preventDefault();
+      const targetId = path.split("#")[1];
+      const targetElement = targetId ? document.getElementById(targetId) : null;
+      if (targetElement) {
+        targetElement.scrollIntoView({ behavior: "smooth" });
+      }
+      closeMobileMenu();
+      return;
+    }
+
+    closeMobileMenu();
   };
 
   const closeMobileMenu = () => {
@@ -74,6 +101,8 @@ export function Navbar() {
             <Link
               key={i}
               href={item.path}
+              prefetch
+              onClick={handleNavClick(item.path)}
               className={`transition-colors ${isLinkActive(item.path) ? "text-primary font-medium" : "hover:text-primary"}`}
             >
               {item.label}
@@ -101,9 +130,10 @@ export function Navbar() {
               <Link
                 key={i}
                 href={item.path}
+                prefetch
                 className={`transition-colors block py-2 ${isLinkActive(item.path) ? "text-primary font-medium" : "hover:text-primary"
                   }`}
-                onClick={closeMobileMenu}
+                onClick={handleNavClick(item.path)}
               >
                 {item.label}
               </Link>

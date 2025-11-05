@@ -39,22 +39,22 @@ export default function AdminDashboard() {
     const { count: messagesCount } = await supabase
       .from("contact_messages")
       .select("*", { count: "exact", head: true })
-      .eq("status", "unread");
+      .eq("is_read", false);
 
     // Fetch gallery images count
     const { count: galleryCount } = await supabase
       .from("gallery_images")
       .select("*", { count: "exact", head: true });
 
-    // Fetch tickets count
-    const { count: ticketsCount } = await supabase
+    // Fetch tickets data for counting
+    const { data: ticketsData } = await supabase
       .from("tickets")
-      .select("*", { count: "exact", head: true });
+      .select("purchase_channel");
 
     setEvents(Array(eventsCount).fill(null));
     setMessages(Array(messagesCount).fill(null));
     setGalleryImages(Array(galleryCount).fill(null));
-    setTickets(Array(ticketsCount).fill(null));
+    setTickets(ticketsData || []);
   };
 
   const handleLogout = () => {
@@ -136,11 +136,26 @@ function DashboardOverview({ events, messages, galleryImages, tickets }: {
   galleryImages: any[], 
   tickets: any[] 
 }) {
+  // Calculate ticket counts
+  const onlineTickets = tickets.filter((ticket: any) => ticket && ticket.purchase_channel === 'online').length;
+  const batchTickets = tickets.filter((ticket: any) => ticket && ticket.purchase_channel === 'physical_batch').length;
+  
   const stats = [
     { name: "Events", value: events.length, href: "/admin/events" },
     { name: "Messages", value: messages.length, href: "/admin/messages" },
     { name: "Gallery Images", value: galleryImages.length, href: "/admin/gallery" },
-    { name: "Tickets Sold", value: tickets.length, href: "/admin/tickets" },
+    { 
+      name: "Tickets Available", 
+      value: (
+        <div className="flex flex-col">
+          <span className="text-2xl">{tickets.length}</span>
+          <span className="text-xs font-normal text-muted-foreground mt-1">
+            Online: {onlineTickets} | Batch: {batchTickets}
+          </span>
+        </div>
+      ), 
+      href: "/admin/tickets" 
+    },
   ];
 
   return (

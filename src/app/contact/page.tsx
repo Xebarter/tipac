@@ -72,19 +72,33 @@ export default function ContactPage() {
         body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
+      // Log response details for debugging
+      console.log("Response status:", response.status);
+      console.log("Response content-type:", response.headers.get("content-type"));
+      
+      // Check if response is actually JSON
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        const data = await response.json();
 
-      if (response.ok && data.success) {
-        setSubmissionStatus("success");
-        setFormData({ name: "", email: "", subject: "", message: "" });
+        if (response.ok && data.success) {
+          setSubmissionStatus("success");
+          setFormData({ name: "", email: "", subject: "", message: "" });
+        } else {
+          setSubmissionStatus("error");
+          setErrorMessage(data.error || "An error occurred while sending the message.");
+        }
       } else {
+        // Try to get the response text to see what's actually being returned
+        const responseText = await response.text();
+        console.error("Received non-JSON response from server:", responseText.substring(0, 500) + "...");
         setSubmissionStatus("error");
-        setErrorMessage(data.error || "An error occurred while sending the message.");
+        setErrorMessage("Failed to send message. The server is currently unavailable. Please try again later.");
       }
     } catch (error) {
+      console.error("Network error during form submission:", error);
       setSubmissionStatus("error");
-      setErrorMessage("Failed to connect to the server.");
-      console.error("Form submission error:", error);
+      setErrorMessage("Failed to connect to the server. Please check your connection and try again.");
     }
   };
 

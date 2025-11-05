@@ -25,8 +25,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const { data, error } = await supabase
       .from('contact_messages')
       .update({ 
-        is_read: read,
-        updated_at: new Date()
+        is_read: read
       })
       .eq('id', id)
       .select();

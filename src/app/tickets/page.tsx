@@ -521,8 +521,8 @@ export default function TicketsPage() {
         throw new Error("Quantity must be at least 1");
       }
 
-      // Ensure required fields are present
-      if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone) {
+      // Ensure required fields are present (email is now optional)
+      if (!formData.firstName || !formData.lastName || !formData.phone) {
         throw new Error("Please fill in all required fields");
       }
 

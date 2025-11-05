@@ -42,7 +42,7 @@ export default function AdminTicketsDashboard() {
   const [events, setEvents] = useState<Event[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'tickets' | 'batches' | 'used'>('tickets');
+  const [activeTab, setActiveTab] = useState<'tickets' | 'batches' | 'used' | 'customers'>('tickets');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   
@@ -200,6 +200,24 @@ export default function AdminTicketsDashboard() {
     ? tickets.filter(t => t.used)
     : tickets;
 
+  // Group tickets by customer for the customers tab
+  const customers = tickets
+    .filter(ticket => ticket.purchase_channel === 'online' && ticket.buyer_name && ticket.buyer_phone)
+    .reduce((acc, ticket) => {
+      const key = `${ticket.buyer_name}-${ticket.buyer_phone}`;
+      if (!acc[key]) {
+        acc[key] = {
+          name: ticket.buyer_name,
+          phone: ticket.buyer_phone,
+          ticketsCount: 0,
+        };
+      }
+      acc[key].ticketsCount += ticket.quantity;
+      return acc;
+    }, {} as Record<string, { name: string | null; phone: string | null; ticketsCount: number }>);
+
+  const customersList = Object.values(customers);
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-8">
@@ -279,13 +297,13 @@ export default function AdminTicketsDashboard() {
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <div className="rounded-full bg-indigo-100 p-3">
-              <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <div className="rounded-full bg-green-100 p-3">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div className="ml-4">
-              <h3 className="text-sm font-medium text-gray-500">Revenue</h3>
+              <h3 className="text-sm font-medium text-gray-500">Online Revenue</h3>
               <p className="text-2xl font-semibold text-gray-900">UGX {stats.totalRevenue.toLocaleString()}</p>
             </div>
           </div>
@@ -324,6 +342,16 @@ export default function AdminTicketsDashboard() {
             }`}
           >
             Used Tickets
+          </button>
+          <button
+            onClick={() => setActiveTab('customers')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'customers'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Customers
           </button>
         </nav>
       </div>
@@ -440,6 +468,67 @@ export default function AdminTicketsDashboard() {
                             </span>
                           )}
                         </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : activeTab === 'customers' ? (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-medium text-gray-900">Customers</h2>
+            <p className="text-sm text-gray-500 mt-1">Customers who purchased tickets online</p>
+          </div>
+          
+          {customersList.length === 0 ? (
+            <div className="text-center py-12">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No customers</h3>
+              <p className="mt-1 text-sm text-gray-500">Customers will appear here after purchasing tickets online.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Customer Name
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Phone Number
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Tickets Purchased
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {customersList.map((customer, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span className="text-blue-800 font-medium">
+                              {customer.name?.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">{customer.name}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {customer.phone}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-3 py-1 inline-flex text-sm font-semibold rounded-full bg-green-100 text-green-800">
+                          {customer.ticketsCount}
+                        </span>
                       </td>
                     </tr>
                   ))}
