@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ['pdfmake', 'fontkit', 'pdfkit'],
-  },
+  serverExternalPackages: ['pdfmake', 'fontkit', 'pdfkit'],
   images: {
     unoptimized: true,
     domains: [
@@ -10,6 +8,7 @@ const nextConfig = {
       "images.unsplash.com",
       "ext.same-assets.com",
       "ugc.same-assets.com",
+      "pfhkyhbjukjlvoqbsjgd.supabase.co"
     ],
     remotePatterns: [
       {
@@ -32,6 +31,11 @@ const nextConfig = {
         hostname: "ugc.same-assets.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "pfhkyhbjukjlvoqbsjgd.supabase.co",
+        pathname: "/**",
+      },
     ],
   },
   typescript: {
@@ -46,7 +50,7 @@ const nextConfig = {
       ...config.resolve.alias,
       "fontkit": false,
     };
-    
+
     config.module.rules.push({
       test: /\.m?js/,
       resolve: {

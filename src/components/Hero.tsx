@@ -1,10 +1,10 @@
-'use client';
-import { useState, useEffect, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import Image from 'next/image';
-import Head from 'next/head';
-import { supabase } from '@/lib/supabaseClient';
+"use client";
+import { useState, useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import Image from "next/image";
+import Head from "next/head";
+import { supabase } from "@/lib/supabaseClient";
 
 interface GalleryImage {
   id: string;
@@ -27,33 +27,33 @@ export function Hero() {
     async function fetchGalleryImages() {
       try {
         const { data, error: supabaseError } = await supabase
-          .from('gallery_images')
-          .select('*')
-          .order('created_at', { ascending: false });
+          .from("gallery_images")
+          .select("*")
+          .order("created_at", { ascending: false });
 
         if (supabaseError) throw supabaseError;
 
         if (isMounted) {
           if (data && data.length > 0) {
-            const formattedImages = data.map(img => ({
+            const formattedImages = data.map((img) => ({
               id: img.id,
               url: img.url,
               alt: img.original_name
                 ? `Performance at TIPAC theatre program, showcasing ${img.original_name}`
-                : 'TIPAC performance image',
+                : "TIPAC performance image",
               filename: img.filename,
-              original_name: img.original_name
+              original_name: img.original_name,
             }));
             setGalleryImages(formattedImages);
           } else {
-            setError('No images available');
+            setError("No images available");
           }
           setIsLoadingInitial(false);
         }
       } catch (err) {
         if (isMounted) {
-          setError('Failed to load images. Please try again later.');
-          console.error('Error fetching gallery images:', err);
+          setError("Failed to load images. Please try again later.");
+          console.error("Error fetching gallery images:", err);
           setIsLoadingInitial(false);
         }
       }
@@ -71,7 +71,9 @@ export function Hero() {
     const startRotation = () => {
       if (galleryImages.length > 1 && !isUserInteracting) {
         interval = setInterval(() => {
-          setCurrentImageIndex(prevIndex => (prevIndex + 1) % galleryImages.length);
+          setCurrentImageIndex(
+            (prevIndex) => (prevIndex + 1) % galleryImages.length,
+          );
         }, 5000);
       }
     };
@@ -90,20 +92,24 @@ export function Hero() {
 
   const goToPrevious = () => {
     handleUserInteraction();
-    setCurrentImageIndex(prevIndex =>
-      prevIndex === 0 ? galleryImages.length - 1 : prevIndex - 1
+    setCurrentImageIndex((prevIndex) =>
+      prevIndex === 0 ? galleryImages.length - 1 : prevIndex - 1,
     );
   };
 
   const goToNext = () => {
     handleUserInteraction();
-    setCurrentImageIndex(prevIndex => (prevIndex + 1) % galleryImages.length);
+    setCurrentImageIndex((prevIndex) => (prevIndex + 1) % galleryImages.length);
   };
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       <Head>
-        <link rel="preload" as="image" href={galleryImages[currentImageIndex]?.url} />
+        <link
+          rel="preload"
+          as="image"
+          href={galleryImages[currentImageIndex]?.url}
+        />
       </Head>
 
       {/* Decorative elements */}
@@ -139,9 +145,7 @@ export function Hero() {
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white mb-6 drop-shadow-lg bg-clip-text bg-gradient-to-r from-white via-white to-gray-200">
             TIPAC
           </h1>
-          <p className="text-xl text-gray-100 mb-10 max-w-2xl mx-auto drop-shadow-md">
-
-          </p>
+          <p className="text-xl text-gray-100 mb-10 max-w-2xl mx-auto drop-shadow-md"></p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link href="/tickets">
               <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl px-8 py-4 text-lg font-semibold rounded-xl transition-all duration-300 transform hover:scale-105">
@@ -165,8 +169,19 @@ export function Hero() {
             className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-3 rounded-full backdrop-blur-sm transition-all duration-300 z-10"
             aria-label="Previous image"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
           </button>
           <button
@@ -174,8 +189,19 @@ export function Hero() {
             className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-3 rounded-full backdrop-blur-sm transition-all duration-300 z-10"
             aria-label="Next image"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
             </svg>
           </button>
         </>
@@ -191,10 +217,11 @@ export function Hero() {
                 handleUserInteraction();
                 setCurrentImageIndex(index);
               }}
-              className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentImageIndex
-                ? 'bg-white w-6'
-                : 'bg-white/50 hover:bg-white/80'
-                }`}
+              className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                index === currentImageIndex
+                  ? "bg-white w-6"
+                  : "bg-white/50 hover:bg-white/80"
+              }`}
               aria-label={`Go to image ${index + 1}`}
             />
           ))}

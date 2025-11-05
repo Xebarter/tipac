@@ -1,7 +1,8 @@
 // src/components/ui/input.tsx
-import * as React from "react";
+import type * as React from "react";
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> { }
+export interface InputProps
+  extends React.InputHTMLAttributes<HTMLInputElement> {}
 
 // Keep the base input minimal so pages can fully control colors/sizing via className
 const Input: React.FC<InputProps> = ({ className = "", ...props }) => {
@@ -11,14 +12,14 @@ const Input: React.FC<InputProps> = ({ className = "", ...props }) => {
     if (!window.matchMedia("(hover: none) and (pointer: coarse)").matches) {
       return;
     }
-    
+
     const target = e.currentTarget;
-    
+
     // Only focus if not already focused to prevent interference with normal behavior
     if (document.activeElement !== target) {
       // Prevent the default behavior to avoid conflicts
       e.preventDefault();
-      
+
       // Focus the input on touch start to prevent the double tap requirement on iOS Safari
       target.focus();
     }

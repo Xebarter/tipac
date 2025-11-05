@@ -1,4 +1,8 @@
-import type { Content, ContentColumns, TDocumentDefinitions } from 'pdfmake/interfaces';
+import type {
+  Content,
+  ContentColumns,
+  TDocumentDefinitions,
+} from "pdfmake/interfaces";
 
 interface TicketData {
   id: string;
@@ -16,11 +20,13 @@ interface TicketData {
   confirmation_code?: string;
 }
 
-type SponsorWithData = NonNullable<TicketData['event']['sponsor_logos']>[number] & {
+type SponsorWithData = NonNullable<
+  TicketData["event"]["sponsor_logos"]
+>[number] & {
   dataUrl: string | null;
 };
 
-type ColumnDefinition = NonNullable<ContentColumns['columns']>[number];
+type ColumnDefinition = NonNullable<ContentColumns["columns"]>[number];
 
 export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
   // Dynamically import pdfMake only in browser environment
@@ -47,11 +53,11 @@ export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
   // Define the standard fonts using the vfs
   const fonts = {
     Roboto: {
-      normal: 'Roboto-Regular.ttf',
-      bold: 'Roboto-Medium.ttf',
-      italics: 'Roboto-Italic.ttf',
-      bolditalics: 'Roboto-MediumItalic.ttf'
-    }
+      normal: "Roboto-Regular.ttf",
+      bold: "Roboto-Medium.ttf",
+      italics: "Roboto-Italic.ttf",
+      bolditalics: "Roboto-MediumItalic.ttf",
+    },
   };
 
   // Approximate content width for A6 (297pt width - 24pt margins)
@@ -64,20 +70,22 @@ export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
     margin: 2,
     color: {
       dark: "#000000",
-      light: "#ffffff"
-    }
+      light: "#ffffff",
+    },
   });
 
   // Convert data URL to base64
-  const base64QR = qrCodeDataUrl.split(',')[1];
+  const base64QR = qrCodeDataUrl.split(",")[1];
 
-  const fetchImageAsDataUrl = async (imageUrl: string): Promise<string | null> => {
-    if (!imageUrl || typeof window === 'undefined') {
+  const fetchImageAsDataUrl = async (
+    imageUrl: string,
+  ): Promise<string | null> => {
+    if (!imageUrl || typeof window === "undefined") {
       return null;
     }
 
     try {
-      const response = await fetch(imageUrl, { mode: 'cors' });
+      const response = await fetch(imageUrl, { mode: "cors" });
       if (!response.ok) {
         return null;
       }
@@ -87,11 +95,11 @@ export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
       return await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error('Failed to read image blob'));
+        reader.onerror = () => reject(new Error("Failed to read image blob"));
         reader.readAsDataURL(blob);
       });
     } catch (error) {
-      console.error('Failed to fetch image for PDF rendering:', error);
+      console.error("Failed to fetch image for PDF rendering:", error);
       return null;
     }
   };
@@ -100,13 +108,14 @@ export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
     ? await fetchImageAsDataUrl(ticketData.event.organizer_logo_url)
     : null;
 
-  const sponsorLogosWithData: SponsorWithData[] = ticketData.event.sponsor_logos?.length
+  const sponsorLogosWithData: SponsorWithData[] = ticketData.event.sponsor_logos
+    ?.length
     ? await Promise.all(
-      ticketData.event.sponsor_logos.map(async sponsor => ({
-        ...sponsor,
-        dataUrl: await fetchImageAsDataUrl(sponsor.url)
-      }))
-    )
+        ticketData.event.sponsor_logos.map(async (sponsor) => ({
+          ...sponsor,
+          dataUrl: await fetchImageAsDataUrl(sponsor.url),
+        })),
+      )
     : [];
 
   // Prepare content array for PDF
@@ -121,63 +130,63 @@ export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
     headerStack.push({
       columns: [
         {
-          width: 'auto',
+          width: "auto",
           image: organizerLogoDataUrl,
           fit: [50, 40],
-          alignment: 'center' as const,
-          margin: [0, 0, 8, 0]
+          alignment: "center" as const,
+          margin: [0, 0, 8, 0],
         },
         {
-          width: '*',
-          text: ticketData.event.organizer_name || 'TIPAC',
+          width: "*",
+          text: ticketData.event.organizer_name || "TIPAC",
           fontSize: 18,
           bold: true,
-          color: '#8B0000',
-          margin: [0, 8, 0, 0]
-        }
+          color: "#8B0000",
+          margin: [0, 8, 0, 0],
+        },
       ] as any[],
       columnGap: 6,
-      margin: [0, 0, 0, 6]
+      margin: [0, 0, 0, 6],
     });
   } else {
     headerStack.push({
-      text: ticketData.event.organizer_name || 'TIPAC',
+      text: ticketData.event.organizer_name || "TIPAC",
       fontSize: 20,
       bold: true,
-      color: '#8B0000',
-      alignment: 'center' as const,
-      margin: [0, 0, 0, 8]
+      color: "#8B0000",
+      alignment: "center" as const,
+      margin: [0, 0, 0, 8],
     });
   }
 
   content.push({
     stack: headerStack,
-    margin: [0, 0, 0, 4]
+    margin: [0, 0, 0, 4],
   });
 
   // Enhanced decorative divider with gradient effect
   content.push({
     canvas: [
       {
-        type: 'line',
+        type: "line",
         x1: 0,
         y1: 0,
         x2: contentWidth,
         y2: 0,
         lineWidth: 2,
-        lineColor: '#8B0000'
+        lineColor: "#8B0000",
       },
       {
-        type: 'line',
+        type: "line",
         x1: 0,
         y1: 3,
         x2: contentWidth,
         y2: 3,
         lineWidth: 1,
-        lineColor: '#FFD700'
-      }
+        lineColor: "#FFD700",
+      },
     ],
-    margin: [0, 0, 0, 8]
+    margin: [0, 0, 0, 8],
   });
 
   // Event title with enhanced styling
@@ -185,135 +194,230 @@ export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
     {
       canvas: [
         {
-          type: 'rect',
+          type: "rect",
           x: 0,
           y: 0,
           w: contentWidth,
           h: 32,
-          color: '#8B0000',
-          r: 6 // rounded corners
-        }
-      ]
+          color: "#8B0000",
+          r: 6, // rounded corners
+        },
+      ],
     },
     {
       text: ticketData.event.title.toUpperCase(),
       fontSize: 14,
       bold: true,
-      color: 'white',
-      alignment: 'center' as const,
-      margin: [0, -22, 0, 10]
-    }
+      color: "white",
+      alignment: "center" as const,
+      margin: [0, -22, 0, 10],
+    },
   );
 
   // Event details with icons and better formatting
   content.push({
     table: {
-      widths: ['22%', '78%'],
+      widths: ["22%", "78%"],
       body: [
         [
-          { text: '📅 Date:', bold: true, fontSize: 9, border: [false, false, false, false], color: '#333333', margin: [0, 1, 0, 1] },
           {
-            text: new Date(ticketData.event.date).toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            }), fontSize: 9, border: [false, false, false, false], color: '#555555', margin: [0, 1, 0, 1]
-          }
+            text: "📅 Date:",
+            bold: true,
+            fontSize: 9,
+            border: [false, false, false, false],
+            color: "#333333",
+            margin: [0, 1, 0, 1],
+          },
+          {
+            text: new Date(ticketData.event.date).toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            }),
+            fontSize: 9,
+            border: [false, false, false, false],
+            color: "#555555",
+            margin: [0, 1, 0, 1],
+          },
         ],
         [
-          { text: '📍 Venue:', bold: true, fontSize: 9, border: [false, false, false, false], color: '#333333', margin: [0, 1, 0, 1] },
-          { text: ticketData.event.location, fontSize: 9, border: [false, false, false, false], color: '#555555', margin: [0, 1, 0, 1] }
-        ]
-      ]
+          {
+            text: "📍 Venue:",
+            bold: true,
+            fontSize: 9,
+            border: [false, false, false, false],
+            color: "#333333",
+            margin: [0, 1, 0, 1],
+          },
+          {
+            text: ticketData.event.location,
+            fontSize: 9,
+            border: [false, false, false, false],
+            color: "#555555",
+            margin: [0, 1, 0, 1],
+          },
+        ],
+      ],
     },
-    margin: [0, 0, 0, 8]
+    margin: [0, 0, 0, 8],
   });
 
   // Ticket details header with enhanced background
   content.push({
     canvas: [
       {
-        type: 'rect',
+        type: "rect",
         x: 0,
         y: 0,
         w: contentWidth,
         h: 18,
-        color: '#F5F5F5',
-        r: 4
-      }
-    ]
+        color: "#F5F5F5",
+        r: 4,
+      },
+    ],
   });
 
   content.push({
-    text: 'TICKET INFORMATION',
+    text: "TICKET INFORMATION",
     fontSize: 11,
     bold: true,
-    color: '#8B0000',
-    alignment: 'center' as const,
-    margin: [0, -14, 0, 6]
+    color: "#8B0000",
+    alignment: "center" as const,
+    margin: [0, -14, 0, 6],
   });
 
   // Ticket details in a clean table format
   const ticketDetailsBody: any[] = [
     [
-      { text: '🎫 Ticket ID:', bold: true, fontSize: 8, border: [false, false, false, true], borderColor: ['', '', '', '#EEEEEE'], color: '#333333', margin: [0, 1, 0, 2] },
-      { text: ticketData.id.substring(0, 12).toUpperCase(), fontSize: 8, border: [false, false, false, true], borderColor: ['', '', '', '#EEEEEE'], color: '#555555', margin: [0, 1, 0, 2] }
+      {
+        text: "🎫 Ticket ID:",
+        bold: true,
+        fontSize: 8,
+        border: [false, false, false, true],
+        borderColor: ["", "", "", "#EEEEEE"],
+        color: "#333333",
+        margin: [0, 1, 0, 2],
+      },
+      {
+        text: ticketData.id.substring(0, 12).toUpperCase(),
+        fontSize: 8,
+        border: [false, false, false, true],
+        borderColor: ["", "", "", "#EEEEEE"],
+        color: "#555555",
+        margin: [0, 1, 0, 2],
+      },
     ],
     [
-      { text: '👤 Full Name:', bold: true, fontSize: 8, border: [false, false, false, true], borderColor: ['', '', '', '#EEEEEE'], color: '#333333', margin: [0, 1, 0, 2] },
-      { text: ticketData.buyer_name, fontSize: 8, border: [false, false, false, true], borderColor: ['', '', '', '#EEEEEE'], color: '#555555', margin: [0, 1, 0, 2] }
+      {
+        text: "👤 Full Name:",
+        bold: true,
+        fontSize: 8,
+        border: [false, false, false, true],
+        borderColor: ["", "", "", "#EEEEEE"],
+        color: "#333333",
+        margin: [0, 1, 0, 2],
+      },
+      {
+        text: ticketData.buyer_name,
+        fontSize: 8,
+        border: [false, false, false, true],
+        borderColor: ["", "", "", "#EEEEEE"],
+        color: "#555555",
+        margin: [0, 1, 0, 2],
+      },
     ],
     [
-      { text: '📱 Phone Number:', bold: true, fontSize: 8, border: [false, false, false, true], borderColor: ['', '', '', '#EEEEEE'], color: '#333333', margin: [0, 1, 0, 2] },
-      { text: ticketData.buyer_phone, fontSize: 8, border: [false, false, false, true], borderColor: ['', '', '', '#EEEEEE'], color: '#555555', margin: [0, 1, 0, 2] }
+      {
+        text: "📱 Phone Number:",
+        bold: true,
+        fontSize: 8,
+        border: [false, false, false, true],
+        borderColor: ["", "", "", "#EEEEEE"],
+        color: "#333333",
+        margin: [0, 1, 0, 2],
+      },
+      {
+        text: ticketData.buyer_phone,
+        fontSize: 8,
+        border: [false, false, false, true],
+        borderColor: ["", "", "", "#EEEEEE"],
+        color: "#555555",
+        margin: [0, 1, 0, 2],
+      },
     ],
     [
-      { text: '💳 Purchase Channel:', bold: true, fontSize: 8, border: [false, false, false, false], color: '#333333', margin: [0, 1, 0, 2] },
-      { text: ticketData.purchase_channel, fontSize: 8, border: [false, false, false, false], color: '#555555', margin: [0, 1, 0, 2] }
-    ]
+      {
+        text: "💳 Purchase Channel:",
+        bold: true,
+        fontSize: 8,
+        border: [false, false, false, false],
+        color: "#333333",
+        margin: [0, 1, 0, 2],
+      },
+      {
+        text: ticketData.purchase_channel,
+        fontSize: 8,
+        border: [false, false, false, false],
+        color: "#555555",
+        margin: [0, 1, 0, 2],
+      },
+    ],
   ];
 
   // Add confirmation code if it exists
   if (ticketData.confirmation_code) {
     ticketDetailsBody.push([
-      { text: '✓ Confirmation Code:', bold: true, fontSize: 8, border: [false, false, false, false], color: '#333333', margin: [0, 1, 0, 2] },
-      { text: ticketData.confirmation_code, fontSize: 8, border: [false, false, false, false], color: '#555555', margin: [0, 1, 0, 2] }
+      {
+        text: "✓ Confirmation Code:",
+        bold: true,
+        fontSize: 8,
+        border: [false, false, false, false],
+        color: "#333333",
+        margin: [0, 1, 0, 2],
+      },
+      {
+        text: ticketData.confirmation_code,
+        fontSize: 8,
+        border: [false, false, false, false],
+        color: "#555555",
+        margin: [0, 1, 0, 2],
+      },
     ]);
   }
 
   content.push({
     table: {
-      widths: ['35%', '65%'],
-      body: ticketDetailsBody
+      widths: ["35%", "65%"],
+      body: ticketDetailsBody,
     },
-    margin: [0, 0, 0, 6]
+    margin: [0, 0, 0, 6],
   });
 
   // QR Code section with enhanced label
   content.push({
-    text: 'SCAN TO VERIFY TICKET',
+    text: "SCAN TO VERIFY TICKET",
     fontSize: 8,
     bold: true,
-    color: '#666666',
-    alignment: 'center' as const,
-    margin: [0, 4, 0, 4]
+    color: "#666666",
+    alignment: "center" as const,
+    margin: [0, 4, 0, 4],
   });
 
   content.push({
     image: `data:image/png;base64,${base64QR}`,
     width: 90,
     height: 90,
-    alignment: 'center' as const,
-    margin: [0, 0, 0, 2]
+    alignment: "center" as const,
+    margin: [0, 0, 0, 2],
   });
 
   content.push({
     text: ticketData.id.substring(0, 12).toUpperCase(),
     fontSize: 7,
-    color: '#999999',
-    alignment: 'center' as const,
-    margin: [0, 0, 0, 6]
+    color: "#999999",
+    alignment: "center" as const,
+    margin: [0, 0, 0, 6],
   });
 
   // ========== FOOTER SECTION ==========
@@ -321,26 +425,26 @@ export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
   content.push({
     canvas: [
       {
-        type: 'line',
+        type: "line",
         x1: 0,
         y1: 0,
         x2: contentWidth,
         y2: 0,
         lineWidth: 1,
-        lineColor: '#8B0000'
+        lineColor: "#8B0000",
       },
       {
-        type: 'line',
+        type: "line",
         x1: 0,
         y1: 3,
         x2: contentWidth,
         y2: 3,
         lineWidth: 0.5,
-        lineColor: '#CCCCCC',
-        dash: { length: 4 }
-      }
+        lineColor: "#CCCCCC",
+        dash: { length: 4 },
+      },
     ],
-    margin: [0, 2, 0, 6]
+    margin: [0, 2, 0, 6],
   });
 
   // Sponsor logos section with names
@@ -349,12 +453,12 @@ export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
 
     // "Proudly Sponsored By" header
     sponsorSection.push({
-      text: 'PROUDLY SPONSORED BY',
+      text: "PROUDLY SPONSORED BY",
       fontSize: 9,
       bold: true,
-      color: '#8B0000',
-      alignment: 'center' as const,
-      margin: [0, 0, 0, 4]
+      color: "#8B0000",
+      alignment: "center" as const,
+      margin: [0, 0, 0, 4],
     });
 
     // Add sponsor logos with names in a more compact grid layout
@@ -367,23 +471,23 @@ export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
         stackItems.push({
           image: sponsor.dataUrl,
           fit: [40, 25],
-          alignment: 'center' as const,
-          margin: [0, 0, 0, 2]
+          alignment: "center" as const,
+          margin: [0, 0, 0, 2],
         });
       }
 
       stackItems.push({
         text: sponsor.name,
         fontSize: 5,
-        alignment: 'center' as const,
-        color: '#555555',
-        margin: [0, 2, 0, 0]
+        alignment: "center" as const,
+        color: "#555555",
+        margin: [0, 2, 0, 0],
       });
 
       sponsorItems.push({
         stack: stackItems,
-        width: '*',
-        margin: [2, 0, 2, 4]
+        width: "*",
+        margin: [2, 0, 2, 4],
       });
     }
 
@@ -393,9 +497,9 @@ export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
       const rowItems = sponsorItems.slice(i, i + 3);
       rows.push({
         columns: rowItems,
-        alignment: 'center' as const,
+        alignment: "center" as const,
         columnGap: 4,
-        margin: [0, 0, 0, 2]
+        margin: [0, 0, 0, 2],
       } as ContentColumns);
     }
 
@@ -403,7 +507,7 @@ export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
 
     content.push({
       stack: sponsorSection,
-      margin: [0, 0, 0, 6]
+      margin: [0, 0, 0, 6],
     });
   }
 
@@ -412,46 +516,46 @@ export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
     {
       canvas: [
         {
-          type: 'rect',
+          type: "rect",
           x: 0,
           y: 0,
           w: contentWidth,
           h: 24,
-          color: '#8B0000',
-          r: 4
-        }
-      ]
+          color: "#8B0000",
+          r: 4,
+        },
+      ],
     },
     {
       stack: [
         {
-          text: 'THANK YOU FOR YOUR PURCHASE!',
+          text: "THANK YOU FOR YOUR PURCHASE!",
           fontSize: 9,
           bold: true,
-          color: 'white',
-          alignment: 'center' as const,
-          margin: [0, 2, 0, 2]
+          color: "white",
+          alignment: "center" as const,
+          margin: [0, 2, 0, 2],
         },
         {
-          text: 'Please present this ticket at the entrance',
+          text: "Please present this ticket at the entrance",
           fontSize: 7,
-          color: '#FFD700',
-          alignment: 'center' as const,
-          margin: [0, 0, 0, 0]
-        }
+          color: "#FFD700",
+          alignment: "center" as const,
+          margin: [0, 0, 0, 0],
+        },
       ],
-      margin: [0, -18, 0, 0]
-    }
+      margin: [0, -18, 0, 0],
+    },
   );
 
   // Define the PDF document
   const docDefinition: TDocumentDefinitions = {
-    pageSize: 'A6' as const,
+    pageSize: "A6" as const,
     pageMargins: [12, 12, 12, 12] as [number, number, number, number],
     content,
     defaultStyle: {
-      font: 'Roboto'
-    }
+      font: "Roboto",
+    },
   };
 
   // Create the PDF, passing the fonts definition
@@ -464,7 +568,9 @@ export async function generateTicketPDF(ticketData: TicketData): Promise<Blob> {
   });
 }
 
-export async function generateMultiTicketPDF(ticketsData: TicketData[]): Promise<Blob> {
+export async function generateMultiTicketPDF(
+  ticketsData: TicketData[],
+): Promise<Blob> {
   // Dynamically import pdfMake only in browser environment
   const pdfMakeModule = await import("pdfmake/build/pdfmake");
   const pdfFontsModule = await import("pdfmake/build/vfs_fonts");
@@ -489,20 +595,22 @@ export async function generateMultiTicketPDF(ticketsData: TicketData[]): Promise
   // Define the standard fonts using the vfs
   const fonts = {
     Roboto: {
-      normal: 'Roboto-Regular.ttf',
-      bold: 'Roboto-Medium.ttf',
-      italics: 'Roboto-Italic.ttf',
-      bolditalics: 'Roboto-MediumItalic.ttf'
-    }
+      normal: "Roboto-Regular.ttf",
+      bold: "Roboto-Medium.ttf",
+      italics: "Roboto-Italic.ttf",
+      bolditalics: "Roboto-MediumItalic.ttf",
+    },
   };
 
-  const fetchImageAsDataUrl = async (imageUrl: string): Promise<string | null> => {
-    if (!imageUrl || typeof window === 'undefined') {
+  const fetchImageAsDataUrl = async (
+    imageUrl: string,
+  ): Promise<string | null> => {
+    if (!imageUrl || typeof window === "undefined") {
       return null;
     }
 
     try {
-      const response = await fetch(imageUrl, { mode: 'cors' });
+      const response = await fetch(imageUrl, { mode: "cors" });
       if (!response.ok) {
         return null;
       }
@@ -512,11 +620,11 @@ export async function generateMultiTicketPDF(ticketsData: TicketData[]): Promise
       return await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error('Failed to read image blob'));
+        reader.onerror = () => reject(new Error("Failed to read image blob"));
         reader.readAsDataURL(blob);
       });
     } catch (error) {
-      console.error('Failed to fetch image for PDF rendering:', error);
+      console.error("Failed to fetch image for PDF rendering:", error);
       return null;
     }
   };
@@ -526,28 +634,28 @@ export async function generateMultiTicketPDF(ticketsData: TicketData[]): Promise
 
   // Add a cover page
   content.push({
-    text: 'YOUR TIPAC TICKETS',
+    text: "YOUR TIPAC TICKETS",
     fontSize: 24,
     bold: true,
-    color: '#8B0000',
-    alignment: 'center' as const,
-    margin: [0, 30, 0, 30]
+    color: "#8B0000",
+    alignment: "center" as const,
+    margin: [0, 30, 0, 30],
   });
 
   content.push({
     text: `Total Tickets: ${ticketsData.length}`,
     fontSize: 16,
-    alignment: 'center' as const,
-    margin: [0, 0, 0, 50]
+    alignment: "center" as const,
+    margin: [0, 0, 0, 50],
   });
 
   // Process each ticket
   for (let i = 0; i < ticketsData.length; i++) {
     const ticketData = ticketsData[i];
-    
+
     // Add a page break before each ticket except the first one
     if (i > 0) {
-      content.push({ text: '', pageBreak: 'before' });
+      content.push({ text: "", pageBreak: "before" });
     }
 
     // Approximate content width for A6 (297pt width - 24pt margins)
@@ -560,24 +668,25 @@ export async function generateMultiTicketPDF(ticketsData: TicketData[]): Promise
       margin: 2,
       color: {
         dark: "#000000",
-        light: "#ffffff"
-      }
+        light: "#ffffff",
+      },
     });
 
     // Convert data URL to base64
-    const base64QR = qrCodeDataUrl.split(',')[1];
+    const base64QR = qrCodeDataUrl.split(",")[1];
 
     const organizerLogoDataUrl = ticketData.event.organizer_logo_url
       ? await fetchImageAsDataUrl(ticketData.event.organizer_logo_url)
       : null;
 
-    const sponsorLogosWithData: SponsorWithData[] = ticketData.event.sponsor_logos?.length
+    const sponsorLogosWithData: SponsorWithData[] = ticketData.event
+      .sponsor_logos?.length
       ? await Promise.all(
-        ticketData.event.sponsor_logos.map(async sponsor => ({
-          ...sponsor,
-          dataUrl: await fetchImageAsDataUrl(sponsor.url)
-        }))
-      )
+          ticketData.event.sponsor_logos.map(async (sponsor) => ({
+            ...sponsor,
+            dataUrl: await fetchImageAsDataUrl(sponsor.url),
+          })),
+        )
       : [];
 
     // Prepare content array for this ticket
@@ -592,63 +701,63 @@ export async function generateMultiTicketPDF(ticketsData: TicketData[]): Promise
       headerStack.push({
         columns: [
           {
-            width: 'auto',
+            width: "auto",
             image: organizerLogoDataUrl,
             fit: [50, 40],
-            alignment: 'center' as const,
-            margin: [0, 0, 8, 0]
+            alignment: "center" as const,
+            margin: [0, 0, 8, 0],
           },
           {
-            width: '*',
-            text: ticketData.event.organizer_name || 'TIPAC',
+            width: "*",
+            text: ticketData.event.organizer_name || "TIPAC",
             fontSize: 18,
             bold: true,
-            color: '#8B0000',
-            margin: [0, 8, 0, 0]
-          }
+            color: "#8B0000",
+            margin: [0, 8, 0, 0],
+          },
         ] as any[],
         columnGap: 6,
-        margin: [0, 0, 0, 6]
+        margin: [0, 0, 0, 6],
       });
     } else {
       headerStack.push({
-        text: ticketData.event.organizer_name || 'TIPAC',
+        text: ticketData.event.organizer_name || "TIPAC",
         fontSize: 20,
         bold: true,
-        color: '#8B0000',
-        alignment: 'center' as const,
-        margin: [0, 0, 0, 8]
+        color: "#8B0000",
+        alignment: "center" as const,
+        margin: [0, 0, 0, 8],
       });
     }
 
     ticketContent.push({
       stack: headerStack,
-      margin: [0, 0, 0, 4]
+      margin: [0, 0, 0, 4],
     });
 
     // Enhanced decorative divider with gradient effect
     ticketContent.push({
       canvas: [
         {
-          type: 'line',
+          type: "line",
           x1: 0,
           y1: 0,
           x2: contentWidth,
           y2: 0,
           lineWidth: 2,
-          lineColor: '#8B0000'
+          lineColor: "#8B0000",
         },
         {
-          type: 'line',
+          type: "line",
           x1: 0,
           y1: 3,
           x2: contentWidth,
           y2: 3,
           lineWidth: 1,
-          lineColor: '#FFD700'
-        }
+          lineColor: "#FFD700",
+        },
       ],
-      margin: [0, 0, 0, 8]
+      margin: [0, 0, 0, 8],
     });
 
     // Event title with enhanced styling
@@ -656,135 +765,233 @@ export async function generateMultiTicketPDF(ticketsData: TicketData[]): Promise
       {
         canvas: [
           {
-            type: 'rect',
+            type: "rect",
             x: 0,
             y: 0,
             w: contentWidth,
             h: 32,
-            color: '#8B0000',
-            r: 6 // rounded corners
-          }
-        ]
+            color: "#8B0000",
+            r: 6, // rounded corners
+          },
+        ],
       },
       {
         text: ticketData.event.title.toUpperCase(),
         fontSize: 14,
         bold: true,
-        color: 'white',
-        alignment: 'center' as const,
-        margin: [0, -22, 0, 10]
-      }
+        color: "white",
+        alignment: "center" as const,
+        margin: [0, -22, 0, 10],
+      },
     );
 
     // Event details with icons and better formatting
     ticketContent.push({
       table: {
-        widths: ['22%', '78%'],
+        widths: ["22%", "78%"],
         body: [
           [
-            { text: '📅 Date:', bold: true, fontSize: 9, border: [false, false, false, false], color: '#333333', margin: [0, 1, 0, 1] },
             {
-              text: new Date(ticketData.event.date).toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              }), fontSize: 9, border: [false, false, false, false], color: '#555555', margin: [0, 1, 0, 1]
-            }
+              text: "📅 Date:",
+              bold: true,
+              fontSize: 9,
+              border: [false, false, false, false],
+              color: "#333333",
+              margin: [0, 1, 0, 1],
+            },
+            {
+              text: new Date(ticketData.event.date).toLocaleDateString(
+                "en-US",
+                {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                },
+              ),
+              fontSize: 9,
+              border: [false, false, false, false],
+              color: "#555555",
+              margin: [0, 1, 0, 1],
+            },
           ],
           [
-            { text: '📍 Venue:', bold: true, fontSize: 9, border: [false, false, false, false], color: '#333333', margin: [0, 1, 0, 1] },
-            { text: ticketData.event.location, fontSize: 9, border: [false, false, false, false], color: '#555555', margin: [0, 1, 0, 1] }
-          ]
-        ]
+            {
+              text: "📍 Venue:",
+              bold: true,
+              fontSize: 9,
+              border: [false, false, false, false],
+              color: "#333333",
+              margin: [0, 1, 0, 1],
+            },
+            {
+              text: ticketData.event.location,
+              fontSize: 9,
+              border: [false, false, false, false],
+              color: "#555555",
+              margin: [0, 1, 0, 1],
+            },
+          ],
+        ],
       },
-      margin: [0, 0, 0, 8]
+      margin: [0, 0, 0, 8],
     });
 
     // Ticket details header with enhanced background
     ticketContent.push({
       canvas: [
         {
-          type: 'rect',
+          type: "rect",
           x: 0,
           y: 0,
           w: contentWidth,
           h: 18,
-          color: '#F5F5F5',
-          r: 4
-        }
-      ]
+          color: "#F5F5F5",
+          r: 4,
+        },
+      ],
     });
 
     ticketContent.push({
-      text: 'TICKET INFORMATION',
+      text: "TICKET INFORMATION",
       fontSize: 11,
       bold: true,
-      color: '#8B0000',
-      alignment: 'center' as const,
-      margin: [0, -14, 0, 6]
+      color: "#8B0000",
+      alignment: "center" as const,
+      margin: [0, -14, 0, 6],
     });
 
     // Ticket details in a clean table format
     const ticketDetailsBody: any[] = [
       [
-        { text: '🎫 Ticket ID:', bold: true, fontSize: 8, border: [false, false, false, true], borderColor: ['', '', '', '#EEEEEE'], color: '#333333', margin: [0, 1, 0, 2] },
-        { text: ticketData.id.substring(0, 12).toUpperCase(), fontSize: 8, border: [false, false, false, true], borderColor: ['', '', '', '#EEEEEE'], color: '#555555', margin: [0, 1, 0, 2] }
+        {
+          text: "🎫 Ticket ID:",
+          bold: true,
+          fontSize: 8,
+          border: [false, false, false, true],
+          borderColor: ["", "", "", "#EEEEEE"],
+          color: "#333333",
+          margin: [0, 1, 0, 2],
+        },
+        {
+          text: ticketData.id.substring(0, 12).toUpperCase(),
+          fontSize: 8,
+          border: [false, false, false, true],
+          borderColor: ["", "", "", "#EEEEEE"],
+          color: "#555555",
+          margin: [0, 1, 0, 2],
+        },
       ],
       [
-        { text: '👤 Full Name:', bold: true, fontSize: 8, border: [false, false, false, true], borderColor: ['', '', '', '#EEEEEE'], color: '#333333', margin: [0, 1, 0, 2] },
-        { text: ticketData.buyer_name, fontSize: 8, border: [false, false, false, true], borderColor: ['', '', '', '#EEEEEE'], color: '#555555', margin: [0, 1, 0, 2] }
+        {
+          text: "👤 Full Name:",
+          bold: true,
+          fontSize: 8,
+          border: [false, false, false, true],
+          borderColor: ["", "", "", "#EEEEEE"],
+          color: "#333333",
+          margin: [0, 1, 0, 2],
+        },
+        {
+          text: ticketData.buyer_name,
+          fontSize: 8,
+          border: [false, false, false, true],
+          borderColor: ["", "", "", "#EEEEEE"],
+          color: "#555555",
+          margin: [0, 1, 0, 2],
+        },
       ],
       [
-        { text: '📱 Phone Number:', bold: true, fontSize: 8, border: [false, false, false, true], borderColor: ['', '', '', '#EEEEEE'], color: '#333333', margin: [0, 1, 0, 2] },
-        { text: ticketData.buyer_phone, fontSize: 8, border: [false, false, false, true], borderColor: ['', '', '', '#EEEEEE'], color: '#555555', margin: [0, 1, 0, 2] }
+        {
+          text: "📱 Phone Number:",
+          bold: true,
+          fontSize: 8,
+          border: [false, false, false, true],
+          borderColor: ["", "", "", "#EEEEEE"],
+          color: "#333333",
+          margin: [0, 1, 0, 2],
+        },
+        {
+          text: ticketData.buyer_phone,
+          fontSize: 8,
+          border: [false, false, false, true],
+          borderColor: ["", "", "", "#EEEEEE"],
+          color: "#555555",
+          margin: [0, 1, 0, 2],
+        },
       ],
       [
-        { text: '💳 Purchase Channel:', bold: true, fontSize: 8, border: [false, false, false, false], color: '#333333', margin: [0, 1, 0, 2] },
-        { text: ticketData.purchase_channel, fontSize: 8, border: [false, false, false, false], color: '#555555', margin: [0, 1, 0, 2] }
-      ]
+        {
+          text: "💳 Purchase Channel:",
+          bold: true,
+          fontSize: 8,
+          border: [false, false, false, false],
+          color: "#333333",
+          margin: [0, 1, 0, 2],
+        },
+        {
+          text: ticketData.purchase_channel,
+          fontSize: 8,
+          border: [false, false, false, false],
+          color: "#555555",
+          margin: [0, 1, 0, 2],
+        },
+      ],
     ];
 
     // Add confirmation code if it exists
     if (ticketData.confirmation_code) {
       ticketDetailsBody.push([
-        { text: '✓ Confirmation Code:', bold: true, fontSize: 8, border: [false, false, false, false], color: '#333333', margin: [0, 1, 0, 2] },
-        { text: ticketData.confirmation_code, fontSize: 8, border: [false, false, false, false], color: '#555555', margin: [0, 1, 0, 2] }
+        {
+          text: "✓ Confirmation Code:",
+          bold: true,
+          fontSize: 8,
+          border: [false, false, false, false],
+          color: "#333333",
+          margin: [0, 1, 0, 2],
+        },
+        {
+          text: ticketData.confirmation_code,
+          fontSize: 8,
+          border: [false, false, false, false],
+          color: "#555555",
+          margin: [0, 1, 0, 2],
+        },
       ]);
     }
 
     ticketContent.push({
       table: {
-        widths: ['35%', '65%'],
-        body: ticketDetailsBody
+        widths: ["35%", "65%"],
+        body: ticketDetailsBody,
       },
-      margin: [0, 0, 0, 6]
+      margin: [0, 0, 0, 6],
     });
 
     // QR Code section with enhanced label
     ticketContent.push({
-      text: 'SCAN TO VERIFY TICKET',
+      text: "SCAN TO VERIFY TICKET",
       fontSize: 8,
       bold: true,
-      color: '#666666',
-      alignment: 'center' as const,
-      margin: [0, 4, 0, 4]
+      color: "#666666",
+      alignment: "center" as const,
+      margin: [0, 4, 0, 4],
     });
 
     ticketContent.push({
       image: `data:image/png;base64,${base64QR}`,
       width: 90,
       height: 90,
-      alignment: 'center' as const,
-      margin: [0, 0, 0, 2]
+      alignment: "center" as const,
+      margin: [0, 0, 0, 2],
     });
 
     ticketContent.push({
       text: ticketData.id.substring(0, 12).toUpperCase(),
       fontSize: 7,
-      color: '#999999',
-      alignment: 'center' as const,
-      margin: [0, 0, 0, 6]
+      color: "#999999",
+      alignment: "center" as const,
+      margin: [0, 0, 0, 6],
     });
 
     // ========== FOOTER SECTION ==========
@@ -792,26 +999,26 @@ export async function generateMultiTicketPDF(ticketsData: TicketData[]): Promise
     ticketContent.push({
       canvas: [
         {
-          type: 'line',
+          type: "line",
           x1: 0,
           y1: 0,
           x2: contentWidth,
           y2: 0,
           lineWidth: 1,
-          lineColor: '#8B0000'
+          lineColor: "#8B0000",
         },
         {
-          type: 'line',
+          type: "line",
           x1: 0,
           y1: 3,
           x2: contentWidth,
           y2: 3,
           lineWidth: 0.5,
-          lineColor: '#CCCCCC',
-          dash: { length: 4 }
-        }
+          lineColor: "#CCCCCC",
+          dash: { length: 4 },
+        },
       ],
-      margin: [0, 2, 0, 6]
+      margin: [0, 2, 0, 6],
     });
 
     // Sponsor logos section with names
@@ -820,12 +1027,12 @@ export async function generateMultiTicketPDF(ticketsData: TicketData[]): Promise
 
       // "Proudly Sponsored By" header
       sponsorSection.push({
-        text: 'PROUDLY SPONSORED BY',
+        text: "PROUDLY SPONSORED BY",
         fontSize: 9,
         bold: true,
-        color: '#8B0000',
-        alignment: 'center' as const,
-        margin: [0, 0, 0, 4]
+        color: "#8B0000",
+        alignment: "center" as const,
+        margin: [0, 0, 0, 4],
       });
 
       // Add sponsor logos with names in a more compact grid layout
@@ -838,23 +1045,23 @@ export async function generateMultiTicketPDF(ticketsData: TicketData[]): Promise
           stackItems.push({
             image: sponsor.dataUrl,
             fit: [40, 25],
-            alignment: 'center' as const,
-            margin: [0, 0, 0, 2]
+            alignment: "center" as const,
+            margin: [0, 0, 0, 2],
           });
         }
 
         stackItems.push({
           text: sponsor.name,
           fontSize: 5,
-          alignment: 'center' as const,
-          color: '#555555',
-          margin: [0, 2, 0, 0]
+          alignment: "center" as const,
+          color: "#555555",
+          margin: [0, 2, 0, 0],
         });
 
         sponsorItems.push({
           stack: stackItems,
-          width: '*',
-          margin: [2, 0, 2, 4]
+          width: "*",
+          margin: [2, 0, 2, 4],
         });
       }
 
@@ -864,9 +1071,9 @@ export async function generateMultiTicketPDF(ticketsData: TicketData[]): Promise
         const rowItems = sponsorItems.slice(i, i + 3);
         rows.push({
           columns: rowItems,
-          alignment: 'center' as const,
+          alignment: "center" as const,
           columnGap: 4,
-          margin: [0, 0, 0, 2]
+          margin: [0, 0, 0, 2],
         });
       }
 
@@ -874,7 +1081,7 @@ export async function generateMultiTicketPDF(ticketsData: TicketData[]): Promise
 
       ticketContent.push({
         stack: sponsorSection,
-        margin: [0, 0, 0, 6]
+        margin: [0, 0, 0, 6],
       });
     }
 
@@ -883,53 +1090,53 @@ export async function generateMultiTicketPDF(ticketsData: TicketData[]): Promise
       {
         canvas: [
           {
-            type: 'rect',
+            type: "rect",
             x: 0,
             y: 0,
             w: contentWidth,
             h: 24,
-            color: '#8B0000',
-            r: 4
-          }
-        ]
+            color: "#8B0000",
+            r: 4,
+          },
+        ],
       },
       {
         stack: [
           {
-            text: 'THANK YOU FOR YOUR PURCHASE!',
+            text: "THANK YOU FOR YOUR PURCHASE!",
             fontSize: 9,
             bold: true,
-            color: 'white',
-            alignment: 'center' as const,
-            margin: [0, 2, 0, 2]
+            color: "white",
+            alignment: "center" as const,
+            margin: [0, 2, 0, 2],
           },
           {
-            text: 'Please present this ticket at the entrance',
+            text: "Please present this ticket at the entrance",
             fontSize: 7,
-            color: '#FFD700',
-            alignment: 'center' as const,
-            margin: [0, 0, 0, 0]
-          }
+            color: "#FFD700",
+            alignment: "center" as const,
+            margin: [0, 0, 0, 0],
+          },
         ],
-        margin: [0, -18, 0, 0]
-      }
+        margin: [0, -18, 0, 0],
+      },
     );
 
     // Add this ticket's content to the main content array
     content.push({
       stack: ticketContent,
-      unbreakable: true
+      unbreakable: true,
     });
   }
 
   // Define the PDF document
   const docDefinition: TDocumentDefinitions = {
-    pageSize: 'A6' as const,
+    pageSize: "A6" as const,
     pageMargins: [12, 12, 12, 12] as [number, number, number, number],
     content,
     defaultStyle: {
-      font: 'Roboto'
-    }
+      font: "Roboto",
+    },
   };
 
   // Create the PDF, passing the fonts definition

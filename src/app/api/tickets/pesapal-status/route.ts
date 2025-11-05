@@ -25,7 +25,9 @@ async function getAccessToken() {
 
     if (!res.ok) {
       const errorData = await res.text(); // Use text() to avoid JSON parse errors
-      throw new Error(`Failed to fetch access token: ${res.status} - ${errorData}`);
+      throw new Error(
+        `Failed to fetch access token: ${res.status} - ${errorData}`,
+      );
     }
 
     const data = await res.json();
@@ -41,13 +43,16 @@ export async function GET(req: NextRequest) {
     const orderTrackingId = searchParams.get("orderTrackingId");
 
     if (!orderTrackingId) {
-      return NextResponse.json({ error: "Missing orderTrackingId" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing orderTrackingId" },
+        { status: 400 },
+      );
     }
 
     if (!consumerKey || !consumerSecret) {
       return NextResponse.json(
         { error: "Missing Pesapal credentials" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -66,38 +71,44 @@ export async function GET(req: NextRequest) {
 
     if (!res.ok) {
       const errorData = await res.text(); // Use text() to avoid JSON parse errors
-      throw new Error(`Failed to fetch transaction status: ${res.status} - ${errorData}`);
+      throw new Error(
+        `Failed to fetch transaction status: ${res.status} - ${errorData}`,
+      );
     }
 
     const data = await res.json();
-    
+
     // Update ticket status in our database based on PesaPal status
     if (data.payment_status_description) {
-      let ticketStatus = 'pending';
-      
-      if (data.payment_status_description.toLowerCase().includes('completed') || 
-          data.payment_status_description.toLowerCase().includes('successful')) {
-        ticketStatus = 'confirmed';
-      } else if (data.payment_status_description.toLowerCase().includes('failed') ||
-                 data.payment_status_description.toLowerCase().includes('cancelled')) {
-        ticketStatus = 'failed';
+      let ticketStatus = "pending";
+
+      if (
+        data.payment_status_description.toLowerCase().includes("completed") ||
+        data.payment_status_description.toLowerCase().includes("successful")
+      ) {
+        ticketStatus = "confirmed";
+      } else if (
+        data.payment_status_description.toLowerCase().includes("failed") ||
+        data.payment_status_description.toLowerCase().includes("cancelled")
+      ) {
+        ticketStatus = "failed";
       }
-      
+
       // Update ticket with status
       await supabase
-        .from('tickets')
-        .update({ 
+        .from("tickets")
+        .update({
           status: ticketStatus,
-          pesapal_status: data.payment_status_description
+          pesapal_status: data.payment_status_description,
         })
-        .eq('id', orderTrackingId);
+        .eq("id", orderTrackingId);
     }
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       status: data.status,
       payment_status_description: data.payment_status_description,
       payment_method: data.payment_method,
-      confirmation_code: data.confirmation_code
+      confirmation_code: data.confirmation_code,
     });
   } catch (error: any) {
     console.error("[PESAPAL STATUS ERROR]", error.message);

@@ -22,9 +22,9 @@ const getRandomImage = (images: string[]): string => {
 async function getGalleryImages(): Promise<string[]> {
   const galleryPath = path.join(process.cwd(), "public/gallery");
   try {
-    const images = fs.readdirSync(galleryPath).filter((file) =>
-      /\.(jpg|jpeg|png|gif|webp)$/i.test(file)
-    );
+    const images = fs
+      .readdirSync(galleryPath)
+      .filter((file) => /\.(jpg|jpeg|png|gif|webp)$/i.test(file));
     return images;
   } catch (error) {
     console.error("Error reading gallery folder:", error);
@@ -44,10 +44,13 @@ export default async function ProgramsPage() {
       <section className="w-full py-16 bg-muted/30">
         <div className="container">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">Our Programs</h1>
+            <h1 className="text-4xl md:text-5xl font-bold mb-6">
+              Our Programs
+            </h1>
             <p className="text-lg text-muted-foreground">
-              TIPAC offers a variety of theatre and arts programs designed to inspire creativity, build confidence,
-              and preserve cultural heritage among children in Uganda.
+              TIPAC offers a variety of theatre and arts programs designed to
+              inspire creativity, build confidence, and preserve cultural
+              heritage among children in Uganda.
             </p>
           </div>
         </div>
@@ -63,7 +66,10 @@ export default async function ProgramsPage() {
                   <span className="text-2xl">🎭</span>
                 </div>
                 <h3 className="text-lg font-bold mb-2">5+ Programs</h3>
-                <p className="text-muted-foreground">Diverse programs catering to different interests and age groups</p>
+                <p className="text-muted-foreground">
+                  Diverse programs catering to different interests and age
+                  groups
+                </p>
               </div>
 
               <div className="p-6 border border-border rounded-lg shadow-sm">
@@ -71,7 +77,10 @@ export default async function ProgramsPage() {
                   <span className="text-2xl">👥</span>
                 </div>
                 <h3 className="text-lg font-bold mb-2">Ages 6-18</h3>
-                <p className="text-muted-foreground">Programs tailored for children and teens of all experience levels</p>
+                <p className="text-muted-foreground">
+                  Programs tailored for children and teens of all experience
+                  levels
+                </p>
               </div>
 
               <div className="p-6 border border-border rounded-lg shadow-sm">
@@ -79,7 +88,9 @@ export default async function ProgramsPage() {
                   <span className="text-2xl">🏆</span>
                 </div>
                 <h3 className="text-lg font-bold mb-2">1000+ Participants</h3>
-                <p className="text-muted-foreground">A growing community of young performers and artists</p>
+                <p className="text-muted-foreground">
+                  A growing community of young performers and artists
+                </p>
               </div>
             </div>
           </div>
@@ -89,7 +100,9 @@ export default async function ProgramsPage() {
       {/* Detailed Programs Section */}
       <section className="w-full py-16">
         <div className="container">
-          <h2 className="text-3xl font-bold mb-12 text-center">Our Core Programs</h2>
+          <h2 className="text-3xl font-bold mb-12 text-center">
+            Our Core Programs
+          </h2>
 
           {/* Theatre Workshops Program */}
           <div id="theatre-workshops" className="mb-24">
@@ -108,22 +121,38 @@ export default async function ProgramsPage() {
                 </div>
                 <h3 className="text-2xl font-bold mb-4">Theatre Workshops</h3>
                 <p className="text-muted-foreground mb-6">
-                  Our weekly theatre workshops introduce children to the fundamentals of acting, improvisation,
-                  stage presence, and character development in a fun and supportive environment.
+                  Our weekly theatre workshops introduce children to the
+                  fundamentals of acting, improvisation, stage presence, and
+                  character development in a fun and supportive environment.
                 </p>
 
                 <div className="space-y-4 mb-8">
                   <div className="flex gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">✓</div>
-                    <p><strong>Weekly Sessions:</strong> 2-hour workshops held every Saturday morning</p>
+                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                      ✓
+                    </div>
+                    <p>
+                      <strong>Weekly Sessions:</strong> 2-hour workshops held
+                      every Saturday morning
+                    </p>
                   </div>
                   <div className="flex gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">✓</div>
-                    <p><strong>Small Groups:</strong> Maximum 15 children per group, grouped by age</p>
+                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                      ✓
+                    </div>
+                    <p>
+                      <strong>Small Groups:</strong> Maximum 15 children per
+                      group, grouped by age
+                    </p>
                   </div>
                   <div className="flex gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">✓</div>
-                    <p><strong>Performance Opportunities:</strong> End-of-term showcase for friends and family</p>
+                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                      ✓
+                    </div>
+                    <p>
+                      <strong>Performance Opportunities:</strong> End-of-term
+                      showcase for friends and family
+                    </p>
                   </div>
                 </div>
 
@@ -161,31 +190,52 @@ export default async function ProgramsPage() {
                 <div className="inline-block tipac-gradient-reverse px-3 py-1 rounded-full text-white text-sm font-medium mb-4">
                   Ages 8-16
                 </div>
-                <h3 className="text-2xl font-bold mb-4">Musical Theatre Program</h3>
+                <h3 className="text-2xl font-bold mb-4">
+                  Musical Theatre Program
+                </h3>
                 <p className="text-muted-foreground mb-6">
-                  Combining acting, singing, and dancing, our musical theatre program helps children develop
-                  multiple performance skills while working on exciting productions that showcase their talents.
+                  Combining acting, singing, and dancing, our musical theatre
+                  program helps children develop multiple performance skills
+                  while working on exciting productions that showcase their
+                  talents.
                 </p>
 
                 <div className="space-y-4 mb-8">
                   <div className="flex gap-3">
-                    <div className="w-6 h-6 rounded-full bg-secondary/10 text-secondary flex items-center justify-center flex-shrink-0">✓</div>
-                    <p><strong>Comprehensive Training:</strong> Voice, dance, and acting instruction</p>
+                    <div className="w-6 h-6 rounded-full bg-secondary/10 text-secondary flex items-center justify-center flex-shrink-0">
+                      ✓
+                    </div>
+                    <p>
+                      <strong>Comprehensive Training:</strong> Voice, dance, and
+                      acting instruction
+                    </p>
                   </div>
                   <div className="flex gap-3">
-                    <div className="w-6 h-6 rounded-full bg-secondary/10 text-secondary flex items-center justify-center flex-shrink-0">✓</div>
-                    <p><strong>Two Major Productions:</strong> Full-scale performances twice yearly</p>
+                    <div className="w-6 h-6 rounded-full bg-secondary/10 text-secondary flex items-center justify-center flex-shrink-0">
+                      ✓
+                    </div>
+                    <p>
+                      <strong>Two Major Productions:</strong> Full-scale
+                      performances twice yearly
+                    </p>
                   </div>
                   <div className="flex gap-3">
-                    <div className="w-6 h-6 rounded-full bg-secondary/10 text-secondary flex items-center justify-center flex-shrink-0">✓</div>
-                    <p><strong>Professional Guidance:</strong> Led by experienced music and theatre professionals</p>
+                    <div className="w-6 h-6 rounded-full bg-secondary/10 text-secondary flex items-center justify-center flex-shrink-0">
+                      ✓
+                    </div>
+                    <p>
+                      <strong>Professional Guidance:</strong> Led by experienced
+                      music and theatre professionals
+                    </p>
                   </div>
                 </div>
 
                 <div className="bg-muted/30 p-4 rounded-lg border border-border mb-6">
                   <h4 className="font-bold mb-2">Program Details:</h4>
                   <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                    <li>Twice-weekly rehearsals (Tuesdays and Thursdays, 4-6pm)</li>
+                    <li>
+                      Twice-weekly rehearsals (Tuesdays and Thursdays, 4-6pm)
+                    </li>
                     <li>Additional rehearsals before performances</li>
                     <li>Basic singing or acting experience recommended</li>
                     <li>Performance opportunities at community events</li>
@@ -215,24 +265,42 @@ export default async function ProgramsPage() {
                 <div className="inline-block tipac-gradient px-3 py-1 rounded-full text-white text-sm font-medium mb-4">
                   Ages 6-18
                 </div>
-                <h3 className="text-2xl font-bold mb-4">Cultural Storytelling Program</h3>
+                <h3 className="text-2xl font-bold mb-4">
+                  Cultural Storytelling Program
+                </h3>
                 <p className="text-muted-foreground mb-6">
-                  This program focuses on preserving and sharing Uganda's rich cultural heritage through
-                  traditional storytelling techniques, oral history, and performance.
+                  This program focuses on preserving and sharing Uganda's rich
+                  cultural heritage through traditional storytelling techniques,
+                  oral history, and performance.
                 </p>
 
                 <div className="space-y-4 mb-8">
                   <div className="flex gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">✓</div>
-                    <p><strong>Cultural Immersion:</strong> Learn from community elders and cultural experts</p>
+                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                      ✓
+                    </div>
+                    <p>
+                      <strong>Cultural Immersion:</strong> Learn from community
+                      elders and cultural experts
+                    </p>
                   </div>
                   <div className="flex gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">✓</div>
-                    <p><strong>Language Preservation:</strong> Stories told in both English and local languages</p>
+                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                      ✓
+                    </div>
+                    <p>
+                      <strong>Language Preservation:</strong> Stories told in
+                      both English and local languages
+                    </p>
                   </div>
                   <div className="flex gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">✓</div>
-                    <p><strong>Community Outreach:</strong> Performances at schools and community centers</p>
+                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                      ✓
+                    </div>
+                    <p>
+                      <strong>Community Outreach:</strong> Performances at
+                      schools and community centers
+                    </p>
                   </div>
                 </div>
 
@@ -270,24 +338,42 @@ export default async function ProgramsPage() {
                 <div className="inline-block tipac-gradient-reverse px-3 py-1 rounded-full text-white text-sm font-medium mb-4">
                   Ages 12-18
                 </div>
-                <h3 className="text-2xl font-bold mb-4">Technical Theatre Program</h3>
+                <h3 className="text-2xl font-bold mb-4">
+                  Technical Theatre Program
+                </h3>
                 <p className="text-muted-foreground mb-6">
-                  For those interested in the behind-the-scenes magic of theatre, this program teaches
-                  set design, lighting, sound, costume design, and stage management.
+                  For those interested in the behind-the-scenes magic of
+                  theatre, this program teaches set design, lighting, sound,
+                  costume design, and stage management.
                 </p>
 
                 <div className="space-y-4 mb-8">
                   <div className="flex gap-3">
-                    <div className="w-6 h-6 rounded-full bg-secondary/10 text-secondary flex items-center justify-center flex-shrink-0">✓</div>
-                    <p><strong>Hands-on Experience:</strong> Work on actual productions</p>
+                    <div className="w-6 h-6 rounded-full bg-secondary/10 text-secondary flex items-center justify-center flex-shrink-0">
+                      ✓
+                    </div>
+                    <p>
+                      <strong>Hands-on Experience:</strong> Work on actual
+                      productions
+                    </p>
                   </div>
                   <div className="flex gap-3">
-                    <div className="w-6 h-6 rounded-full bg-secondary/10 text-secondary flex items-center justify-center flex-shrink-0">✓</div>
-                    <p><strong>Skill Development:</strong> Learn technical and creative problem-solving</p>
+                    <div className="w-6 h-6 rounded-full bg-secondary/10 text-secondary flex items-center justify-center flex-shrink-0">
+                      ✓
+                    </div>
+                    <p>
+                      <strong>Skill Development:</strong> Learn technical and
+                      creative problem-solving
+                    </p>
                   </div>
                   <div className="flex gap-3">
-                    <div className="w-6 h-6 rounded-full bg-secondary/10 text-secondary flex items-center justify-center flex-shrink-0">✓</div>
-                    <p><strong>Career Pathways:</strong> Introduction to technical theatre careers</p>
+                    <div className="w-6 h-6 rounded-full bg-secondary/10 text-secondary flex items-center justify-center flex-shrink-0">
+                      ✓
+                    </div>
+                    <p>
+                      <strong>Career Pathways:</strong> Introduction to
+                      technical theatre careers
+                    </p>
                   </div>
                 </div>
 
@@ -323,24 +409,42 @@ export default async function ProgramsPage() {
                 <div className="inline-block tipac-gradient px-3 py-1 rounded-full text-white text-sm font-medium mb-4">
                   Ages 14-18
                 </div>
-                <h3 className="text-2xl font-bold mb-4">Theatre for Social Change</h3>
+                <h3 className="text-2xl font-bold mb-4">
+                  Theatre for Social Change
+                </h3>
                 <p className="text-muted-foreground mb-6">
-                  Our advanced program for teenagers uses theatre as a tool to address social issues,
-                  promote community dialogue, and inspire positive change.
+                  Our advanced program for teenagers uses theatre as a tool to
+                  address social issues, promote community dialogue, and inspire
+                  positive change.
                 </p>
 
                 <div className="space-y-4 mb-8">
                   <div className="flex gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">✓</div>
-                    <p><strong>Issue-Based Theatre:</strong> Create performances addressing community concerns</p>
+                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                      ✓
+                    </div>
+                    <p>
+                      <strong>Issue-Based Theatre:</strong> Create performances
+                      addressing community concerns
+                    </p>
                   </div>
                   <div className="flex gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">✓</div>
-                    <p><strong>Community Engagement:</strong> Performances in schools and public spaces</p>
+                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                      ✓
+                    </div>
+                    <p>
+                      <strong>Community Engagement:</strong> Performances in
+                      schools and public spaces
+                    </p>
                   </div>
                   <div className="flex gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">✓</div>
-                    <p><strong>Leadership Development:</strong> Youth-led creative process</p>
+                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                      ✓
+                    </div>
+                    <p>
+                      <strong>Leadership Development:</strong> Youth-led
+                      creative process
+                    </p>
                   </div>
                 </div>
 
@@ -366,39 +470,53 @@ export default async function ProgramsPage() {
       {/* Testimonials Section */}
       <section className="w-full py-16 bg-muted/30">
         <div className="container">
-          <h2 className="text-3xl font-bold mb-12 text-center">What Our Participants Say</h2>
+          <h2 className="text-3xl font-bold mb-12 text-center">
+            What Our Participants Say
+          </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="bg-background p-6 rounded-lg border border-border shadow-sm">
               <div className="text-4xl text-accent mb-4">"</div>
               <p className="italic mb-6">
-                "TIPAC's theatre workshops helped me overcome my shyness and find my voice. Now I can speak confidently in front of others, and I've made so many friends."
+                "TIPAC's theatre workshops helped me overcome my shyness and
+                find my voice. Now I can speak confidently in front of others,
+                and I've made so many friends."
               </p>
               <div>
                 <p className="font-bold">Esther, 12</p>
-                <p className="text-muted-foreground">Theatre Workshops Participant</p>
+                <p className="text-muted-foreground">
+                  Theatre Workshops Participant
+                </p>
               </div>
             </div>
 
             <div className="bg-background p-6 rounded-lg border border-border shadow-sm">
               <div className="text-4xl text-accent mb-4">"</div>
               <p className="italic mb-6">
-                "The musical theatre program has been amazing. I've discovered my love for singing and dancing, and performing in front of an audience has been such a thrill!"
+                "The musical theatre program has been amazing. I've discovered
+                my love for singing and dancing, and performing in front of an
+                audience has been such a thrill!"
               </p>
               <div>
                 <p className="font-bold">Joshua, 14</p>
-                <p className="text-muted-foreground">Musical Theatre Participant</p>
+                <p className="text-muted-foreground">
+                  Musical Theatre Participant
+                </p>
               </div>
             </div>
 
             <div className="bg-background p-6 rounded-lg border border-border shadow-sm">
               <div className="text-4xl text-accent mb-4">"</div>
               <p className="italic mb-6">
-                "Learning about our cultural stories through TIPAC has connected me to my heritage in a way I never expected. I'm proud to share these stories with others."
+                "Learning about our cultural stories through TIPAC has connected
+                me to my heritage in a way I never expected. I'm proud to share
+                these stories with others."
               </p>
               <div>
                 <p className="font-bold">Grace, 16</p>
-                <p className="text-muted-foreground">Storytelling Program Participant</p>
+                <p className="text-muted-foreground">
+                  Storytelling Program Participant
+                </p>
               </div>
             </div>
           </div>
@@ -409,46 +527,66 @@ export default async function ProgramsPage() {
       <section className="w-full py-16">
         <div className="container">
           <div className="max-w-3xl mx-auto">
-            <h2 className="text-3xl font-bold mb-12 text-center">Frequently Asked Questions</h2>
+            <h2 className="text-3xl font-bold mb-12 text-center">
+              Frequently Asked Questions
+            </h2>
 
             <div className="space-y-6">
               <div className="border border-border rounded-lg p-6">
-                <h3 className="text-xl font-bold mb-2">How do I register my child for a program?</h3>
+                <h3 className="text-xl font-bold mb-2">
+                  How do I register my child for a program?
+                </h3>
                 <p className="text-muted-foreground">
-                  Registration can be done online through our website, by phone, or in person at our office.
-                  Each program has specific registration periods, so check the program details for upcoming dates.
+                  Registration can be done online through our website, by phone,
+                  or in person at our office. Each program has specific
+                  registration periods, so check the program details for
+                  upcoming dates.
                 </p>
               </div>
 
               <div className="border border-border rounded-lg p-6">
-                <h3 className="text-xl font-bold mb-2">Are there any scholarships or financial assistance available?</h3>
+                <h3 className="text-xl font-bold mb-2">
+                  Are there any scholarships or financial assistance available?
+                </h3>
                 <p className="text-muted-foreground">
-                  Yes, TIPAC is committed to making our programs accessible to all children. We offer partial
-                  and full scholarships based on financial need. Please contact our office for more information.
+                  Yes, TIPAC is committed to making our programs accessible to
+                  all children. We offer partial and full scholarships based on
+                  financial need. Please contact our office for more
+                  information.
                 </p>
               </div>
 
               <div className="border border-border rounded-lg p-6">
-                <h3 className="text-xl font-bold mb-2">What if my child has never done theatre before?</h3>
+                <h3 className="text-xl font-bold mb-2">
+                  What if my child has never done theatre before?
+                </h3>
                 <p className="text-muted-foreground">
-                  No prior experience is needed for most of our programs! Our Theatre Workshops and
-                  Cultural Storytelling programs are perfect for beginners and designed to build confidence gradually.
+                  No prior experience is needed for most of our programs! Our
+                  Theatre Workshops and Cultural Storytelling programs are
+                  perfect for beginners and designed to build confidence
+                  gradually.
                 </p>
               </div>
 
               <div className="border border-border rounded-lg p-6">
-                <h3 className="text-xl font-bold mb-2">Where are programs held?</h3>
+                <h3 className="text-xl font-bold mb-2">
+                  Where are programs held?
+                </h3>
                 <p className="text-muted-foreground">
-                  Most programs take place at our main center in Kampala, though some workshops and
-                  performances happen at partner schools and community centers throughout the region.
+                  Most programs take place at our main center in Kampala, though
+                  some workshops and performances happen at partner schools and
+                  community centers throughout the region.
                 </p>
               </div>
 
               <div className="border border-border rounded-lg p-6">
-                <h3 className="text-xl font-bold mb-2">Can parents observe classes?</h3>
+                <h3 className="text-xl font-bold mb-2">
+                  Can parents observe classes?
+                </h3>
                 <p className="text-muted-foreground">
-                  We have designated observation days throughout each term where parents are welcome to
-                  watch. We also have end-of-term showcases and performances open to families and friends.
+                  We have designated observation days throughout each term where
+                  parents are welcome to watch. We also have end-of-term
+                  showcases and performances open to families and friends.
                 </p>
               </div>
             </div>
@@ -462,7 +600,8 @@ export default async function ProgramsPage() {
           <div className="max-w-4xl mx-auto text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Upcoming Events</h2>
             <p className="text-muted-foreground mb-8">
-              Check out our upcoming performances, workshops, and special events where you can see our programs in action.
+              Check out our upcoming performances, workshops, and special events
+              where you can see our programs in action.
             </p>
             <Button asChild size="lg" className="tipac-gradient">
               <Link href="/events">View All Events</Link>

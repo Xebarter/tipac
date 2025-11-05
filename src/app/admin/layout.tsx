@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import Sidebar from "./components/Sidebar";
 import { cookies } from "next/headers";
 
@@ -9,7 +9,7 @@ export default async function AdminLayout({
 }) {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("admin_session");
-  
+
   // If no session cookie, don't show the sidebar
   const isAuthenticated = !!sessionCookie;
 
@@ -21,9 +21,7 @@ export default async function AdminLayout({
         </div>
       ) : null}
       <div className={isAuthenticated ? "ml-64 flex-1" : "flex-1"}>
-        <div className="p-8">
-          {children}
-        </div>
+        <div className="p-8">{children}</div>
       </div>
     </div>
   );

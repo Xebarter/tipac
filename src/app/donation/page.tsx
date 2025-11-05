@@ -58,12 +58,20 @@ export default function Donation() {
       <motion.div
         className="absolute top-0 left-0 w-64 h-64 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full blur-3xl pointer-events-none"
         animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.7, 0.5] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        transition={{
+          duration: 8,
+          repeat: Number.POSITIVE_INFINITY,
+          ease: "easeInOut",
+        }}
       />
       <motion.div
         className="absolute bottom-0 right-0 w-80 h-80 bg-gradient-to-r from-cyan-500/20 to-blue-600/20 rounded-full blur-3xl pointer-events-none"
         animate={{ scale: [1, 1.3, 1], opacity: [0.4, 0.6, 0.4] }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        transition={{
+          duration: 6,
+          repeat: Number.POSITIVE_INFINITY,
+          ease: "easeInOut",
+        }}
       />
 
       <div className="container mx-auto px-4 relative z-10">
@@ -78,7 +86,8 @@ export default function Donation() {
             Support TIPAC with Your Donation
           </h2>
           <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-            Your contribution helps empower children in Uganda through the transformative power of theatre.
+            Your contribution helps empower children in Uganda through the
+            transformative power of theatre.
           </p>
         </motion.div>
 
@@ -92,9 +101,7 @@ export default function Donation() {
           {/* ✅ Fix overlay blocking input */}
           <div className="absolute inset-0 border border-transparent rounded-xl bg-gradient-to-r from-transparent via-blue-500/20 to-transparent animate-pulse pointer-events-none" />
 
-          {error && (
-            <p className="text-red-400 text-center mb-4">{error}</p>
-          )}
+          {error && <p className="text-red-400 text-center mb-4">{error}</p>}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

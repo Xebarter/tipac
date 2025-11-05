@@ -1,12 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
-<url><loc>https://yourdomain.com/about</loc><lastmod>2025-04-26T12:40:40.866Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://yourdomain.com/admin/messages</loc><lastmod>2025-04-26T12:40:40.867Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://yourdomain.com/contact</loc><lastmod>2025-04-26T12:40:40.867Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://yourdomain.com/gallery</loc><lastmod>2025-04-26T12:40:40.867Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://yourdomain.com</loc><lastmod>2025-04-26T12:40:40.867Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://yourdomain.com/programs</loc><lastmod>2025-04-26T12:40:40.867Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://yourdomain.com/programs/musical-theatre</loc><lastmod>2025-04-26T12:40:40.867Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://yourdomain.com/programs/cultural-storytelling</loc><lastmod>2025-04-26T12:40:40.867Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://yourdomain.com/programs/theatre-workshops</loc><lastmod>2025-04-26T12:40:40.867Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://tipac.co.ug/icon1.png</loc><lastmod>2025-11-05T17:22:30.746Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://tipac.co.ug/manifest.json</loc><lastmod>2025-11-05T17:22:30.747Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://tipac.co.ug/icon0.svg</loc><lastmod>2025-11-05T17:22:30.747Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://tipac.co.ug/apple-icon.png</loc><lastmod>2025-11-05T17:22:30.747Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://tipac.co.ug/about</loc><lastmod>2025-11-05T17:22:30.747Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://tipac.co.ug/contact</loc><lastmod>2025-11-05T17:22:30.747Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://tipac.co.ug/donation</loc><lastmod>2025-11-05T17:22:30.747Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://tipac.co.ug/events</loc><lastmod>2025-11-05T17:22:30.747Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://tipac.co.ug/gallery</loc><lastmod>2025-11-05T17:22:30.747Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://tipac.co.ug</loc><lastmod>2025-11-05T17:22:30.747Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://tipac.co.ug/programs/cultural-storytelling</loc><lastmod>2025-11-05T17:22:30.747Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://tipac.co.ug/programs/musical-theatre</loc><lastmod>2025-11-05T17:22:30.747Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://tipac.co.ug/programs</loc><lastmod>2025-11-05T17:22:30.747Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://tipac.co.ug/programs/theatre-workshops</loc><lastmod>2025-11-05T17:22:30.747Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://tipac.co.ug/tickets</loc><lastmod>2025-11-05T17:22:30.747Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://tipac.co.ug/verify</loc><lastmod>2025-11-05T17:22:30.747Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://tipac.co.ug/payment-complete</loc><lastmod>2025-11-05T17:22:30.747Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
 </urlset>

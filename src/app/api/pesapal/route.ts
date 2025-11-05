@@ -17,13 +17,18 @@ console.log("[ENV] PESAPAL_IPN_ID:", notificationId);
 
 async function getAccessToken() {
   if (!consumerKey || !consumerSecret) {
-    throw new Error("Missing PESAPAL_CONSUMER_KEY or PESAPAL_CONSUMER_SECRET environment variables");
+    throw new Error(
+      "Missing PESAPAL_CONSUMER_KEY or PESAPAL_CONSUMER_SECRET environment variables",
+    );
   }
 
   try {
     const tokenUrl = `${baseUrl}/api/Auth/RequestToken`;
     console.log("[AUTH REQUEST] Sending token request to:", tokenUrl);
-    console.log("[AUTH REQUEST] Payload:", { consumer_key: consumerKey, consumer_secret: consumerSecret });
+    console.log("[AUTH REQUEST] Payload:", {
+      consumer_key: consumerKey,
+      consumer_secret: consumerSecret,
+    });
 
     const res = await fetch(tokenUrl, {
       method: "POST",
@@ -44,11 +49,15 @@ async function getAccessToken() {
 
     if (!res.ok) {
       if (responseBody.startsWith("<!DOCTYPE")) {
-        throw new Error(`Failed to fetch access token: ${res.status} - HTML response received (likely incorrect endpoint)`);
+        throw new Error(
+          `Failed to fetch access token: ${res.status} - HTML response received (likely incorrect endpoint)`,
+        );
       }
 
       const errorData = JSON.parse(responseBody);
-      throw new Error(`Failed to fetch access token: ${res.status} - ${JSON.stringify(errorData)}`);
+      throw new Error(
+        `Failed to fetch access token: ${res.status} - ${JSON.stringify(errorData)}`,
+      );
     }
 
     const data = JSON.parse(responseBody);
@@ -65,10 +74,14 @@ async function getAccessToken() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { firstName, lastName, email, phoneNumber, amount } = await req.json();
+    const { firstName, lastName, email, phoneNumber, amount } =
+      await req.json();
 
     if (!firstName || !lastName || !email || !amount) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 },
+      );
     }
 
     if (!notificationId) {
@@ -83,7 +96,7 @@ export async function POST(req: NextRequest) {
     const payload = {
       id: orderTrackingId,
       currency: "UGX",
-      amount: parseFloat(amount),
+      amount: Number.parseFloat(amount),
       description: "Donation to TIPAC",
       callback_url: callbackUrl,
       notification_id: notificationId, // Use the provided IPN ID
@@ -116,7 +129,9 @@ export async function POST(req: NextRequest) {
     if (!res.ok) {
       const errData = JSON.parse(responseBody);
       console.error("[PESAPAL SUBMIT ERROR]", res.status, errData);
-      throw new Error(`Failed to submit donation request: ${res.status} - ${JSON.stringify(errData)}`);
+      throw new Error(
+        `Failed to submit donation request: ${res.status} - ${JSON.stringify(errData)}`,
+      );
     }
 
     const data = JSON.parse(responseBody);

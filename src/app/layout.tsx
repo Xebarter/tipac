@@ -14,6 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://tipac.co.ug"),
   title: "TIPAC - Theatre Initiative for The Pearl of Africa Children",
   description: "Empowering children through the art of theatre in Uganda",
   openGraph: {

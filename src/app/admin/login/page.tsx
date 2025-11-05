@@ -12,7 +12,7 @@ export default function AdminLogin() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Simple authentication with hardcoded credentials
     if (email === "admin@tipac.com" && password === "Admin123") {
       // Set a cookie for authentication
@@ -35,17 +35,20 @@ export default function AdminLogin() {
             Please sign in to access the admin panel
           </p>
         </div>
-        
+
         {error && (
           <div className="rounded-md bg-destructive/20 p-4 text-destructive">
             <p className="text-sm font-medium">{error}</p>
           </div>
         )}
-        
+
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           <div className="rounded-md shadow-sm space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-foreground mb-1"
+              >
                 Email address
               </label>
               <input
@@ -60,7 +63,10 @@ export default function AdminLogin() {
               />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-foreground mb-1"
+              >
                 Password
               </label>
               <input
@@ -86,7 +92,7 @@ export default function AdminLogin() {
             </button>
           </div>
         </form>
-        
+
         <div className="text-center mt-4">
           <Link href="/" className="text-sm text-primary hover:underline">
             Back to Home

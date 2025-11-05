@@ -25,7 +25,9 @@ export default function AdminMessagesPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedMessageId, setExpandedMessageId] = useState<string | null>(null);
+  const [expandedMessageId, setExpandedMessageId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -70,8 +72,8 @@ export default function AdminMessagesPage() {
       if (response.ok && data.success) {
         setMessages((prevMessages) =>
           prevMessages.map((msg) =>
-            msg.id === id ? { ...msg, is_read: !is_read } : msg
-          )
+            msg.id === id ? { ...msg, is_read: !is_read } : msg,
+          ),
         );
       } else {
         setError(data.error || "Failed to update read status");
@@ -94,7 +96,7 @@ export default function AdminMessagesPage() {
 
       if (response.ok && data.success) {
         setMessages((prevMessages) =>
-          prevMessages.filter((msg) => msg.id !== id)
+          prevMessages.filter((msg) => msg.id !== id),
         );
       } else {
         setError(data.error || "Failed to delete message");
@@ -116,8 +118,7 @@ export default function AdminMessagesPage() {
       </div>
     );
 
-  if (error)
-    return <div className="p-6 text-red-500">Error: {error}</div>;
+  if (error) return <div className="p-6 text-red-500">Error: {error}</div>;
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -165,9 +166,7 @@ export default function AdminMessagesPage() {
                     >
                       {msg.email}
                     </a>
-                    <div className="text-sm text-gray-600">
-                      {msg.subject}
-                    </div>
+                    <div className="text-sm text-gray-600">{msg.subject}</div>
                   </div>
                 </div>
 

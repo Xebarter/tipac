@@ -34,7 +34,8 @@ export function Testimonials() {
       <div className="container">
         <h2 className="text-3xl font-bold text-center mb-4">Our Team</h2>
         <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
-          Meet the passionate individuals behind TIPAC who are dedicated to transforming children's lives through theatrical arts
+          Meet the passionate individuals behind TIPAC who are dedicated to
+          transforming children's lives through theatrical arts
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -80,7 +81,7 @@ export function Testimonials() {
                   </Link>
 
                   <Link
-                    href={`tel:${member.phone.replace(/\s+/g, '')}`}
+                    href={`tel:${member.phone.replace(/\s+/g, "")}`}
                     className="flex items-center justify-center text-sm hover:text-primary transition-colors"
                   >
                     <svg

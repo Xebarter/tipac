@@ -40,7 +40,7 @@ export default function Sidebar() {
       <div className="flex items-center justify-between p-4 border-b border-gray-700">
         <h1 className="text-xl font-bold">TIPAC Admin</h1>
       </div>
-      
+
       <nav className="flex-1 p-4">
         <ul className="space-y-2">
           {navigation.map((item) => (
@@ -59,7 +59,7 @@ export default function Sidebar() {
           ))}
         </ul>
       </nav>
-      
+
       <div className="p-4 border-t border-gray-700">
         <button
           onClick={handleLogout}

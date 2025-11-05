@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { getMongoClient } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 
@@ -7,12 +7,9 @@ const collectionName = "events";
 
 export async function GET(req: NextRequest) {
   // Check authentication
-  const adminSession = req.cookies.get('admin_session');
+  const adminSession = req.cookies.get("admin_session");
   if (!adminSession) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
@@ -23,9 +20,9 @@ export async function GET(req: NextRequest) {
     const events = await collection.find({}).sort({ date: -1 }).toArray();
 
     // Convert ObjectId to string for JSON serialization
-    const serializedEvents = events.map(event => ({
+    const serializedEvents = events.map((event) => ({
       ...event,
-      _id: event._id.toString()
+      _id: event._id.toString(),
     }));
 
     return NextResponse.json({ events: serializedEvents });
@@ -33,19 +30,16 @@ export async function GET(req: NextRequest) {
     console.error("Failed to fetch events:", error);
     return NextResponse.json(
       { error: "Failed to load events", details: String(error) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function POST(req: NextRequest) {
   // Check authentication
-  const adminSession = req.cookies.get('admin_session');
+  const adminSession = req.cookies.get("admin_session");
   if (!adminSession) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
@@ -55,38 +49,35 @@ export async function POST(req: NextRequest) {
     const collection = db.collection(collectionName);
 
     const result = await collection.insertOne(body);
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       message: "Event created successfully",
-      eventId: result.insertedId.toString()
+      eventId: result.insertedId.toString(),
     });
   } catch (error) {
     console.error("Failed to create event:", error);
     return NextResponse.json(
       { error: "Failed to create event", details: String(error) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function PUT(req: NextRequest) {
   // Check authentication
-  const adminSession = req.cookies.get('admin_session');
+  const adminSession = req.cookies.get("admin_session");
   if (!adminSession) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     const body = await req.json();
     const { id, ...updateData } = body;
-    
+
     if (!id) {
       return NextResponse.json(
         { error: "Event ID is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -96,14 +87,11 @@ export async function PUT(req: NextRequest) {
 
     const result = await collection.updateOne(
       { _id: new ObjectId(id) },
-      { $set: updateData }
+      { $set: updateData },
     );
-    
+
     if (result.matchedCount === 0) {
-      return NextResponse.json(
-        { error: "Event not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
     return NextResponse.json({ message: "Event updated successfully" });
@@ -111,28 +99,25 @@ export async function PUT(req: NextRequest) {
     console.error("Failed to update event:", error);
     return NextResponse.json(
       { error: "Failed to update event", details: String(error) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function DELETE(req: NextRequest) {
   // Check authentication
-  const adminSession = req.cookies.get('admin_session');
+  const adminSession = req.cookies.get("admin_session");
   if (!adminSession) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     const { id } = await req.json();
-    
+
     if (!id) {
       return NextResponse.json(
         { error: "Event ID is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -141,12 +126,9 @@ export async function DELETE(req: NextRequest) {
     const collection = db.collection(collectionName);
 
     const result = await collection.deleteOne({ _id: new ObjectId(id) });
-    
+
     if (result.deletedCount === 0) {
-      return NextResponse.json(
-        { error: "Event not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
     return NextResponse.json({ message: "Event deleted successfully" });
@@ -154,7 +136,7 @@ export async function DELETE(req: NextRequest) {
     console.error("Failed to delete event:", error);
     return NextResponse.json(
       { error: "Failed to delete event", details: String(error) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

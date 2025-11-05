@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
-import QRCode from 'qrcode';
+import QRCode from "qrcode";
 
 // Protect this route - admin only
 export async function POST(request: Request) {
@@ -11,15 +11,17 @@ export async function POST(request: Request) {
     if (!event_id || !num_tickets || !batch_code) {
       return NextResponse.json(
         { error: "Missing required fields: event_id, num_tickets, batch_code" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Get event details including organizer and sponsor information
     const { data: eventData, error: eventError } = await supabase
-      .from('events')
-      .select('title, date, location, organizer_name, organizer_logo_url, sponsor_logos')
-      .eq('id', event_id)
+      .from("events")
+      .select(
+        "title, date, location, organizer_name, organizer_logo_url, sponsor_logos",
+      )
+      .eq("id", event_id)
       .single();
 
     if (eventError) {
@@ -30,12 +32,12 @@ export async function POST(request: Request) {
     let ticketPrice = price || 0;
     if (!price) {
       const { data: ticketTypeData, error: ticketTypeError } = await supabase
-        .from('ticket_types')
-        .select('price')
-        .eq('event_id', event_id)
-        .eq('is_active', true)
+        .from("ticket_types")
+        .select("price")
+        .eq("event_id", event_id)
+        .eq("is_active", true)
         .limit(1);
-        
+
       if (!ticketTypeError && ticketTypeData && ticketTypeData.length > 0) {
         ticketPrice = ticketTypeData[0].price;
       }
@@ -49,16 +51,16 @@ export async function POST(request: Request) {
       const qrData = JSON.stringify({
         ticket_id: ticketId,
         batch_code,
-        event_id
+        event_id,
       });
-      
+
       const qrCode = await QRCode.toDataURL(qrData);
-      
+
       tickets.push({
         id: ticketId,
         event_id,
-        purchase_channel: 'physical_batch',
-        status: 'confirmed', // Changed from 'valid' to 'confirmed' to match expected status
+        purchase_channel: "physical_batch",
+        status: "confirmed", // Changed from 'valid' to 'confirmed' to match expected status
         is_active: true, // Set to true by default for physical tickets to be valid at entrance
         batch_code,
         qr_code: qrCode,
@@ -71,41 +73,52 @@ export async function POST(request: Request) {
     let batchData, batchError;
     let attemptCount = 0;
     const maxAttempts = 5;
-    
+
     do {
       // Try to create the batch record
       const result = await supabase
-        .from('batches')
-        .insert([{
-          batch_code: attemptCount === 0 ? batch_code : `${batch_code}-${Date.now()}-${attemptCount}`,
-          event_id,
-          num_tickets,
-          is_active: true // Ensure batch is active by default
-        }])
+        .from("batches")
+        .insert([
+          {
+            batch_code:
+              attemptCount === 0
+                ? batch_code
+                : `${batch_code}-${Date.now()}-${attemptCount}`,
+            event_id,
+            num_tickets,
+            is_active: true, // Ensure batch is active by default
+          },
+        ])
         .select()
         .single();
-      
+
       batchData = result.data;
       batchError = result.error;
-      
+
       attemptCount++;
-    } while (batchError && batchError.code === '23505' && attemptCount < maxAttempts); // 23505 is duplicate key error
+    } while (
+      batchError &&
+      batchError.code === "23505" &&
+      attemptCount < maxAttempts
+    ); // 23505 is duplicate key error
 
     if (batchError) {
-      throw new Error(`Failed to create batch record after ${maxAttempts} attempts: ${batchError.message}`);
+      throw new Error(
+        `Failed to create batch record after ${maxAttempts} attempts: ${batchError.message}`,
+      );
     }
 
     // Use the actual batch_code that was created (might be different if we had to modify it)
     const actualBatchCode = batchData.batch_code;
 
     // Update tickets with the actual batch code
-    tickets.forEach(ticket => {
+    tickets.forEach((ticket) => {
       ticket.batch_code = actualBatchCode;
     });
 
     // Insert tickets into database
     const { data: ticketData, error: ticketError } = await supabase
-      .from('tickets')
+      .from("tickets")
       .insert(tickets)
       .select();
 
@@ -114,59 +127,73 @@ export async function POST(request: Request) {
     }
 
     // Generate PDF with ticket details
-    const pdfBuffer = await generateTicketsPDF(ticketData, actualBatchCode, eventData, price);
+    const pdfBuffer = await generateTicketsPDF(
+      ticketData,
+      actualBatchCode,
+      eventData,
+      price,
+    );
 
     // Return success response with PDF
     return new NextResponse(pdfBuffer as any, {
       headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename=tickets-${actualBatchCode}.pdf`
-      }
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename=tickets-${actualBatchCode}.pdf`,
+      },
     });
   } catch (error: any) {
     console.error("Error generating batch tickets:", error);
     return NextResponse.json(
       { error: error.message || "Failed to generate batch tickets" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
-async function generateTicketsPDF(tickets: any[], batchCode: string, event: any, price?: number) {
+async function generateTicketsPDF(
+  tickets: any[],
+  batchCode: string,
+  event: any,
+  price?: number,
+) {
   // Dynamically import PDFKit to avoid issues with Next.js server-side rendering
-  const PDFDocument = (await import('pdfkit')).default;
-  
+  const PDFDocument = (await import("pdfkit")).default;
+
   // Create a new PDF document
   const doc = new PDFDocument({
-    size: 'A4',
-    margin: 50
+    size: "A4",
+    margin: 50,
   });
-  
+
   // Store PDF data in a buffer
   const chunks: Buffer[] = [];
-  
-  doc.on('data', (chunk) => chunks.push(chunk));
-  doc.on('end', () => {});
+
+  doc.on("data", (chunk) => chunks.push(chunk));
+  doc.on("end", () => {});
 
   // Add title
-  doc.fontSize(20).text('TIPAC Batch Tickets', { align: 'center' });
+  doc.fontSize(20).text("TIPAC Batch Tickets", { align: "center" });
   doc.moveDown();
-  
+
   // Add organizer information if available
   if (event.organizer_logo_url) {
     try {
-      doc.fontSize(10).text('Organized by:', 50, doc.y, { continued: true });
-      doc.text(event.organizer_name || 'Event Organizer', { underline: true });
+      doc.fontSize(10).text("Organized by:", 50, doc.y, { continued: true });
+      doc.text(event.organizer_name || "Event Organizer", { underline: true });
       doc.moveDown(0.5);
     } catch (err) {
       // If image loading fails, just show the name
-      doc.fontSize(10).text('Organized by: ' + (event.organizer_name || 'Event Organizer'), { underline: true });
+      doc
+        .fontSize(10)
+        .text("Organized by: " + (event.organizer_name || "Event Organizer"), {
+          underline: true,
+        });
       doc.moveDown(0.5);
     }
   }
-  
+
   // Add event information
-  doc.fontSize(14).text('Event Details:', { underline: true });
+  doc.fontSize(14).text("Event Details:", { underline: true });
   doc.moveDown(0.5);
   doc.fontSize(12).text(`Event Name: ${event.title}`);
   doc.fontSize(12).text(`Date: ${new Date(event.date).toLocaleDateString()}`);
@@ -174,73 +201,85 @@ async function generateTicketsPDF(tickets: any[], batchCode: string, event: any,
   doc.fontSize(12).text(`Batch Code: ${batchCode}`);
   doc.fontSize(12).text(`Number of Tickets: ${tickets.length}`);
   if (price !== undefined) {
-    doc.fontSize(12).text(`Price per Ticket: ${price > 0 ? `UGX ${price.toLocaleString()}` : 'Free'}`);
+    doc
+      .fontSize(12)
+      .text(
+        `Price per Ticket: ${price > 0 ? `UGX ${price.toLocaleString()}` : "Free"}`,
+      );
   }
   doc.moveDown(2);
-  
+
   // Add sponsor information if available
   if (event.sponsor_logos && event.sponsor_logos.length > 0) {
-    doc.fontSize(14).text('Sponsors:', { underline: true });
+    doc.fontSize(14).text("Sponsors:", { underline: true });
     doc.moveDown(0.5);
-    
+
     // List sponsors
     event.sponsor_logos.forEach((sponsor: any) => {
-      doc.fontSize(10).text(`• ${sponsor.name || 'Sponsor'}`);
+      doc.fontSize(10).text(`• ${sponsor.name || "Sponsor"}`);
     });
-    
+
     doc.moveDown(2);
   }
-  
+
   // Add ticket information
-  doc.fontSize(14).text('Tickets:', { underline: true });
+  doc.fontSize(14).text("Tickets:", { underline: true });
   doc.moveDown(0.5);
-  
+
   // Add each ticket with QR code
   for (let i = 0; i < tickets.length; i++) {
     const ticket = tickets[i];
-    
+
     // Check if we need a new page
     if (doc.y > 650 && i > 0) {
       doc.addPage();
-      doc.fontSize(20).text('TIPAC Batch Tickets', { align: 'center' });
+      doc.fontSize(20).text("TIPAC Batch Tickets", { align: "center" });
       doc.moveDown();
-      doc.fontSize(14).text('Tickets:', { underline: true });
+      doc.fontSize(14).text("Tickets:", { underline: true });
       doc.moveDown(0.5);
     }
-    
+
     // Ticket number and ID (using bold font by increasing font size)
     doc.fontSize(12).text(`${i + 1}. Ticket ID: ${ticket.id}`);
-    
+
     // QR code
     const qrSize = 100;
     const qrX = doc.x;
     const qrY = doc.y + 10;
-    
+
     // Convert base64 QR code to buffer
-    const qrImage = ticket.qr_code.replace(/^data:image\/png;base64,/, '');
-    const qrBuffer = Buffer.from(qrImage, 'base64');
-    
+    const qrImage = ticket.qr_code.replace(/^data:image\/png;base64,/, "");
+    const qrBuffer = Buffer.from(qrImage, "base64");
+
     doc.image(qrBuffer, qrX, qrY, { width: qrSize, height: qrSize });
-    
+
     // Ticket details next to QR code
     doc.fontSize(10);
     doc.text(`Batch Code: ${ticket.batch_code}`, qrX + qrSize + 10, qrY);
     doc.text(`Status: confirmed`, qrX + qrSize + 10, qrY + 20);
-    doc.text(`Active: ${(ticket.is_active) ? 'Yes' : 'No'}`, qrX + qrSize + 10, qrY + 40);
+    doc.text(
+      `Active: ${ticket.is_active ? "Yes" : "No"}`,
+      qrX + qrSize + 10,
+      qrY + 40,
+    );
     if (price !== undefined) {
-      doc.text(`Price: ${price > 0 ? `UGX ${price.toLocaleString()}` : 'Free'}`, qrX + qrSize + 10, qrY + 60);
+      doc.text(
+        `Price: ${price > 0 ? `UGX ${price.toLocaleString()}` : "Free"}`,
+        qrX + qrSize + 10,
+        qrY + 60,
+      );
     }
-    
+
     // Move down below the QR code
     doc.moveDown(7);
   }
-  
+
   // Finalize PDF file
   doc.end();
-  
+
   // Wait for the stream to finish and return the buffer
   return new Promise<Buffer>((resolve) => {
-    doc.on('end', () => {
+    doc.on("end", () => {
       const pdfBuffer = Buffer.concat(chunks);
       resolve(pdfBuffer);
     });

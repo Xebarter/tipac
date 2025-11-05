@@ -1,14 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } },
+) {
   // Check authentication
-  const adminSession = req.cookies.get('admin_session');
+  const adminSession = req.cookies.get("admin_session");
   if (!adminSession) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
@@ -18,16 +18,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (typeof read !== "boolean") {
       return NextResponse.json(
         { success: false, error: "Invalid read status" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const { data, error } = await supabase
-      .from('contact_messages')
-      .update({ 
-        is_read: read
+      .from("contact_messages")
+      .update({
+        is_read: read,
       })
-      .eq('id', id)
+      .eq("id", id)
       .select();
 
     if (error) {
@@ -37,7 +37,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (data.length === 0) {
       return NextResponse.json(
         { success: false, error: "Message not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -46,28 +46,28 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     console.error("Failed to update message:", error);
     return NextResponse.json(
       { success: false, error: "Failed to update message" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } },
+) {
   // Check authentication
-  const adminSession = req.cookies.get('admin_session');
+  const adminSession = req.cookies.get("admin_session");
   if (!adminSession) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     const { id } = params;
 
     const { data, error } = await supabase
-      .from('contact_messages')
+      .from("contact_messages")
       .delete()
-      .eq('id', id);
+      .eq("id", id);
 
     if (error) {
       throw error;
@@ -76,7 +76,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     if (data.length === 0) {
       return NextResponse.json(
         { success: false, error: "Message not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -85,7 +85,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     console.error("Failed to delete message:", error);
     return NextResponse.json(
       { success: false, error: "Failed to delete message" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

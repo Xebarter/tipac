@@ -55,7 +55,10 @@ export default function GenerateBatchTickets() {
       setEvents(data || []);
 
       // Unique batch code with timestamp
-      const dateStr = new Date().toISOString().slice(0, 19).replace(/[:T-]/g, "");
+      const dateStr = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace(/[:T-]/g, "");
       const timestamp = Date.now();
       setBatchCode(`BATCH-${dateStr}-${timestamp}`);
     } catch (err) {
@@ -75,7 +78,7 @@ export default function GenerateBatchTickets() {
 
       if (error) throw error;
       setTicketTypes(data || []);
-      
+
       // Auto-select first ticket type if only one exists
       if (data && data.length === 1) {
         setSelectedTicketType(data[0].id);
@@ -96,7 +99,7 @@ export default function GenerateBatchTickets() {
 
     try {
       // Get selected ticket type price
-      const ticketType = ticketTypes.find(tt => tt.id === selectedTicketType);
+      const ticketType = ticketTypes.find((tt) => tt.id === selectedTicketType);
       const price = ticketType ? ticketType.price : 0;
 
       const response = await fetch("/api/tickets/generate-batch", {
@@ -126,7 +129,9 @@ export default function GenerateBatchTickets() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      setSuccess(`Successfully generated ${numTickets} tickets for batch ${batchCode}`);
+      setSuccess(
+        `Successfully generated ${numTickets} tickets for batch ${batchCode}`,
+      );
     } catch (err: any) {
       setError(err.message || "Failed to generate batch tickets");
       console.error("Error generating batch tickets:", err);
@@ -179,7 +184,10 @@ export default function GenerateBatchTickets() {
       >
         <form onSubmit={handleSubmit} className="space-y-8">
           <div>
-            <Label htmlFor="event" className="text-gray-300 text-sm font-medium">
+            <Label
+              htmlFor="event"
+              className="text-gray-300 text-sm font-medium"
+            >
               Event
             </Label>
             <select
@@ -199,7 +207,10 @@ export default function GenerateBatchTickets() {
           </div>
 
           <div>
-            <Label htmlFor="numTickets" className="text-gray-300 text-sm font-medium">
+            <Label
+              htmlFor="numTickets"
+              className="text-gray-300 text-sm font-medium"
+            >
               Number of Tickets
             </Label>
             <Input
@@ -208,14 +219,19 @@ export default function GenerateBatchTickets() {
               min="1"
               max="1000"
               value={numTickets}
-              onChange={(e) => setNumTickets(parseInt(e.target.value) || 1)}
+              onChange={(e) =>
+                setNumTickets(Number.parseInt(e.target.value) || 1)
+              }
               className="mt-2 bg-black/30 border-gray-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
 
           <div>
-            <Label htmlFor="ticketType" className="text-gray-300 text-sm font-medium">
+            <Label
+              htmlFor="ticketType"
+              className="text-gray-300 text-sm font-medium"
+            >
               Ticket Type
             </Label>
             <select
@@ -227,9 +243,11 @@ export default function GenerateBatchTickets() {
               required
             >
               <option value="">
-                {selectedEvent 
-                  ? (ticketTypes.length === 0 ? 'No active ticket types found' : 'Select a ticket type') 
-                  : 'Please select an event first'}
+                {selectedEvent
+                  ? ticketTypes.length === 0
+                    ? "No active ticket types found"
+                    : "Select a ticket type"
+                  : "Please select an event first"}
               </option>
               {ticketTypes.map((type) => (
                 <option key={type.id} value={type.id}>
@@ -238,12 +256,16 @@ export default function GenerateBatchTickets() {
               ))}
             </select>
             <p className="text-xs text-gray-400 mt-1">
-              Select the ticket type to generate. Price is automatically set based on selected type.
+              Select the ticket type to generate. Price is automatically set
+              based on selected type.
             </p>
           </div>
 
           <div>
-            <Label htmlFor="batchCode" className="text-gray-300 text-sm font-medium">
+            <Label
+              htmlFor="batchCode"
+              className="text-gray-300 text-sm font-medium"
+            >
               Batch Code
             </Label>
             <Input
@@ -254,7 +276,8 @@ export default function GenerateBatchTickets() {
               required
             />
             <p className="text-xs text-gray-400 mt-1">
-              A unique batch code is automatically generated. You can modify it if needed.
+              A unique batch code is automatically generated. You can modify it
+              if needed.
             </p>
           </div>
 

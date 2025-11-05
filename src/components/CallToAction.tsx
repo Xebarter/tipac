@@ -21,12 +21,20 @@ export function CallToAction() {
       <motion.div
         className="absolute top-[-10%] left-[-10%] w-72 md:w-96 h-72 md:h-96 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full blur-3xl z-0"
         animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.7, 0.5] }}
-        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+        transition={{
+          duration: 5,
+          repeat: Number.POSITIVE_INFINITY,
+          ease: "easeInOut",
+        }}
       />
       <motion.div
         className="absolute bottom-[-15%] right-[-15%] w-64 md:w-80 h-64 md:h-80 bg-gradient-to-r from-cyan-500/20 to-blue-600/20 rounded-full blur-3xl z-0"
         animate={{ scale: [1, 1.2, 1], opacity: [0.4, 0.6, 0.4] }}
-        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        transition={{
+          duration: 4,
+          repeat: Number.POSITIVE_INFINITY,
+          ease: "easeInOut",
+        }}
       />
 
       {/* CTA Content */}
@@ -39,7 +47,7 @@ export function CallToAction() {
           viewport={{ once: true }}
         >
           <div className="absolute inset-0 border border-transparent rounded-xl bg-gradient-to-r from-transparent via-blue-500/20 to-transparent animate-pulse pointer-events-none" />
-          
+
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6 text-white">
             Support Our Mission
           </h2>
