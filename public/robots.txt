@@ -3,7 +3,7 @@ User-agent: *
 Allow: /
 
 # Host
-Host: https://tipac.co.ug
+Host: https://yourdomain.com
 
 # Sitemaps
-Sitemap: https://tipac.co.ug/sitemap.xml
+Sitemap: https://yourdomain.com/sitemap.xml

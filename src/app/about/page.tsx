@@ -10,11 +10,7 @@ import Link from "next/link"; // Import the Link component
 export default function AboutPage() {
   const sectionVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.6, ease: "easeInOut" },
-    },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeInOut" } },
   };
 
   return (
@@ -25,10 +21,7 @@ export default function AboutPage() {
           name="description"
           content="Learn about TIPAC, a non-profit dedicated to empowering Ugandan children through theatre and performing arts."
         />
-        <meta
-          name="keywords"
-          content="TIPAC, Uganda, theatre, children, non-profit, arts education"
-        />
+        <meta name="keywords" content="TIPAC, Uganda, theatre, children, non-profit, arts education" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </Head>
       <main className="min-h-screen flex flex-col bg-gray-50">
@@ -69,14 +62,16 @@ export default function AboutPage() {
                 />
                 <div className="p-8 flex flex-col justify-between">
                   <div>
-                    <h2 className="text-2xl font-semibold mb-4">Latest News</h2>
+                    <h2 className="text-2xl font-semibold mb-4">
+                      Latest News
+                    </h2>
                     <h3 className="text-xl font-medium mb-2">
                       TIPAC Children's Festival Debuts with Strong Message
                       Against Drug Abuse
                     </h3>
                     <p className="text-base text-purple-100 mb-6 leading-relaxed">
-                      Discover how TIPAC’s recent children’s festival is making
-                      a difference by addressing critical social issues through
+                      Discover how TIPAC’s recent children’s festival is making a
+                      difference by addressing critical social issues through
                       engaging performances.
                     </p>
                   </div>
@@ -128,8 +123,8 @@ export default function AboutPage() {
               <p className="text-lg text-gray-700 leading-relaxed">
                 A Uganda where every child has the opportunity to express
                 themselves creatively, where traditional stories and cultural
-                heritage are preserved through theatre, and where communities
-                are strengthened through shared artistic experiences.
+                heritage are preserved through theatre, and where communities are
+                strengthened through shared artistic experiences.
               </p>
             </motion.div>
 

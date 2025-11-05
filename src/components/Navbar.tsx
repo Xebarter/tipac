@@ -18,14 +18,7 @@ export function Navbar() {
   };
 
   useEffect(() => {
-    const routesToPrefetch = [
-      "/",
-      "/about",
-      "/programs",
-      "/gallery",
-      "/contact",
-      "/tickets",
-    ];
+    const routesToPrefetch = ["/", "/about", "/programs", "/gallery", "/contact", "/tickets"];
     routesToPrefetch.forEach((route) => {
       try {
         router.prefetch(route);
@@ -35,23 +28,20 @@ export function Navbar() {
     });
   }, [router]);
 
-  const handleNavClick =
-    (path: string) => (event: React.MouseEvent<HTMLAnchorElement>) => {
-      if (path.startsWith("/#") && pathname === "/") {
-        event.preventDefault();
-        const targetId = path.split("#")[1];
-        const targetElement = targetId
-          ? document.getElementById(targetId)
-          : null;
-        if (targetElement) {
-          targetElement.scrollIntoView({ behavior: "smooth" });
-        }
-        closeMobileMenu();
-        return;
+  const handleNavClick = (path: string) => (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (path.startsWith("/#") && pathname === "/") {
+      event.preventDefault();
+      const targetId = path.split("#")[1];
+      const targetElement = targetId ? document.getElementById(targetId) : null;
+      if (targetElement) {
+        targetElement.scrollIntoView({ behavior: "smooth" });
       }
-
       closeMobileMenu();
-    };
+      return;
+    }
+
+    closeMobileMenu();
+  };
 
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
@@ -69,11 +59,7 @@ export function Navbar() {
   // Close the menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        isMobileMenuOpen &&
-        menuRef.current &&
-        !menuRef.current.contains(event.target as Node)
-      ) {
+      if (isMobileMenuOpen && menuRef.current && !menuRef.current.contains(event.target as Node)) {
         closeMobileMenu();
       }
     };
@@ -97,15 +83,8 @@ export function Navbar() {
 
         {/* Mobile Toggle */}
         <div className="md:hidden">
-          <button
-            onClick={toggleMobileMenu}
-            className="text-gray-500 hover:text-gray-700 focus:outline-none"
-          >
-            {isMobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
+          <button onClick={toggleMobileMenu} className="text-gray-500 hover:text-gray-700 focus:outline-none">
+            {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
 
@@ -152,17 +131,18 @@ export function Navbar() {
                 key={i}
                 href={item.path}
                 prefetch
-                className={`transition-colors block py-2 ${
-                  isLinkActive(item.path)
-                    ? "text-primary font-medium"
-                    : "hover:text-primary"
-                }`}
+                className={`transition-colors block py-2 ${isLinkActive(item.path) ? "text-primary font-medium" : "hover:text-primary"
+                  }`}
                 onClick={handleNavClick(item.path)}
               >
                 {item.label}
               </Link>
             ))}
-            <Link href="/tickets" onClick={closeMobileMenu} className="w-48">
+            <Link
+              href="/tickets"
+              onClick={closeMobileMenu}
+              className="w-48"
+            >
               <Button className="tipac-gradient w-full">Buy Ticket</Button>
             </Link>
           </div>

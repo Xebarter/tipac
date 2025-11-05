@@ -1,14 +1,9 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import validator from "validator";
 import { supabase } from "@/lib/supabaseClient";
 
-const validateInput = (data: {
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-}) => {
+const validateInput = (data: { name: string; email: string; subject: string; message: string }) => {
   const errors: string[] = [];
 
   if (!data.name || data.name.trim().length < 2) {
@@ -43,7 +38,7 @@ export async function POST(req: NextRequest) {
       console.log("Validation errors:", validationErrors);
       return NextResponse.json(
         { success: false, error: validationErrors.join(", ") },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -63,7 +58,7 @@ export async function POST(req: NextRequest) {
     try {
       console.log("Attempting to save to Supabase");
       const { data: supabaseData, error: supabaseError } = await supabase
-        .from("contact_messages")
+        .from('contact_messages')
         .insert([sanitizedData]);
 
       if (supabaseError) {
@@ -78,14 +73,8 @@ export async function POST(req: NextRequest) {
     // Send email (only if email environment variables are set)
     try {
       console.log("Checking email environment variables");
-      if (
-        process.env.EMAIL_USER &&
-        process.env.EMAIL_PASS &&
-        process.env.RECIPIENT_EMAIL
-      ) {
-        console.log(
-          "Email environment variables found, setting up transporter",
-        );
+      if (process.env.EMAIL_USER && process.env.EMAIL_PASS && process.env.RECIPIENT_EMAIL) {
+        console.log("Email environment variables found, setting up transporter");
         const transporter = nodemailer.createTransport({
           service: "gmail",
           auth: {
@@ -113,9 +102,7 @@ export async function POST(req: NextRequest) {
         });
         console.log("Email sent successfully to", process.env.RECIPIENT_EMAIL);
       } else {
-        console.log(
-          "Email environment variables not set. Skipping email sending.",
-        );
+        console.log("Email environment variables not set. Skipping email sending.");
       }
     } catch (emailError) {
       console.error("Error sending email:", emailError);
@@ -128,7 +115,7 @@ export async function POST(req: NextRequest) {
     console.error("Error in contact submission:", error);
     return NextResponse.json(
       { success: false, error: "Failed to process contact message" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

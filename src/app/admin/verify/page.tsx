@@ -5,18 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Scanner } from "@yudiel/react-qr-scanner";
 
 export default function TicketScannerPage() {
-  const [result, setResult] = useState<{
-    valid: boolean;
-    message: string;
-    ticket?: any;
-  } | null>(null);
+  const [result, setResult] = useState<{ valid: boolean; message: string; ticket?: any } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ticketId, setTicketId] = useState("");
   const [scanning, setScanning] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
-  const [recentlyMarkedUsedId, setRecentlyMarkedUsedId] = useState<
-    string | null
-  >(null);
+  const [recentlyMarkedUsedId, setRecentlyMarkedUsedId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -54,24 +48,17 @@ export default function TicketScannerPage() {
       }
     };
 
-    const parsedJson =
-      trimmed.startsWith("{") && trimmed.endsWith("}")
-        ? tryParseJson(trimmed)
-        : null;
+    const parsedJson = trimmed.startsWith("{") && trimmed.endsWith("}") ? tryParseJson(trimmed) : null;
 
     if (parsedJson && typeof parsedJson === "object") {
-      const ticketIdFromJson =
-        (parsedJson as Record<string, unknown>).ticket_id ??
-        (parsedJson as Record<string, unknown>).id;
+      const ticketIdFromJson = (parsedJson as Record<string, unknown>).ticket_id ?? (parsedJson as Record<string, unknown>).id;
       if (typeof ticketIdFromJson === "string" && ticketIdFromJson.trim()) {
         return { ticketId: ticketIdFromJson.trim() } as const;
       }
     }
 
     if (trimmed.includes("ticket_id")) {
-      const match = trimmed.match(
-        /[\"']?ticket[_-]?id[\"'\s:=]+([0-9a-fA-F-]{8,})/i,
-      );
+      const match = trimmed.match(/[\"']?ticket[_-]?id[\"'\s:=]+([0-9a-fA-F-]{8,})/i);
       if (match && match[1]) {
         return { ticketId: match[1] } as const;
       }
@@ -98,8 +85,7 @@ export default function TicketScannerPage() {
   // Verify ticket with the API
   const verifyTicket = async (id: string) => {
     try {
-      const { ticketId: normalizedId, error: extractionError } =
-        extractTicketId(id);
+      const { ticketId: normalizedId, error: extractionError } = extractTicketId(id);
 
       if (extractionError) {
         setError(extractionError);
@@ -108,9 +94,7 @@ export default function TicketScannerPage() {
 
       setSuccessMessage(null);
 
-      const response = await fetch(
-        `/api/tickets/verify/${encodeURIComponent(normalizedId)}`,
-      );
+      const response = await fetch(`/api/tickets/verify/${encodeURIComponent(normalizedId)}`);
       const data = await response.json();
       setResult(data);
       setError(null);
@@ -136,26 +120,26 @@ export default function TicketScannerPage() {
   // Mark ticket as used
   const markAsUsed = async () => {
     if (!result?.ticket?.id) return;
-
+    
     try {
       const response = await fetch(`/api/tickets/verify/${result.ticket.id}`, {
-        method: "PUT",
+        method: 'PUT',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ used: true }),
+        body: JSON.stringify({ used: true })
       });
-
+      
       const data = await response.json();
-
+      
       if (data.valid) {
         setResult({
           ...result,
           ticket: {
             ...result.ticket,
-            used: true,
+            used: true
           },
-          message: "Ticket marked as used successfully",
+          message: "Ticket marked as used successfully"
         });
         setRecentlyMarkedUsedId(result.ticket.id);
         setSuccessMessage("Ticket marked as used successfully");
@@ -201,12 +185,12 @@ export default function TicketScannerPage() {
   return (
     <section className="py-16 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 relative overflow-hidden min-h-screen">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.1)_0%,transparent_70%)] pointer-events-none" />
-
+      
       {/* Decorative elements */}
       <div className="absolute top-0 left-0 w-72 h-72 bg-gradient-to-r from-purple-400/20 to-indigo-400/20 rounded-full blur-3xl pointer-events-none -translate-x-1/2 -translate-y-1/2" />
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-r from-pink-400/20 to-rose-400/20 rounded-full blur-3xl pointer-events-none translate-x-1/2 translate-y-1/2" />
       <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 rounded-full blur-3xl pointer-events-none" />
-
+      
       <div className="max-w-4xl mx-auto px-4 relative z-10">
         <div className="text-center mb-12">
           <div className="inline-block mb-4">
@@ -231,15 +215,13 @@ export default function TicketScannerPage() {
         )}
 
         {/* QR Scanner Section */}
-        <div
-          className={`max-w-2xl mx-auto bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-100 p-6 mb-8 cursor-pointer transition-all duration-200 hover:shadow-lg ${scanning ? "ring-2 ring-purple-500" : ""}`}
+        <div 
+          className={`max-w-2xl mx-auto bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-100 p-6 mb-8 cursor-pointer transition-all duration-200 hover:shadow-lg ${scanning ? 'ring-2 ring-purple-500' : ''}`}
           onClick={() => setScanning(!scanning)}
         >
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">
-              QR Code Scanner
-            </h2>
-            <Button
+            <h2 className="text-xl font-semibold text-gray-900">QR Code Scanner</h2>
+            <Button 
               onClick={(e) => {
                 e.stopPropagation();
                 setScanning(!scanning);
@@ -249,7 +231,7 @@ export default function TicketScannerPage() {
               {scanning ? "Stop Scanner" : "Start Scanner"}
             </Button>
           </div>
-
+          
           {scanning && (
             <div className="mt-4">
               <Scanner
@@ -261,28 +243,15 @@ export default function TicketScannerPage() {
                 constraints={{ facingMode: "environment" }}
                 className="w-full"
               />
-              <p className="text-gray-600 text-center mt-2">
-                Point your camera at a QR code
-              </p>
+              <p className="text-gray-600 text-center mt-2">Point your camera at a QR code</p>
             </div>
           )}
-
+          
           {!scanning && (
             <div className="text-center py-8">
               <div className="mx-auto w-16 h-16 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full flex items-center justify-center mb-4 shadow-inner">
-                <svg
-                  className="w-8 h-8 text-purple-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
-                  ></path>
+                <svg className="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
                 </svg>
               </div>
               <p className="text-gray-600">
@@ -293,10 +262,8 @@ export default function TicketScannerPage() {
         </div>
 
         <div className="max-w-2xl mx-auto bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-100 p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Manual Verification
-          </h2>
-
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Manual Verification</h2>
+          
           <div className="flex space-x-2 mb-4">
             <input
               type="text"
@@ -305,14 +272,14 @@ export default function TicketScannerPage() {
               placeholder="Enter ticket ID"
               className="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white/80"
             />
-            <Button
-              onClick={() => verifyTicket(ticketId)}
+            <Button 
+              onClick={() => verifyTicket(ticketId)} 
               className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg"
             >
               Verify
             </Button>
           </div>
-
+          
           <p className="text-gray-600 text-sm">
             Enter a ticket ID manually if you can't scan the QR code
           </p>
@@ -327,103 +294,54 @@ export default function TicketScannerPage() {
                   <h3 className="text-xl font-bold text-gray-900">
                     {result.valid ? "Valid Ticket" : "Invalid Ticket"}
                   </h3>
-                  <button
+                  <button 
                     onClick={closePopup}
                     className="text-gray-500 hover:text-gray-700"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-6 w-6"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
-
+                
                 {result.valid && result.ticket ? (
                   <div className="space-y-4">
                     <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-100">
-                      <h4 className="font-bold text-gray-900 mb-2">
-                        {result.ticket.event_title}
-                      </h4>
+                      <h4 className="font-bold text-gray-900 mb-2">{result.ticket.event_title}</h4>
                       <div className="space-y-2 text-sm text-gray-700">
-                        <p>
-                          <span className="font-medium">Ticket ID:</span>{" "}
-                          {result.ticket.id.substring(0, 8)}...
-                        </p>
-                        <p>
-                          <span className="font-medium">Type:</span>{" "}
-                          {result.ticket.ticket_type_name}
-                        </p>
-                        <p>
-                          <span className="font-medium">Batch:</span>{" "}
-                          {result.ticket.batch_name}
-                        </p>
-                        <p>
-                          <span className="font-medium">Purchased:</span>{" "}
-                          {new Date(result.ticket.created_at).toLocaleString()}
-                        </p>
+                        <p><span className="font-medium">Ticket ID:</span> {result.ticket.id.substring(0, 8)}...</p>
+                        <p><span className="font-medium">Type:</span> {result.ticket.ticket_type_name}</p>
+                        <p><span className="font-medium">Batch:</span> {result.ticket.batch_name}</p>
+                        <p><span className="font-medium">Purchased:</span> {new Date(result.ticket.created_at).toLocaleString()}</p>
                       </div>
                     </div>
-
-                    <div
-                      className={`p-4 rounded-xl ${
-                        result.ticket.used
-                          ? "bg-rose-50 border border-rose-200"
-                          : "bg-green-50 border border-green-200"
-                      }`}
-                    >
+                    
+                    <div className={`p-4 rounded-xl ${
+                      result.ticket.used 
+                        ? "bg-rose-50 border border-rose-200" 
+                        : "bg-green-50 border border-green-200"
+                    }`}>
                       <div className="flex items-center">
                         {result.ticket.used ? (
                           <>
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-5 w-5 text-rose-500 mr-2"
-                              viewBox="0 0 20 20"
-                              fill="currentColor"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                                clipRule="evenodd"
-                              />
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-rose-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                             </svg>
-                            <span className="font-medium text-rose-700">
-                              Already Used
-                            </span>
+                            <span className="font-medium text-rose-700">Already Used</span>
                           </>
                         ) : (
                           <>
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-5 w-5 text-green-500 mr-2"
-                              viewBox="0 0 20 20"
-                              fill="currentColor"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clipRule="evenodd"
-                              />
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                             </svg>
-                            <span className="font-medium text-green-700">
-                              Valid Ticket
-                            </span>
+                            <span className="font-medium text-green-700">Valid Ticket</span>
                           </>
                         )}
                       </div>
                     </div>
 
                     {!result.ticket.used && (
-                      <Button
+                      <Button 
                         onClick={handleMarkAsUsed}
                         className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg"
                       >

@@ -15,20 +15,17 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     // Check if user is authenticated
-    const cookies = document.cookie.split("; ").reduce(
-      (acc, cookie) => {
-        const [name, value] = cookie.split("=");
-        acc[name] = value;
-        return acc;
-      },
-      {} as { [key: string]: string },
-    );
-
-    if (!cookies["admin_session"]) {
-      router.push("/admin/login");
+    const cookies = document.cookie.split("; ").reduce((acc, cookie) => {
+      const [name, value] = cookie.split("=");
+      acc[name] = value;
+      return acc;
+    }, {} as {[key: string]: string});
+    
+    if (!cookies['admin_session']) {
+      router.push('/admin/login');
       return;
     }
-
+    
     fetchData();
   }, [router]);
 
@@ -62,19 +59,16 @@ export default function AdminDashboard() {
 
   const handleLogout = () => {
     // Remove the admin session cookie
-    document.cookie =
-      "admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    router.push("/admin/login");
+    document.cookie = "admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    router.push('/admin/login');
   };
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <header className="bg-white shadow">
         <div className="flex justify-between items-center px-8 py-4">
-          <h1 className="text-2xl font-bold text-foreground">
-            Admin Dashboard
-          </h1>
-          <button
+          <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
+          <button 
             onClick={handleLogout}
             className="px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90"
           >
@@ -82,57 +76,51 @@ export default function AdminDashboard() {
           </button>
         </div>
       </header>
-
+      
       <main className="flex-1 overflow-y-auto p-6 bg-background">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-3xl font-bold mb-6">Dashboard Overview</h1>
-
-          <DashboardOverview
-            events={events}
-            messages={messages}
-            galleryImages={galleryImages}
-            tickets={tickets}
+          
+          <DashboardOverview 
+            events={events} 
+            messages={messages} 
+            galleryImages={galleryImages} 
+            tickets={tickets} 
           />
-
+          
           <div className="mt-12">
             <h2 className="text-2xl font-semibold mb-4">Quick Actions</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Link
-                href="/admin/messages"
+              <Link 
+                href="/admin/messages" 
                 className="bg-card p-6 rounded-lg shadow hover:shadow-md transition-shadow"
               >
                 <h3 className="text-lg font-medium mb-2">Messages</h3>
-                <p className="text-muted-foreground">
-                  View and manage messages
-                </p>
+                <p className="text-muted-foreground">View and manage messages</p>
               </Link>
-
-              <Link
-                href="/admin/events"
+              
+              <Link 
+                href="/admin/events" 
                 className="bg-card p-6 rounded-lg shadow hover:shadow-md transition-shadow"
               >
                 <h3 className="text-lg font-medium mb-2">Events</h3>
-                <p className="text-muted-foreground">
-                  Manage events and participants
-                </p>
+                <p className="text-muted-foreground">Manage events and participants</p>
               </Link>
-
-              <Link
-                href="/admin/gallery"
+              
+              <Link 
+                href="/admin/gallery" 
                 className="bg-card p-6 rounded-lg shadow hover:shadow-md transition-shadow"
               >
                 <h3 className="text-lg font-medium mb-2">Gallery</h3>
                 <p className="text-muted-foreground">Manage gallery images</p>
               </Link>
-
-              <Link
-                href="/admin/tickets"
+              
+              <Link 
+                href="/admin/tickets" 
                 className="bg-card p-6 rounded-lg shadow hover:shadow-md transition-shadow"
               >
                 <h3 className="text-lg font-medium mb-2">Tickets</h3>
-                <p className="text-muted-foreground">
-                  View ticket sales and statistics
-                </p>
+                <p className="text-muted-foreground">View ticket sales and statistics</p>
               </Link>
             </div>
           </div>
@@ -142,35 +130,22 @@ export default function AdminDashboard() {
   );
 }
 
-function DashboardOverview({
-  events,
-  messages,
-  galleryImages,
-  tickets,
-}: {
-  events: any[];
-  messages: any[];
-  galleryImages: any[];
-  tickets: any[];
+function DashboardOverview({ events, messages, galleryImages, tickets }: { 
+  events: any[], 
+  messages: any[], 
+  galleryImages: any[], 
+  tickets: any[] 
 }) {
   // Calculate ticket counts
-  const onlineTickets = tickets.filter(
-    (ticket: any) => ticket && ticket.purchase_channel === "online",
-  ).length;
-  const batchTickets = tickets.filter(
-    (ticket: any) => ticket && ticket.purchase_channel === "physical_batch",
-  ).length;
-
+  const onlineTickets = tickets.filter((ticket: any) => ticket && ticket.purchase_channel === 'online').length;
+  const batchTickets = tickets.filter((ticket: any) => ticket && ticket.purchase_channel === 'physical_batch').length;
+  
   const stats = [
     { name: "Events", value: events.length, href: "/admin/events" },
     { name: "Messages", value: messages.length, href: "/admin/messages" },
-    {
-      name: "Gallery Images",
-      value: galleryImages.length,
-      href: "/admin/gallery",
-    },
-    {
-      name: "Tickets Available",
+    { name: "Gallery Images", value: galleryImages.length, href: "/admin/gallery" },
+    { 
+      name: "Tickets Available", 
       value: (
         <div className="flex flex-col">
           <span className="text-2xl">{tickets.length}</span>
@@ -178,23 +153,21 @@ function DashboardOverview({
             Online: {onlineTickets} | Batch: {batchTickets}
           </span>
         </div>
-      ),
-      href: "/admin/tickets",
+      ), 
+      href: "/admin/tickets" 
     },
   ];
 
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
       {stats.map((stat, index) => (
-        <Link
-          key={index}
+        <Link 
+          key={index} 
           href={stat.href}
           className="overflow-hidden rounded-lg bg-card shadow hover:shadow-md transition-shadow"
         >
           <div className="px-4 py-5 sm:p-6">
-            <dt className="text-base font-normal text-muted-foreground">
-              {stat.name}
-            </dt>
+            <dt className="text-base font-normal text-muted-foreground">{stat.name}</dt>
             <dd className="mt-1 text-3xl font-semibold tracking-tight text-foreground">
               {stat.value}
             </dd>
@@ -214,12 +187,12 @@ function GalleryManagement() {
       try {
         // Try Supabase first
         const { data, error } = await supabase
-          .from("gallery_images")
-          .select("*")
-          .order("created_at", { ascending: false });
-
+          .from('gallery_images')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
         if (error) throw error;
-
+        
         setImages(data || []);
         setLoading(false);
       } catch (error) {
@@ -236,7 +209,7 @@ function GalleryManagement() {
         }
       }
     };
-
+    
     fetchImages();
   }, []);
 
@@ -244,38 +217,38 @@ function GalleryManagement() {
     if (!confirm("Are you sure you want to delete this image?")) {
       return;
     }
-
+    
     try {
       // Get image data first to get the filename
       const { data: imageData, error: fetchError } = await supabase
-        .from("gallery_images")
-        .select("filename")
-        .eq("id", id)
+        .from('gallery_images')
+        .select('filename')
+        .eq('id', id)
         .single();
-
+        
       if (fetchError) throw fetchError;
-
+      
       // Delete from database
       const { error: deleteError } = await supabase
-        .from("gallery_images")
+        .from('gallery_images')
         .delete()
-        .eq("id", id);
-
+        .eq('id', id);
+        
       if (deleteError) throw deleteError;
-
+      
       // Delete from storage
       if (imageData?.filename) {
         const { error: storageError } = await supabase.storage
-          .from("gallery")
+          .from('gallery')
           .remove([imageData.filename]);
-
+          
         if (storageError) {
           console.warn("Could not remove file from storage:", storageError);
           // Continue even if storage deletion fails
         }
       }
-
-      setImages(images.filter((img) => img.id !== id));
+      
+      setImages(images.filter(img => img.id !== id));
     } catch (error) {
       console.error("Failed to delete image:", error);
       alert("Failed to delete image");
@@ -285,45 +258,43 @@ function GalleryManagement() {
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-
+    
     let successCount = 0;
     let errorCount = 0;
-
+    
     // Process each file
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-
+      
       try {
         // Upload to Supabase Storage
         const fileName = `${Date.now()}_${Math.random().toString(36)}_${file.name}`;
         const { error: uploadError } = await supabase.storage
-          .from("gallery")
+          .from('gallery')
           .upload(fileName, file, {
-            cacheControl: "3600",
-            upsert: false,
+            cacheControl: '3600',
+            upsert: false
           });
-
+          
         if (uploadError) throw uploadError;
-
+        
         // Get public URL
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("gallery").getPublicUrl(fileName);
-
+        const { data: { publicUrl } } = supabase.storage
+          .from('gallery')
+          .getPublicUrl(fileName);
+          
         // Insert record into gallery_images table
         const { data, error: insertError } = await supabase
-          .from("gallery_images")
-          .insert([
-            {
-              url: publicUrl,
-              filename: fileName,
-              original_name: file.name,
-            },
-          ])
+          .from('gallery_images')
+          .insert([{ 
+            url: publicUrl,
+            filename: fileName,
+            original_name: file.name
+          }])
           .select();
-
+          
         if (insertError) throw insertError;
-
+        
         // Update state with new image
         setImages([data[0], ...images]);
         successCount++;
@@ -332,17 +303,15 @@ function GalleryManagement() {
         errorCount++;
       }
     }
-
+    
     // Show result message
     if (successCount > 0) {
       alert(`${successCount} image(s) uploaded successfully!`);
     }
     if (errorCount > 0) {
-      alert(
-        `Failed to upload ${errorCount} image(s). Check console for details.`,
-      );
+      alert(`Failed to upload ${errorCount} image(s). Check console for details.`);
     }
-
+    
     // Reset the input
     e.target.value = "";
   };
@@ -350,21 +319,19 @@ function GalleryManagement() {
   return (
     <div className="bg-card rounded-lg shadow p-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-foreground">
-          Gallery Management
-        </h2>
+        <h2 className="text-2xl font-bold text-foreground">Gallery Management</h2>
         <label className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md cursor-pointer">
           Upload Images
-          <input
-            type="file"
-            className="hidden"
-            accept="image/*"
+          <input 
+            type="file" 
+            className="hidden" 
+            accept="image/*" 
             onChange={handleUpload}
             multiple
           />
         </label>
       </div>
-
+      
       {loading ? (
         <div className="flex justify-center items-center h-32">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -372,15 +339,12 @@ function GalleryManagement() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {images.map((image) => (
-            <div
-              key={image.id}
-              className="border border-border rounded-lg overflow-hidden"
-            >
+            <div key={image.id} className="border border-border rounded-lg overflow-hidden">
               <div className="bg-muted border-2 border-dashed rounded-xl w-full h-40 flex items-center justify-center">
                 {image.url ? (
-                  <img
-                    src={image.url}
-                    alt={image.original_name || "Gallery image"}
+                  <img 
+                    src={image.url} 
+                    alt={image.original_name || "Gallery image"} 
                     className="object-cover w-full h-full"
                   />
                 ) : (
@@ -397,7 +361,7 @@ function GalleryManagement() {
                   <button className="text-primary hover:text-primary/80 text-sm">
                     Edit
                   </button>
-                  <button
+                  <button 
                     onClick={() => handleDelete(image.id)}
                     className="text-destructive hover:text-destructive/80 text-sm"
                   >
@@ -422,12 +386,12 @@ function EventsManagement() {
       try {
         // Try Supabase first
         const { data, error } = await supabase
-          .from("events")
-          .select("*")
-          .order("date", { ascending: false });
-
+          .from('events')
+          .select('*')
+          .order('date', { ascending: false });
+          
         if (error) throw error;
-
+        
         setEvents(data || []);
         setLoading(false);
       } catch (error) {
@@ -444,7 +408,7 @@ function EventsManagement() {
         }
       }
     };
-
+    
     fetchEvents();
   }, []);
 
@@ -452,13 +416,16 @@ function EventsManagement() {
     if (!confirm("Are you sure you want to delete this event?")) {
       return;
     }
-
+    
     try {
-      const { error } = await supabase.from("events").delete().eq("id", id);
-
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', id);
+        
       if (error) throw error;
-
-      setEvents(events.filter((event) => event.id !== id));
+      
+      setEvents(events.filter(event => event.id !== id));
     } catch (error) {
       console.error("Failed to delete event:", error);
       alert("Failed to delete event");
@@ -468,14 +435,12 @@ function EventsManagement() {
   return (
     <div className="bg-card rounded-lg shadow p-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-foreground">
-          Events Management
-        </h2>
+        <h2 className="text-2xl font-bold text-foreground">Events Management</h2>
         <button className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md">
           Create New Event
         </button>
       </div>
-
+      
       {loading ? (
         <div className="flex justify-center items-center h-32">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -485,28 +450,16 @@ function EventsManagement() {
           <table className="min-w-full divide-y divide-border">
             <thead className="bg-muted">
               <tr>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
-                >
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Event
                 </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
-                >
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Date
                 </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
-                >
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Status
                 </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
-                >
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -515,15 +468,11 @@ function EventsManagement() {
               {events.map((event) => (
                 <tr key={event.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-foreground">
-                      {event.title || "Untitled Event"}
-                    </div>
+                    <div className="text-sm font-medium text-foreground">{event.title || "Untitled Event"}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-foreground">
-                      {event.date
-                        ? new Date(event.date).toLocaleDateString()
-                        : "No date"}
+                      {event.date ? new Date(event.date).toLocaleDateString() : "No date"}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -535,7 +484,7 @@ function EventsManagement() {
                     <button className="text-primary hover:text-primary/80 mr-3">
                       Edit
                     </button>
-                    <button
+                    <button 
                       onClick={() => handleDelete(event.id)}
                       className="text-destructive hover:text-destructive/80"
                     >
@@ -546,10 +495,7 @@ function EventsManagement() {
               ))}
               {events.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={4}
-                    className="px-6 py-4 text-center text-sm text-muted-foreground"
-                  >
+                  <td colSpan={4} className="px-6 py-4 text-center text-sm text-muted-foreground">
                     No events found
                   </td>
                 </tr>
@@ -571,15 +517,15 @@ function TicketsManagement() {
       try {
         // Try Supabase first
         const { data, error } = await supabase
-          .from("tickets")
+          .from('tickets')
           .select(`
             *,
             events (title)
           `)
-          .order("created_at", { ascending: false });
-
+          .order('created_at', { ascending: false });
+          
         if (error) throw error;
-
+        
         setTickets(data || []);
         setLoading(false);
       } catch (error) {
@@ -596,21 +542,19 @@ function TicketsManagement() {
         }
       }
     };
-
+    
     fetchTickets();
   }, []);
 
   return (
     <div className="bg-card rounded-lg shadow p-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-foreground">
-          Ticket Management
-        </h2>
+        <h2 className="text-2xl font-bold text-foreground">Ticket Management</h2>
         <button className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md">
           Generate Tickets
         </button>
       </div>
-
+      
       {loading ? (
         <div className="flex justify-center items-center h-32">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -620,28 +564,16 @@ function TicketsManagement() {
           <table className="min-w-full divide-y divide-border">
             <thead className="bg-muted">
               <tr>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
-                >
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Event
                 </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
-                >
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Purchaser
                 </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
-                >
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Quantity
                 </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
-                >
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Status
                 </th>
               </tr>
@@ -651,9 +583,7 @@ function TicketsManagement() {
                 <tr key={ticket.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-foreground">
-                      {ticket.events?.title ||
-                        ticket.event?.title ||
-                        "Unknown Event"}
+                      {ticket.events?.title || ticket.event?.title || "Unknown Event"}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -673,10 +603,7 @@ function TicketsManagement() {
               ))}
               {tickets.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={4}
-                    className="px-6 py-4 text-center text-sm text-muted-foreground"
-                  >
+                  <td colSpan={4} className="px-6 py-4 text-center text-sm text-muted-foreground">
                     No tickets found
                   </td>
                 </tr>

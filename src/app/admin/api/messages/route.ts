@@ -1,21 +1,21 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 
 export async function GET(req: NextRequest) {
   // Check authentication
-  const adminSession = req.cookies.get("admin_session");
+  const adminSession = req.cookies.get('admin_session');
   if (!adminSession) {
     return NextResponse.json(
       { success: false, error: "Unauthorized" },
-      { status: 401 },
+      { status: 401 }
     );
   }
 
   try {
     const { data: messages, error } = await supabase
-      .from("contact_messages")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .from('contact_messages')
+      .select('*')
+      .order('created_at', { ascending: false });
 
     if (error) {
       throw error;
@@ -26,23 +26,19 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("Failed to fetch messages:", error);
     return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to load messages",
-        details: String(error),
-      },
-      { status: 500 },
+      { success: false, error: "Failed to load messages", details: String(error) },
+      { status: 500 }
     );
   }
 }
 
 export async function PUT(req: NextRequest) {
   // Check authentication
-  const adminSession = req.cookies.get("admin_session");
+  const adminSession = req.cookies.get('admin_session');
   if (!adminSession) {
     return NextResponse.json(
       { success: false, error: "Unauthorized" },
-      { status: 401 },
+      { status: 401 }
     );
   }
 
@@ -50,44 +46,31 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
 
     const { id, ...updateData } = body;
-
+    
     if (!id) {
-      return NextResponse.json(
-        { success: false, error: "Message ID is required" },
-        { status: 400 },
-      );
+      return NextResponse.json({ success: false, error: "Message ID is required" }, { status: 400 });
     }
 
     const { data, error } = await supabase
-      .from("contact_messages")
+      .from('contact_messages')
       .update(updateData)
-      .eq("id", id)
+      .eq('id', id)
       .select();
 
     if (error) {
       throw error;
     }
-
+    
     if (data.length === 0) {
-      return NextResponse.json(
-        { success: false, error: "Message not found" },
-        { status: 404 },
-      );
+      return NextResponse.json({ success: false, error: "Message not found" }, { status: 404 });
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Message updated successfully",
-    });
+    return NextResponse.json({ success: true, message: "Message updated successfully" });
   } catch (error) {
     console.error("Failed to update message:", error);
     return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to update message",
-        details: String(error),
-      },
-      { status: 500 },
+      { success: false, error: "Failed to update message", details: String(error) },
+      { status: 500 }
     );
   }
 }

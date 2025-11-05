@@ -20,9 +20,7 @@ export default function ContactPage() {
     subject: "",
     message: "",
   });
-  const [submissionStatus, setSubmissionStatus] = useState<
-    "idle" | "submitting" | "success" | "error"
-  >("idle");
+  const [submissionStatus, setSubmissionStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const validateForm = () => {
@@ -44,9 +42,7 @@ export default function ContactPage() {
     return errors;
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     if (submissionStatus === "error") {
       setErrorMessage(null); // Clear error on input change
@@ -78,11 +74,8 @@ export default function ContactPage() {
 
       // Log response details for debugging
       console.log("Response status:", response.status);
-      console.log(
-        "Response content-type:",
-        response.headers.get("content-type"),
-      );
-
+      console.log("Response content-type:", response.headers.get("content-type"));
+      
       // Check if response is actually JSON
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.indexOf("application/json") !== -1) {
@@ -93,28 +86,19 @@ export default function ContactPage() {
           setFormData({ name: "", email: "", subject: "", message: "" });
         } else {
           setSubmissionStatus("error");
-          setErrorMessage(
-            data.error || "An error occurred while sending the message.",
-          );
+          setErrorMessage(data.error || "An error occurred while sending the message.");
         }
       } else {
         // Try to get the response text to see what's actually being returned
         const responseText = await response.text();
-        console.error(
-          "Received non-JSON response from server:",
-          responseText.substring(0, 500) + "...",
-        );
+        console.error("Received non-JSON response from server:", responseText.substring(0, 500) + "...");
         setSubmissionStatus("error");
-        setErrorMessage(
-          "Failed to send message. The server is currently unavailable. Please try again later.",
-        );
+        setErrorMessage("Failed to send message. The server is currently unavailable. Please try again later.");
       }
     } catch (error) {
       console.error("Network error during form submission:", error);
       setSubmissionStatus("error");
-      setErrorMessage(
-        "Failed to connect to the server. Please check your connection and try again.",
-      );
+      setErrorMessage("Failed to connect to the server. Please check your connection and try again.");
     }
   };
 
@@ -126,8 +110,7 @@ export default function ContactPage() {
           <div className="max-w-3xl mx-auto">
             <h1 className="text-4xl font-bold mb-6">Contact Us</h1>
             <p className="text-lg text-muted-foreground mb-8">
-              We'd love to hear from you! Please use the form below to get in
-              touch with our team.
+              We'd love to hear from you! Please use the form below to get in touch with our team.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
@@ -135,10 +118,7 @@ export default function ContactPage() {
                 <h2 className="text-2xl font-bold mb-4">Get In Touch</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label
-                      htmlFor="name"
-                      className="block text-sm font-medium mb-1"
-                    >
+                    <label htmlFor="name" className="block text-sm font-medium mb-1">
                       Name
                     </label>
                     <input
@@ -153,10 +133,7 @@ export default function ContactPage() {
                     />
                   </div>
                   <div>
-                    <label
-                      htmlFor="email"
-                      className="block text-sm font-medium mb-1"
-                    >
+                    <label htmlFor="email" className="block text-sm font-medium mb-1">
                       Email
                     </label>
                     <input
@@ -171,10 +148,7 @@ export default function ContactPage() {
                     />
                   </div>
                   <div>
-                    <label
-                      htmlFor="subject"
-                      className="block text-sm font-medium mb-1"
-                    >
+                    <label htmlFor="subject" className="block text-sm font-medium mb-1">
                       Subject
                     </label>
                     <input
@@ -189,10 +163,7 @@ export default function ContactPage() {
                     />
                   </div>
                   <div>
-                    <label
-                      htmlFor="message"
-                      className="block text-sm font-medium mb-1"
-                    >
+                    <label htmlFor="message" className="block text-sm font-medium mb-1">
                       Message
                     </label>
                     <textarea
@@ -211,9 +182,7 @@ export default function ContactPage() {
                     className="w-full tipac-gradient"
                     disabled={submissionStatus === "submitting"}
                   >
-                    {submissionStatus === "submitting"
-                      ? "Sending..."
-                      : "Send Message"}
+                    {submissionStatus === "submitting" ? "Sending..." : "Send Message"}
                   </Button>
                   {submissionStatus === "success" && (
                     <p className="text-green-500">Message sent successfully!</p>

@@ -24,9 +24,7 @@ async function getAccessToken() {
 
     if (!res.ok) {
       const errorData = await res.text(); // Use text() to avoid JSON parse errors
-      throw new Error(
-        `Failed to fetch access token: ${res.status} - ${errorData}`,
-      );
+      throw new Error(`Failed to fetch access token: ${res.status} - ${errorData}`);
     }
 
     const data = await res.json();
@@ -42,16 +40,13 @@ export async function GET(req: NextRequest) {
     const orderTrackingId = searchParams.get("orderTrackingId");
 
     if (!orderTrackingId) {
-      return NextResponse.json(
-        { error: "Missing orderTrackingId" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Missing orderTrackingId" }, { status: 400 });
     }
 
     if (!consumerKey || !consumerSecret) {
       return NextResponse.json(
         { error: "Missing Pesapal credentials" },
-        { status: 500 },
+        { status: 500 }
       );
     }
 
@@ -70,9 +65,7 @@ export async function GET(req: NextRequest) {
 
     if (!res.ok) {
       const errorData = await res.text(); // Use text() to avoid JSON parse errors
-      throw new Error(
-        `Failed to fetch transaction status: ${res.status} - ${errorData}`,
-      );
+      throw new Error(`Failed to fetch transaction status: ${res.status} - ${errorData}`);
     }
 
     const data = await res.json();

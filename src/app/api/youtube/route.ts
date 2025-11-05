@@ -19,14 +19,14 @@ export async function GET() {
           id: "8EVuKfbqMtQ",
           title: "TIPAC Performance",
           thumbnail: "https://img.youtube.com/vi/8EVuKfbqMtQ/maxresdefault.jpg",
-          publishedAt: "2023-06-15T10:00:00Z",
+          publishedAt: "2023-06-15T10:00:00Z"
         },
         {
           id: "8EVuKfbqMtQ",
           title: "TIPAC Show",
           thumbnail: "https://img.youtube.com/vi/8EVuKfbqMtQ/maxresdefault.jpg",
-          publishedAt: "2023-05-20T14:30:00Z",
-        },
+          publishedAt: "2023-05-20T14:30:00Z"
+        }
       ];
 
       return NextResponse.json({ videos });
@@ -39,10 +39,12 @@ export async function GET() {
       part: "snippet",
       order: "date",
       maxResults: "2",
-      type: "video",
+      type: "video"
     });
 
-    const response = await fetch(`${YOUTUBE_API_URL}/search?${searchParams}`);
+    const response = await fetch(
+      `${YOUTUBE_API_URL}/search?${searchParams}`
+    );
 
     if (!response.ok) {
       throw new Error(`YouTube API error: ${response.status}`);
@@ -55,7 +57,7 @@ export async function GET() {
       id: item.id.videoId,
       title: item.snippet.title,
       thumbnail: item.snippet.thumbnails.medium.url,
-      publishedAt: item.snippet.publishedAt,
+      publishedAt: item.snippet.publishedAt
     }));
 
     return NextResponse.json({ videos });
@@ -63,7 +65,7 @@ export async function GET() {
     console.error("Error fetching YouTube videos:", error);
     return NextResponse.json(
       { error: "Failed to fetch videos" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

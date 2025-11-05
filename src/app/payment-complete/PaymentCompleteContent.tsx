@@ -67,26 +67,12 @@ export default function PaymentCompleteContent() {
         let statusData: any = null;
 
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          const response = await fetch(
-            `/api/tickets/pesapal-status?orderTrackingId=${orderTrackingId}`,
-          );
+          const response = await fetch(`/api/tickets/pesapal-status?orderTrackingId=${orderTrackingId}`);
           statusData = await response.json().catch(() => null);
 
-          if (
-            response.ok &&
-            statusData &&
-            (statusData.payment_status_description || statusData.status)
-          ) {
-            const desc = (
-              statusData.payment_status_description ||
-              statusData.status ||
-              ""
-            )
-              .toString()
-              .toLowerCase();
-            setPaymentStatus(
-              statusData.payment_status_description || statusData.status || "",
-            );
+          if (response.ok && statusData && (statusData.payment_status_description || statusData.status)) {
+            const desc = (statusData.payment_status_description || statusData.status || "").toString().toLowerCase();
+            setPaymentStatus(statusData.payment_status_description || statusData.status || "");
 
             if (desc.includes("completed") || desc.includes("successful")) {
               break; // confirmed
@@ -103,28 +89,15 @@ export default function PaymentCompleteContent() {
           return;
         }
 
-        const finalDesc = (
-          statusData.payment_status_description ||
-          statusData.status ||
-          ""
-        )
-          .toString()
-          .toLowerCase();
+        const finalDesc = (statusData.payment_status_description || statusData.status || "").toString().toLowerCase();
 
-        if (
-          finalDesc.includes("completed") ||
-          finalDesc.includes("successful")
-        ) {
+        if (finalDesc.includes("completed") || finalDesc.includes("successful")) {
           // Try to fetch ticket data without marking it used (use new fetch endpoint)
-          let ticketResponse = await fetch(
-            `/api/tickets/fetch/${orderTrackingId}`,
-          );
+          let ticketResponse = await fetch(`/api/tickets/fetch/${orderTrackingId}`);
 
           // Fallback to the existing verify endpoint if fetch isn't available
           if (!ticketResponse.ok) {
-            ticketResponse = await fetch(
-              `/api/tickets/verify/${orderTrackingId}`,
-            );
+            ticketResponse = await fetch(`/api/tickets/verify/${orderTrackingId}`);
           }
 
           const ticketData = await ticketResponse.json().catch(() => null);
@@ -137,19 +110,13 @@ export default function PaymentCompleteContent() {
             // Attempt immediate download
             const downloadSuccess = await downloadTicket(ticket);
             if (!downloadSuccess) {
-              console.warn(
-                "Automatic ticket download failed - user can use manual download button",
-              );
+              console.warn("Automatic ticket download failed - user can use manual download button");
             }
           } else {
             setPaymentStatus("Ticket retrieval failed");
           }
         } else {
-          setPaymentStatus(
-            statusData.payment_status_description ||
-              statusData.status ||
-              "Payment not completed",
-          );
+          setPaymentStatus(statusData.payment_status_description || statusData.status || "Payment not completed");
         }
       } catch (error) {
         console.error("Error verifying payment status:", error);
@@ -176,34 +143,19 @@ export default function PaymentCompleteContent() {
             </div>
           ) : (
             <>
-              {paymentStatus?.toLowerCase().includes("completed") ||
-              paymentStatus?.toLowerCase().includes("successful") ? (
+              {paymentStatus?.toLowerCase().includes("completed") || paymentStatus?.toLowerCase().includes("successful") ? (
                 <>
                   <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/30">
-                    <svg
-                      className="w-10 h-10 text-green-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M5 13l4 4L19 7"
-                      ></path>
+                    <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                     </svg>
                   </div>
-                  <h1 className="text-4xl font-bold text-white mb-4">
-                    Payment Successful!
-                  </h1>
+                  <h1 className="text-4xl font-bold text-white mb-4">Payment Successful!</h1>
                   <p className="text-lg text-gray-300 mb-2">
                     Thank you for your purchase. Your ticket has been confirmed.
                   </p>
                   <p className="text-gray-400 mb-2">
-                    Your ticket is downloading automatically. Check your
-                    downloads folder.
+                    Your ticket is downloading automatically. Check your downloads folder.
                   </p>
                   {orderId && (
                     <p className="text-gray-400 mb-8">
@@ -222,24 +174,11 @@ export default function PaymentCompleteContent() {
               ) : (
                 <>
                   <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/30">
-                    <svg
-                      className="w-10 h-10 text-red-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M6 18L18 6M6 6l12 12"
-                      ></path>
+                    <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                   </div>
-                  <h1 className="text-4xl font-bold text-white mb-4">
-                    Payment Issue
-                  </h1>
+                  <h1 className="text-4xl font-bold text-white mb-4">Payment Issue</h1>
                   <p className="text-lg text-gray-300 mb-2">
                     There was an issue with your payment.
                   </p>
@@ -258,10 +197,7 @@ export default function PaymentCompleteContent() {
                   </Button>
                 </Link>
                 <Link href="/">
-                  <Button
-                    variant="outline"
-                    className="border-gray-600 text-white hover:bg-gray-800"
-                  >
+                  <Button variant="outline" className="border-gray-600 text-white hover:bg-gray-800">
                     Return Home
                   </Button>
                 </Link>

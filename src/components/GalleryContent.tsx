@@ -7,7 +7,7 @@ import { useState } from "react";
 // Client component for gallery with filtering functionality
 export function GalleryContent({
   galleryItems,
-  categories,
+  categories
 }: {
   galleryItems: Array<{
     id: number;
@@ -21,24 +21,21 @@ export function GalleryContent({
   const [selectedCategory, setSelectedCategory] = useState("All");
 
   // Filter items based on selected category
-  const filteredItems =
-    selectedCategory === "All"
-      ? galleryItems
-      : galleryItems.filter((item) => item.category === selectedCategory);
+  const filteredItems = selectedCategory === "All"
+    ? galleryItems
+    : galleryItems.filter(item => item.category === selectedCategory);
 
   return (
     <section className="w-full py-16 md:py-24">
       <div className="container">
         <h1 className="text-4xl font-bold mb-6">Our Gallery</h1>
         <p className="text-lg text-muted-foreground mb-8 max-w-3xl">
-          Explore photos from our past events, performances, and workshops.
-          These moments showcase the joy, creativity, and impact of our theatre
-          programs.
+          Explore photos from our past events, performances, and workshops. These moments showcase the joy, creativity, and impact of our theatre programs.
         </p>
 
         {/* Category filters */}
         <div className="flex flex-wrap gap-2 mb-8">
-          {categories.map((category) => (
+          {categories.map(category => (
             <Button
               key={category}
               variant={selectedCategory === category ? "default" : "outline"}
@@ -79,19 +76,14 @@ export function GalleryContent({
 
         {filteredItems.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-lg text-muted-foreground">
-              No items found in this category.
-            </p>
+            <p className="text-lg text-muted-foreground">No items found in this category.</p>
           </div>
         )}
 
         <div className="tipac-gradient mt-16 p-10 rounded-lg text-center">
-          <h2 className="text-2xl font-bold mb-4 text-white">
-            Want to see more?
-          </h2>
+          <h2 className="text-2xl font-bold mb-4 text-white">Want to see more?</h2>
           <p className="text-white/90 mb-8 max-w-2xl mx-auto">
-            Follow us on social media for regular updates on our events and
-            programs.
+            Follow us on social media for regular updates on our events and programs.
           </p>
           <div className="flex justify-center gap-4">
             <Button
