@@ -275,8 +275,8 @@ export default function AdminEventsManagement() {
       if (error) throw error;
 
       // Create ticket types if provided
-      if (eventTicketTypes.some(type => type.name.trim())) {
-        const validTicketTypes = eventTicketTypes.filter(type => type.name.trim());
+      const validTicketTypes = eventTicketTypes.filter(type => type.name.trim() !== "");
+      if (validTicketTypes.length > 0) {
         const ticketTypesData = validTicketTypes.map(type => ({
           event_id: data.id,
           name: type.name.trim(),
@@ -869,7 +869,7 @@ export default function AdminEventsManagement() {
                     <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 bg-gray-50 rounded-lg">
                       <div className="md:col-span-5">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Ticket Name *
+                          Ticket Name
                         </label>
                         <input
                           type="text"
@@ -910,11 +910,9 @@ export default function AdminEventsManagement() {
                         <button
                           type="button"
                           onClick={() => removeEventTicketType(index)}
-                          className="text-red-500 hover:text-red-700"
+                          className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
+                          Remove
                         </button>
                       </div>
                     </div>

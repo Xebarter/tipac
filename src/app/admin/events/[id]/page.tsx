@@ -18,7 +18,7 @@ interface Event {
   is_published: boolean;
   organizer_name?: string;
   organizer_logo_url?: string;
-  sponsor_logos?: Array<{ url: string; name: string }>;
+  sponsor_logos?: Array<{ name: string; url: string }>;
 }
 
 interface TicketType {
@@ -228,8 +228,8 @@ export default function EditEvent() {
         if (ticketTypeError) throw ticketTypeError;
       }
 
-      // Add new ticket types
-      const validNewTicketTypes = newTicketTypes.filter(type => type.name.trim());
+      // Add new ticket types - only if there are valid ticket types with names
+      const validNewTicketTypes = newTicketTypes.filter(type => type.name.trim() !== "");
       if (validNewTicketTypes.length > 0) {
         const ticketTypesData = validNewTicketTypes.map(type => ({
           event_id: event.id,
@@ -259,6 +259,42 @@ export default function EditEvent() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSponsorChange = (index: number, field: keyof Event['sponsor_logos'][0], value: string) => {
+    if (!event) return;
+    
+    const updatedSponsors = [...(event.sponsor_logos || [])];
+    updatedSponsors[index] = {
+      ...updatedSponsors[index],
+      [field]: value
+    };
+    
+    setEvent({
+      ...event,
+      sponsor_logos: updatedSponsors
+    });
+  };
+
+  const addSponsor = () => {
+    if (!event) return;
+    
+    setEvent({
+      ...event,
+      sponsor_logos: [...(event.sponsor_logos || []), { name: '', url: '' }]
+    });
+  };
+
+  const removeSponsor = (index: number) => {
+    if (!event) return;
+    
+    const updatedSponsors = [...(event.sponsor_logos || [])];
+    updatedSponsors.splice(index, 1);
+    
+    setEvent({
+      ...event,
+      sponsor_logos: updatedSponsors
+    });
   };
 
   if (loading) {
@@ -438,6 +474,80 @@ export default function EditEvent() {
             </div>
           </div>
 
+          {/* Organizer Information */}
+          <div className="bg-card rounded-lg p-6 space-y-4">
+            <h2 className="text-xl font-semibold mb-4">Organizer Information</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="organizer_name">Organizer Name</Label>
+                <Input
+                  id="organizer_name"
+                  value={event.organizer_name || ""}
+                  onChange={(e) => handleEventChange("organizer_name", e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="organizer_logo_url">Organizer Logo URL</Label>
+                <Input
+                  id="organizer_logo_url"
+                  value={event.organizer_logo_url || ""}
+                  onChange={(e) => handleEventChange("organizer_logo_url", e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Sponsor Logos */}
+          <div className="bg-card rounded-lg p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Sponsor Logos</h2>
+              <Button type="button" onClick={addSponsor} variant="outline" size="sm">
+                Add Sponsor
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              {event.sponsor_logos && event.sponsor_logos.length > 0 ? (
+                event.sponsor_logos.map((sponsor, index) => (
+                  <div key={index} className="border border-gray-200 rounded-md p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Sponsor Name</Label>
+                        <Input
+                          value={sponsor.name}
+                          onChange={(e) => handleSponsorChange(index, "name", e.target.value)}
+                          placeholder="Sponsor name"
+                        />
+                      </div>
+                      <div>
+                        <Label>Sponsor Logo URL</Label>
+                        <Input
+                          value={sponsor.url}
+                          onChange={(e) => handleSponsorChange(index, "url", e.target.value)}
+                          placeholder="Sponsor logo URL"
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <Button
+                        type="button"
+                        onClick={() => removeSponsor(index)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        Remove Sponsor
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 italic">No sponsors added</p>
+              )}
+            </div>
+          </div>
+
           {/* Existing Ticket Types Section */}
           <div className="bg-card rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Existing Ticket Types</h2>
@@ -450,13 +560,12 @@ export default function EditEvent() {
                     className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 bg-gray-50 rounded-lg"
                   >
                     <div className="md:col-span-5">
-                      <Label>Ticket Name *</Label>
+                      <Label>Ticket Name</Label>
                       <Input
                         value={ticketType.name}
                         onChange={(e) =>
                           handleTicketTypeChange(ticketType.id, "name", e.target.value)
                         }
-                        required
                       />
                     </div>
 
@@ -506,11 +615,10 @@ export default function EditEvent() {
               {newTicketTypes.map((ticketType, index) => (
                 <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 bg-gray-50 rounded-lg">
                   <div className="md:col-span-5">
-                    <Label>Ticket Name *</Label>
+                    <Label>Ticket Name</Label>
                     <Input
                       value={ticketType.name}
                       onChange={(e) => handleNewTicketTypeChange(index, "name", e.target.value)}
-                      required
                     />
                   </div>
 
