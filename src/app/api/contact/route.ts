@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import { getMongoClient } from "@/lib/mongodb";
 import validator from "validator";
 import { supabase } from "@/lib/supabaseClient";
-
-const dbName = "TIPAC";
 
 const validateInput = (data: { name: string; email: string; subject: string; message: string }) => {
   const errors: string[] = [];
@@ -51,42 +48,18 @@ export async function POST(req: NextRequest) {
       email: email.trim().toLowerCase(),
       subject: validator.escape(subject.trim()),
       message: validator.escape(message.trim()),
-      createdAt: new Date(),
-      read: false, // Initialize read status as false
+      created_at: new Date().toISOString(),
+      is_read: false,
     };
 
     console.log("Data sanitized successfully");
 
-    // 1. Save to MongoDB
-    try {
-      console.log("Attempting to connect to MongoDB");
-      const client = await getMongoClient();
-      console.log("MongoDB client connected successfully");
-      const db = client.db(dbName);
-      const collection = db.collection("contacts");
-      console.log("MongoDB database and collection accessed");
-
-      await collection.insertOne(sanitizedData);
-      console.log("Message saved to MongoDB:", sanitizedData);
-    } catch (mongoError) {
-      console.error("Error saving to MongoDB:", mongoError);
-    }
-
-    // 2. Save to Supabase
+    // Save to Supabase
     try {
       console.log("Attempting to save to Supabase");
       const { data: supabaseData, error: supabaseError } = await supabase
         .from('contact_messages')
-        .insert([
-          {
-            name: sanitizedData.name,
-            email: sanitizedData.email,
-            subject: sanitizedData.subject,
-            message: sanitizedData.message,
-            created_at: sanitizedData.createdAt,
-            is_read: sanitizedData.read
-          }
-        ]);
+        .insert([sanitizedData]);
 
       if (supabaseError) {
         console.error("Error saving to Supabase:", supabaseError);
@@ -97,7 +70,7 @@ export async function POST(req: NextRequest) {
       console.error("Error with Supabase operation:", supabaseError);
     }
 
-    // 3. Send email (only if email environment variables are set)
+    // Send email (only if email environment variables are set)
     try {
       console.log("Checking email environment variables");
       if (process.env.EMAIL_USER && process.env.EMAIL_PASS && process.env.RECIPIENT_EMAIL) {

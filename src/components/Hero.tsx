@@ -100,184 +100,120 @@ export function Hero() {
     setCurrentImageIndex(prevIndex => (prevIndex + 1) % galleryImages.length);
   };
 
-  const goToIndex = (index: number) => {
-    handleUserInteraction();
-    setCurrentImageIndex(index);
-  };
-
-  if (isLoadingInitial) {
-    return (
-      <section className="relative w-full h-screen flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
-        <div className="text-center animate-fade-in">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-white/20 border-t-white mx-auto mb-4"></div>
-          <p className="text-xl text-white font-semibold">Loading gallery...</p>
-        </div>
-      </section>
-    );
-  }
-
-  if (error || galleryImages.length === 0) {
-    return (
-      <section className="relative w-full h-screen flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
-        <div className="text-center px-4 animate-fade-in">
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 drop-shadow-2xl">TIPAC</h1>
-          <p className="text-2xl md:text-3xl text-white/90 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Theatre Initiative for the Pearl of Africa Children
-          </p>
-          <p className="text-lg text-white/70 mb-10">
-            {error || 'No gallery images available at the moment.'}
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center w-full max-w-md mx-auto">
-            <Button
-              asChild
-              className="sleek-btn amber flex-1 max-w-[200px] mx-auto sm:mx-0"
-            >
-              <Link href="/tickets">Buy Ticket</Link>
-            </Button>
-            <Button
-              asChild
-              className="sleek-btn blue flex-1 max-w-[200px] mx-auto sm:mx-0"
-            >
-              <Link href="/events">Upcoming Events</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
   return (
-    <>
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       <Head>
-        <link
-          rel="preload"
-          href={galleryImages[currentImageIndex]?.url || '/images/fallback-placeholder.jpg'}
-          as="image"
-          fetchPriority="high"
-        />
+        <link rel="preload" as="image" href={galleryImages[currentImageIndex]?.url} />
       </Head>
 
-      <section className="relative w-full h-screen overflow-hidden">
-        {/* Background images */}
-        <div className="absolute inset-0">
-          {galleryImages.map((image, index) => (
-            <div
-              key={image.id}
-              className={`absolute inset-0 transition-all duration-1000 ease-in-out ${index === currentImageIndex ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
-                }`}
-            >
-              <Image
-                src={image.url}
-                alt={image.alt || 'TIPAC performance image'}
-                fill
-                className="object-cover"
-                priority={index === currentImageIndex}
-                sizes="100vw"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent"></div>
-            </div>
-          ))}
-        </div>
+      {/* Decorative elements */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.1)_0%,transparent_70%)] pointer-events-none" />
+      <div className="absolute top-0 left-0 w-72 h-72 bg-gradient-to-r from-purple-400/20 to-indigo-400/20 rounded-full blur-3xl pointer-events-none -translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-r from-pink-400/20 to-rose-400/20 rounded-full blur-3xl pointer-events-none translate-x-1/2 translate-y-1/2" />
+      <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Content */}
-        <div className="absolute inset-0 flex items-center justify-center text-center text-white z-10 px-4 animate-fade-in">
-          <div className="max-w-4xl mx-auto flex flex-col items-center" style={{ marginTop: '20%' }}>
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 drop-shadow-2xl leading-tight">
-              TIPAC
-            </h1>
-            <p className="text-2xl md:text-3xl mb-10 drop-shadow-xl leading-relaxed text-white/90">
-              Theatre Initiative for the Pearl of Africa Children
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center w-full max-w-md">
-              <Button asChild className="sleek-btn amber flex-1 max-w-[200px] mx-auto sm:mx-0">
-                <Link href="/tickets">Buy Ticket</Link>
+      <div className="absolute inset-0 z-0">
+        {galleryImages.length > 0 ? (
+          <div className="relative w-full h-full">
+            <Image
+              src={galleryImages[currentImageIndex].url}
+              alt={galleryImages[currentImageIndex].alt || "TIPAC Performance"}
+              fill
+              priority={true}
+              className="object-cover transition-opacity duration-1000"
+              sizes="100vw"
+              quality={80}
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-black/40"></div>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="container mx-auto px-4 relative z-10 py-20">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="inline-block mb-6">
+            <span className="bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-semibold px-4 py-1.5 rounded-full shadow">
+              Theater Initiative for the Pearl of Africa Children.
+            </span>
+          </div>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white mb-6 drop-shadow-lg bg-clip-text bg-gradient-to-r from-white via-white to-gray-200">
+            TIPAC
+          </h1>
+          <p className="text-xl text-gray-100 mb-10 max-w-2xl mx-auto drop-shadow-md">
+
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Link href="/tickets">
+              <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl px-8 py-4 text-lg font-semibold rounded-xl transition-all duration-300 transform hover:scale-105">
+                Buy Ticket
               </Button>
-              <Button asChild className="sleek-btn blue flex-1 max-w-[200px] mx-auto sm:mx-0">
-                <Link href="/events">Upcoming Events</Link>
+            </Link>
+            <Link href="/events">
+              <Button className="bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 shadow-lg hover:shadow-xl px-8 py-4 text-lg font-semibold rounded-xl transition-all duration-300">
+                Upcoming Events
               </Button>
-            </div>
+            </Link>
           </div>
         </div>
-      </section>
+      </div>
 
-      <style jsx>{`
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fade-in {
-          animation: fade-in 1s ease-out forwards;
-        }
+      {/* Navigation arrows */}
+      {galleryImages.length > 1 && (
+        <>
+          <button
+            onClick={goToPrevious}
+            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-3 rounded-full backdrop-blur-sm transition-all duration-300 z-10"
+            aria-label="Previous image"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            onClick={goToNext}
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-3 rounded-full backdrop-blur-sm transition-all duration-300 z-10"
+            aria-label="Next image"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </>
+      )}
 
-        .sleek-btn {
-          position: relative;
-          font-weight: 700;
-          padding: 1rem 2.5rem;
-          border-radius: 1.25rem;
-          overflow: hidden;
-          transition: all 0.3s ease;
-          backdrop-filter: blur(10px);
-          border: 2px solid rgba(255, 255, 255, 0.2);
-          box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          font-size: 1.1rem;
-        }
+      {/* Dots indicator */}
+      {galleryImages.length > 1 && (
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-2 z-10">
+          {galleryImages.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => {
+                handleUserInteraction();
+                setCurrentImageIndex(index);
+              }}
+              className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentImageIndex
+                ? 'bg-white w-6'
+                : 'bg-white/50 hover:bg-white/80'
+                }`}
+              aria-label={`Go to image ${index + 1}`}
+            />
+          ))}
+        </div>
+      )}
 
-        .sleek-btn::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0.3));
-          border-radius: inherit;
-          opacity: 0;
-          transition: opacity 0.4s ease;
-        }
+      {/* Loading state */}
+      {isLoadingInitial && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm z-20">
+          <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      )}
 
-        .sleek-btn:hover::before {
-          opacity: 1;
-        }
-
-        /* Buy Ticket (brightest, most prominent) */
-        .sleek-btn.amber, .sleek-btn.amber:where(*) {
-          /* vibrant coral-red to golden-yellow gradient - maximum brightness */
-          background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 30%, #ffa500 60%, #ffb700 100%) !important;
-          color: #ffffff !important;
-          text-shadow: 0 2px 8px rgba(255, 107, 53, 0.3), 0 1px 3px rgba(0,0,0,0.2);
-          box-shadow: 0 10px 40px 0 rgba(255, 107, 53, 0.9), 0 1px 0 rgba(255,255,255,0.1) inset;
-          border: 2px solid #ffffff;
-          filter: brightness(1.1) saturate(1.2);
-          font-weight: 700;
-        }
-        .sleek-btn.amber:hover {
-          transform: translateY(-5px) scale(1.1) rotate(-1deg);
-          box-shadow: 0 18px 60px 0 rgba(255, 107, 53, 1), 0 1px 0 rgba(255,255,255,0.12) inset;
-          filter: brightness(1.18) saturate(1.28) drop-shadow(0 10px 28px rgba(255, 107, 53, 0.4));
-        }
-
-        /* Upcoming Events (bright, but secondary) */
-        .sleek-btn.blue, .sleek-btn.blue:where(*) {
-          /* vibrant cyan-blue to purple gradient - bright but less intense */
-          background: linear-gradient(135deg, #00d4ff 0%, #0099ff 40%, #5b5bff 80%, #8b5cf6 100%) !important;
-          color: #ffffff !important;
-          text-shadow: 0 1px 4px rgba(0, 153, 255, 0.2), 0 1px 2px rgba(0,0,0,0.15);
-          box-shadow: 0 8px 32px rgba(0, 153, 255, 0.5), 0 1px 0 rgba(255,255,255,0.08) inset;
-          border: 2px solid #ffffff;
-          filter: brightness(1.05) saturate(1.15);
-          font-weight: 600;
-        }
-        .sleek-btn.blue:hover {
-          transform: translateY(-4px) scale(1.08) rotate(1deg);
-          box-shadow: 0 14px 48px rgba(0, 153, 255, 0.65);
-          filter: brightness(1.12) saturate(1.22);
-        }
-      `}</style>
-    </>
+      {/* Error message */}
+      {error && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-500/90 text-white px-4 py-2 rounded-lg backdrop-blur-sm z-20">
+          {error}
+        </div>
+      )}
+    </section>
   );
 }

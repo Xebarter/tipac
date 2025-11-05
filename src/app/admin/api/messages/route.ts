@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   const adminSession = req.cookies.get('admin_session');
   if (!adminSession) {
     return NextResponse.json(
-      { error: "Unauthorized" },
+      { success: false, error: "Unauthorized" },
       { status: 401 }
     );
   }
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("Failed to fetch messages:", error);
     return NextResponse.json(
-      { error: "Failed to load messages", details: String(error) },
+      { success: false, error: "Failed to load messages", details: String(error) },
       { status: 500 }
     );
   }
@@ -37,20 +37,18 @@ export async function PUT(req: NextRequest) {
   const adminSession = req.cookies.get('admin_session');
   if (!adminSession) {
     return NextResponse.json(
-      { error: "Unauthorized" },
+      { success: false, error: "Unauthorized" },
       { status: 401 }
     );
   }
 
   try {
     const body = await req.json();
+
     const { id, ...updateData } = body;
     
     if (!id) {
-      return NextResponse.json(
-        { error: "Message ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "Message ID is required" }, { status: 400 });
     }
 
     const { data, error } = await supabase
@@ -64,17 +62,14 @@ export async function PUT(req: NextRequest) {
     }
     
     if (data.length === 0) {
-      return NextResponse.json(
-        { error: "Message not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "Message not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ message: "Message updated successfully" });
+    return NextResponse.json({ success: true, message: "Message updated successfully" });
   } catch (error) {
     console.error("Failed to update message:", error);
     return NextResponse.json(
-      { error: "Failed to update message", details: String(error) },
+      { success: false, error: "Failed to update message", details: String(error) },
       { status: 500 }
     );
   }

@@ -242,9 +242,9 @@ export default function EventsPage() {
           viewport={{ once: true }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          <Link href="/tickets">
+          <Link href="/">
             <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-3 text-lg font-semibold rounded-xl">
-              View All Tickets
+              Return Home
             </Button>
           </Link>
         </motion.div>
