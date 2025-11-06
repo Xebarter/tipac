@@ -1,6 +1,6 @@
 # Theatre for Ignatius Peter And Charles (TIPAC)
 
-Welcome to the official website for Theatre for Ignatius Peter And Charles (TIPAC). This is a Next.js 15+ application built with TypeScript, Tailwind CSS, and various other modern technologies.
+Welcome to the official website for Theatre Initiative For the Pearl of Africa Children (TIPAC). This is a Next.js 15+ application built with TypeScript, Tailwind CSS, and various other modern technologies.
 
 ## Technologies Used
 

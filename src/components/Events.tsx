@@ -280,17 +280,19 @@ export function Events() {
                     )}
 
                     <div className={`${events.length === 1 ? 'lg:mt-auto' : ''}`}>
-                      <Link href={`/tickets?event=${event.id}`}>
-                        <Button
-                          size="sm"
-                          className={`bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all duration-300 shadow-lg hover:shadow-xl ${events.length === 1
-                              ? 'text-base lg:text-lg lg:px-8 lg:py-3'
-                              : 'text-sm px-4 py-2'
-                            }`}
-                        >
-                          Get Tickets
-                        </Button>
-                      </Link>
+                      <div className="flex justify-center">
+                        <Link href={`/tickets?event=${event.id}`}>
+                          <Button
+                            size="sm"
+                            className={`bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all duration-300 shadow-lg hover:shadow-xl ${events.length === 1
+                                ? 'text-base lg:text-lg lg:px-8 lg:py-3'
+                                : 'text-sm px-4 py-2'
+                              }`}
+                          >
+                            Get Tickets
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>
