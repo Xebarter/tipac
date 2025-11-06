@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useSWR from "swr"; // Fixed: Correct import for SWR
 import Link from "next/link";
 import Image from "next/image"; // New: For optimized thumbnails
 import { Button } from "@/components/ui/button";
+import { supabase } from '@/lib/supabaseClient';
 
 interface YouTubeVideo {
   id: string;
@@ -13,6 +14,14 @@ interface YouTubeVideo {
   publishedAt: string;
   duration?: string; // New: Video duration (e.g., "PT4M30S")
   viewCount?: number; // New: View count
+}
+
+interface GalleryImage {
+  id: string;
+  url: string;
+  alt?: string;
+  filename?: string;
+  original_name?: string;
 }
 
 const fetcher = async (url: string) => {
@@ -49,6 +58,44 @@ const fetcher = async (url: string) => {
 };
 
 export function YouTubeVideos() {
+  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
+  // Test mode - set to true to force using gallery images as fallback
+  const testMode = false;
+  
+  // Fetch gallery images for fallback thumbnails
+  useEffect(() => {
+    async function fetchGalleryImages() {
+      try {
+        const { data, error: supabaseError } = await supabase
+          .from('gallery_images')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (supabaseError) throw supabaseError;
+
+        if (data && data.length > 0) {
+          const formattedImages = data.map(img => ({
+            id: img.id,
+            url: img.url,
+            alt: img.original_name
+              ? `Performance at TIPAC theatre program, showcasing ${img.original_name}`
+              : 'TIPAC performance image',
+            filename: img.filename,
+            original_name: img.original_name
+          }));
+          setGalleryImages(formattedImages);
+          console.log('Gallery images loaded:', formattedImages.length);
+        } else {
+          console.log('No gallery images found');
+        }
+      } catch (err) {
+        console.error('Error fetching gallery images for fallback thumbnails:', err);
+      }
+    }
+
+    fetchGalleryImages();
+  }, []);
+
   // New: SWR for caching (refetch every 5min), error retry, and loading states
   const { data: videos = [], error, isLoading, mutate } = useSWR<YouTubeVideo[]>("/api/youtube", fetcher, {
     revalidateOnFocus: false,
@@ -138,6 +185,34 @@ export function YouTubeVideos() {
             {videos.map((video) => {
               // New: Parse duration (assumes ISO 8601, e.g., PT4M30S -> "4:30")
               const duration = video.duration ? new Date(video.duration.slice(2)).toISOString().slice(11, 19).replace(/^0(?:0:)?0?/, '') : null;
+              
+              // Use video thumbnail or fallback to a random gallery image
+              let thumbnailSrc = "https://via.placeholder.com/320x180?text=TIPAC+Performance";
+              
+              // In test mode, always use gallery images
+              if (testMode) {
+                if (galleryImages.length > 0) {
+                  const randomImage = galleryImages[Math.floor(Math.random() * galleryImages.length)];
+                  thumbnailSrc = randomImage.url;
+                  console.log(`TEST MODE: Using gallery image for video ${video.id}:`, randomImage.url);
+                }
+              } 
+              // Normal mode - check if we have a valid video thumbnail
+              else if (video.thumbnail && video.thumbnail.trim() !== '' && !video.thumbnail.includes('default.jpg')) {
+                thumbnailSrc = video.thumbnail.replace('default.jpg', 'maxresdefault.jpg');
+              } 
+              // If no valid video thumbnail, try to use a random gallery image
+              else if (galleryImages.length > 0) {
+                const randomImage = galleryImages[Math.floor(Math.random() * galleryImages.length)];
+                thumbnailSrc = randomImage.url;
+                console.log(`Using gallery image for video ${video.id}:`, randomImage.url);
+              } 
+              // If neither works, we'll use the placeholder (already set as default)
+              else {
+                console.log(`Using placeholder for video ${video.id}`);
+              }
+
+              console.log(`Video ${video.id} thumbnail:`, thumbnailSrc);
 
               return (
                 <Link
@@ -159,18 +234,20 @@ export function YouTubeVideos() {
                   }`}>
                     {/* New: Next.js Image for lazy loading/optimization */}
                     <Image
-                      src={video.thumbnail.replace('default.jpg', 'maxresdefault.jpg')} // Higher res if available
+                      src={thumbnailSrc}
                       alt={`${video.title} thumbnail`}
                       fill
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
                       sizes="(max-width: 768px) 100vw, 50vw"
                       placeholder="blur"
-                      blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8Alt4YsmAJqJ5zVQR5qY2n1k4R1Qe0J2/9k="
+                      blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8Alt4YsmAJqJ5zVQR5qY2n1k4R1Qe0J2/9k="
                       onError={(e) => {
-                        e.currentTarget.src = "https://via.placeholder.com/320x180?text=Video+Thumbnail";
+                        // If both video thumbnail and gallery image fail, use placeholder
+                        console.log(`Thumbnail failed for video ${video.id}, using placeholder`);
+                        e.currentTarget.src = "https://via.placeholder.com/320x180?text=TIPAC+Performance";
                       }}
                       // New: Analytics on load (e.g., track impressions)
-                      onLoad={() => console.log(`Impression: ${video.id}`)} // Replace with gtag or similar
+                      onLoad={() => console.log(`Thumbnail loaded for video ${video.id}`)} // Replace with gtag or similar
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -201,14 +278,14 @@ export function YouTubeVideos() {
                     }`}>
                       {video.title}
                     </h3>
-                    <p className={`text-gray-600 mt-2 flex items-center gap-4 text-sm ${
-                      videos.length === 1 ? 'text-base lg:text-lg' : 'text-xs'
-                    }`}>
-                      <span>{new Date(video.publishedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</span>
-                      {video.viewCount && <span className="text-gray-500">{(video.viewCount / 1000).toFixed(0)}K views</span>}
+                    <p className="text-gray-600 mt-2 line-clamp-2">
+                      Published: {new Date(video.publishedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                     </p>
-                    {/* New: Analytics on click */}
-                    <script dangerouslySetInnerHTML={{ __html: `gtag('event', 'video_click', { 'video_id': '${video.id}' });` }} /> {/* If using GA */}
+                    {video.viewCount && (
+                      <p className="text-gray-500 text-sm mt-1">
+                        {video.viewCount.toLocaleString()} views
+                      </p>
+                    )}
                   </div>
                 </Link>
               );

@@ -17,6 +17,9 @@ function shuffleArray(array: any[]) {
 }
 
 export async function GET() {
+  // Test mode - set to true to simulate videos without thumbnails
+  const testMode = false;
+  
   try {
     // Try to get YouTube API key from environment variables
     const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
@@ -28,25 +31,25 @@ export async function GET() {
         {
           id: "8EVuKfbqMtQ",
           title: "TIPAC Performance Highlights",
-          thumbnail: "https://img.youtube.com/vi/8EVuKfbqMtQ/maxresdefault.jpg",
+          thumbnail: testMode ? "" : "https://img.youtube.com/vi/8EVuKfbqMtQ/maxresdefault.jpg",
           publishedAt: "2023-06-15T10:00:00Z"
         },
         {
           id: "dQw4w9WgXcQ",
           title: "Behind the Scenes at TIPAC",
-          thumbnail: "https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg",
+          thumbnail: testMode ? "" : "https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg",
           publishedAt: "2023-05-20T14:30:00Z"
         },
         {
           id: "DLzxrzFCyOs",
           title: "TIPAC Cultural Workshop",
-          thumbnail: "https://img.youtube.com/vi/DLzxrzFCyOs/maxresdefault.jpg",
+          thumbnail: testMode ? "" : "https://img.youtube.com/vi/DLzxrzFCyOs/maxresdefault.jpg",
           publishedAt: "2023-04-10T09:15:00Z"
         },
         {
           id: "jNQXAC9IVRw",
           title: "TIPAC Theatre Rehearsal",
-          thumbnail: "https://img.youtube.com/vi/jNQXAC9IVRw/maxresdefault.jpg",
+          thumbnail: testMode ? "" : "https://img.youtube.com/vi/jNQXAC9IVRw/maxresdefault.jpg",
           publishedAt: "2023-03-22T16:45:00Z"
         }
       ];
@@ -118,12 +121,28 @@ export async function GET() {
         }
         return isCorrectChannel;
       })
-      .map((item: any) => ({
-        id: item.id.videoId,
-        title: item.snippet.title,
-        thumbnail: item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url || "https://via.placeholder.com/320x180?text=Video+Thumbnail",
-        publishedAt: item.snippet.publishedAt
-      }));
+      .map((item: any) => {
+        // Get the best available thumbnail
+        let thumbnail = "";
+        if (item.snippet.thumbnails) {
+          if (item.snippet.thumbnails.maxres) {
+            thumbnail = item.snippet.thumbnails.maxres.url;
+          } else if (item.snippet.thumbnails.high) {
+            thumbnail = item.snippet.thumbnails.high.url;
+          } else if (item.snippet.thumbnails.medium) {
+            thumbnail = item.snippet.thumbnails.medium.url;
+          } else if (item.snippet.thumbnails.default) {
+            thumbnail = item.snippet.thumbnails.default.url;
+          }
+        }
+        
+        return {
+          id: item.id.videoId,
+          title: item.snippet.title,
+          thumbnail: thumbnail,
+          publishedAt: item.snippet.publishedAt
+        };
+      });
 
     console.log(`Found ${videos.length} videos from channel ${CHANNEL_ID}`);
 

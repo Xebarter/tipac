@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -285,7 +286,16 @@ export default function SchoolApplicationPage() {
               </div>
             )}
             
-            <div className="flex justify-end">
+            <div className="flex flex-col sm:flex-row sm:justify-end gap-4">
+              <Link href="/" className="w-full sm:w-auto">
+                <Button 
+                  type="button"
+                  variant="outline"
+                  className="w-full sm:w-auto border border-gray-300 bg-white/70 text-gray-700 hover:bg-gray-50/70 shadow-sm hover:shadow-md px-6 py-3 font-semibold rounded-xl transition-all duration-300 backdrop-blur-sm"
+                >
+                  Return to Home Page
+                </Button>
+              </Link>
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
