@@ -2,20 +2,28 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { 
+  LayoutDashboard, 
+  Calendar, 
+  Image, 
+  Mail, 
+  Ticket, 
+  ShieldCheck,
+  Users
+} from "lucide-react";
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
   const navigation = [
-    { name: "Dashboard", href: "/admin" },
-    { name: "Events", href: "/admin/events" },
-    { name: "Gallery", href: "/admin/gallery" },
-    { name: "Tickets", href: "/admin/tickets" },
-    { name: "Messages", href: "/admin/messages" },
-    // New ticket management features
-    { name: "Generate Batch Tickets", href: "/admin/tickets/generate" },
-    { name: "Verify Tickets", href: "/admin/verify" },
+    { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { name: "Events", href: "/admin/events", icon: Calendar },
+    { name: "Gallery", href: "/admin/gallery", icon: Image },
+    { name: "Messages", href: "/admin/messages", icon: Mail },
+    { name: "Tickets", href: "/admin/tickets", icon: Ticket },
+    { name: "Applications", href: "/admin/applications", icon: Users },
+    { name: "Verify Ticket", href: "/admin/verify", icon: ShieldCheck },
   ];
 
   const handleLogout = async () => {
@@ -36,34 +44,38 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-900 text-white w-64">
-      <div className="flex items-center justify-between p-4 border-b border-gray-700">
-        <h1 className="text-xl font-bold">TIPAC Admin</h1>
+    <div className="flex flex-col h-full border-r bg-card">
+      <div className="p-4 border-b">
+        <h1 className="text-lg font-semibold">TIPAC Admin</h1>
       </div>
       
-      <nav className="flex-1 p-4">
-        <ul className="space-y-2">
-          {navigation.map((item) => (
-            <li key={item.name}>
-              <Link
-                href={item.href}
-                className={`block px-4 py-2 rounded-md transition-colors ${
-                  pathname === item.href
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-300 hover:bg-gray-800"
-                }`}
-              >
-                {item.name}
-              </Link>
-            </li>
-          ))}
+      <nav className="flex-1 p-2">
+        <ul className="space-y-1">
+          {navigation.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <li key={item.name}>
+                <Link
+                  href={item.href}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  }`}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.name}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
       
-      <div className="p-4 border-t border-gray-700">
+      <div className="p-4 border-t">
         <button
           onClick={handleLogout}
-          className="w-full px-4 py-2 text-left text-red-400 hover:bg-gray-800 rounded-md transition-colors"
+          className="w-full text-left text-sm text-red-500 hover:bg-accent rounded-lg px-3 py-2 transition-colors"
         >
           Logout
         </button>

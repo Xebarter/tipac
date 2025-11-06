@@ -36,6 +36,11 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/apply" className="hover:text-primary transition-colors">
+                  Apply for Participation
+                </Link>
+              </li>
+              <li>
                 <Link href="/contact" className="hover:text-primary transition-colors">
                   Contact
                 </Link>

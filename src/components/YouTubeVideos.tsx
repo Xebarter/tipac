@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 interface YouTubeVideo {
   id: string;
@@ -129,7 +129,7 @@ export function YouTubeVideos() {
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Watch TIPAC</h2>
           <p className="text-white/80 max-w-2xl mx-auto">
-            Check out our latest performances and behind-the-scenes content.
+            Check out our latest performances and behind-the-scenes content from our YouTube channel.
           </p>
         </div>
 

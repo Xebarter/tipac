@@ -18,7 +18,7 @@ export function Navbar() {
   };
 
   useEffect(() => {
-    const routesToPrefetch = ["/", "/about", "/programs", "/gallery", "/contact", "/tickets"];
+    const routesToPrefetch = ["/", "/about", "/gallery", "/contact", "/tickets", "/apply"];
     routesToPrefetch.forEach((route) => {
       try {
         router.prefetch(route);
@@ -94,8 +94,8 @@ export function Navbar() {
             { path: "/", label: "Home" },
             { path: "/about", label: "About" },
             { path: "/#upcoming-events", label: "Events" },
-            { path: "/programs", label: "Programs" },
             { path: "/gallery", label: "Gallery" },
+            { path: "/apply", label: "Apply" },
             { path: "/contact", label: "Contact" },
           ].map((item, i) => (
             <Link
@@ -123,8 +123,8 @@ export function Navbar() {
               { path: "/", label: "Home" },
               { path: "/about", label: "About" },
               { path: "/#upcoming-events", label: "Events" },
-              { path: "/programs", label: "Programs" },
               { path: "/gallery", label: "Gallery" },
+              { path: "/apply", label: "Apply" },
               { path: "/contact", label: "Contact" },
             ].map((item, i) => (
               <Link
