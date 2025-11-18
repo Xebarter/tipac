@@ -9,7 +9,8 @@ import {
   Mail, 
   Ticket, 
   ShieldCheck,
-  Users
+  Users,
+  Mailbox
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -22,8 +23,10 @@ export default function Sidebar() {
     { name: "Gallery", href: "/admin/gallery", icon: Image },
     { name: "Messages", href: "/admin/messages", icon: Mail },
     { name: "Tickets", href: "/admin/tickets", icon: Ticket },
+    { name: "Invitation Cards", href: "/admin/invitation-cards", icon: Mailbox },
     { name: "Applications", href: "/admin/applications", icon: Users },
     { name: "Verify Ticket", href: "/admin/verify", icon: ShieldCheck },
+    { name: "Verify Invitations", href: "/admin/verify-invitations", icon: ShieldCheck },
   ];
 
   const handleLogout = async () => {
