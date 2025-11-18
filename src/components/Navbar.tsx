@@ -104,8 +104,8 @@ export function Navbar() {
 
         {/* Mobile Toggle */}
         <div className="md:hidden">
-          <button 
-            onClick={toggleMobileMenu} 
+          <button
+            onClick={toggleMobileMenu}
             className="text-gray-500 hover:text-gray-700 focus:outline-none p-2"
             aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
             aria-expanded={isMobileMenuOpen}

@@ -42,7 +42,7 @@ export default function AdminTicketsDashboard() {
   const [events, setEvents] = useState<Event[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'tickets' | 'batches' | 'used' | 'customers'>('tickets');
+  const [activeTab, setActiveTab] = useState<'tickets' | 'batches' | 'used' | 'customers' | 'generate'>('tickets');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   
@@ -54,6 +54,15 @@ export default function AdminTicketsDashboard() {
     usedTickets: 0,
     totalRevenue: 0
   });
+
+  // Form state for batch generation
+  const [batchForm, setBatchForm] = useState({
+    event_id: '',
+    num_tickets: 10,
+    batch_code: '',
+    price: 0
+  });
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Load all data
   const loadData = async () => {
@@ -171,6 +180,61 @@ export default function AdminTicketsDashboard() {
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred");
+    }
+  };
+
+  const handleBatchFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setBatchForm(prev => ({
+      ...prev,
+      [name]: name === 'num_tickets' || name === 'price' ? Number(value) : value
+    }));
+  };
+
+  const handleGenerateBatch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsGenerating(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/tickets/generate-batch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(batchForm)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate batch tickets');
+      }
+      
+      // Download the PDF
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tickets-${batchForm.batch_code}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      setSuccess('Batch tickets generated successfully!');
+      setBatchForm({
+        event_id: '',
+        num_tickets: 10,
+        batch_code: '',
+        price: 0
+      });
+      
+      // Reload data to show new batch
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unknown error occurred");
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -334,6 +398,16 @@ export default function AdminTicketsDashboard() {
             Ticket Batches
           </button>
           <button
+            onClick={() => setActiveTab('generate')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'generate'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Generate Batch
+          </button>
+          <button
             onClick={() => setActiveTab('used')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'used'
@@ -360,6 +434,123 @@ export default function AdminTicketsDashboard() {
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        </div>
+      ) : activeTab === 'generate' ? (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-medium text-gray-900">Generate Ticket Batch</h2>
+            <p className="text-sm text-gray-500 mt-1">Create a batch of physical tickets for an event</p>
+          </div>
+          
+          <div className="p-6">
+            <form onSubmit={handleGenerateBatch} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="event_id" className="block text-sm font-medium text-gray-700">
+                    Event
+                  </label>
+                  <select
+                    id="event_id"
+                    name="event_id"
+                    value={batchForm.event_id}
+                    onChange={handleBatchFormChange}
+                    required
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  >
+                    <option value="">Select an event</option>
+                    {events.map((event) => (
+                      <option key={event.id} value={event.id}>
+                        {event.title} ({formatDate(event.date)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label htmlFor="num_tickets" className="block text-sm font-medium text-gray-700">
+                    Number of Tickets
+                  </label>
+                  <input
+                    type="number"
+                    id="num_tickets"
+                    name="num_tickets"
+                    min="1"
+                    max="1000"
+                    value={batchForm.num_tickets}
+                    onChange={handleBatchFormChange}
+                    required
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="batch_code" className="block text-sm font-medium text-gray-700">
+                    Batch Code
+                  </label>
+                  <input
+                    type="text"
+                    id="batch_code"
+                    name="batch_code"
+                    value={batchForm.batch_code}
+                    onChange={handleBatchFormChange}
+                    required
+                    placeholder="Enter unique batch code"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="price" className="block text-sm font-medium text-gray-700">
+                    Price per Ticket (UGX)
+                  </label>
+                  <input
+                    type="number"
+                    id="price"
+                    name="price"
+                    min="0"
+                    value={batchForm.price}
+                    onChange={handleBatchFormChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={isGenerating}
+                  className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                    isGenerating
+                      ? "bg-blue-400 cursor-not-allowed"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+                >
+                  {isGenerating ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Generating...
+                    </>
+                  ) : (
+                    "Generate Batch"
+                  )}
+                </button>
+              </div>
+            </form>
+            
+            <div className="mt-8 p-4 bg-blue-50 rounded-lg">
+              <h3 className="text-sm font-medium text-blue-800">How to use:</h3>
+              <ul className="mt-2 list-disc pl-5 space-y-1 text-sm text-blue-700">
+                <li>Select the event for which you want to generate tickets</li>
+                <li>Specify the number of tickets to generate (1-1000)</li>
+                <li>Enter a unique batch code (used to identify this batch)</li>
+                <li>Optionally set a price per ticket (0 for free tickets)</li>
+                <li>Click "Generate Batch" to create the tickets and download the PDF</li>
+              </ul>
+            </div>
+          </div>
         </div>
       ) : activeTab === 'tickets' || activeTab === 'used' ? (
         <div className="bg-white rounded-lg shadow overflow-hidden">

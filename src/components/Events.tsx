@@ -65,12 +65,12 @@ export function Events() {
     return (
       <section className="py-16 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.1)_0%,transparent_70%)] pointer-events-none"></div>
-        
+
         {/* Decorative elements */}
         <div className="absolute top-0 left-0 w-72 h-72 bg-gradient-to-r from-purple-400/20 to-indigo-400/20 rounded-full blur-3xl pointer-events-none -translate-x-1/2 -translate-y-1/2" />
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-r from-pink-400/20 to-rose-400/20 rounded-full blur-3xl pointer-events-none translate-x-1/2 translate-y-1/2" />
         <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 rounded-full blur-3xl pointer-events-none" />
-        
+
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-12">
             <div className="inline-block mb-4">
@@ -96,12 +96,12 @@ export function Events() {
   return (
     <section id="upcoming-events" className="py-16 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.1)_0%,transparent_70%)] pointer-events-none"></div>
-      
+
       {/* Decorative elements */}
       <div className="absolute top-0 left-0 w-72 h-72 bg-gradient-to-r from-purple-400/20 to-indigo-400/20 rounded-full blur-3xl pointer-events-none -translate-x-1/2 -translate-y-1/2" />
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-r from-pink-400/20 to-rose-400/20 rounded-full blur-3xl pointer-events-none translate-x-1/2 translate-y-1/2" />
       <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 rounded-full blur-3xl pointer-events-none" />
-      
+
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-12">
           <div className="inline-block mb-4">
@@ -142,10 +142,10 @@ export function Events() {
           </div>
         ) : (
           <div className={`grid gap-8 ${events.length === 1
-              ? 'grid-cols-1'
-              : events.length === 2
-                ? 'grid-cols-1 md:grid-cols-2'
-                : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+            ? 'grid-cols-1'
+            : events.length === 2
+              ? 'grid-cols-1 md:grid-cols-2'
+              : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
             }`}>
             {events.map((event, index) => {
               // Define color schemes for events
@@ -157,22 +157,22 @@ export function Events() {
                 { from: 'from-rose-100/50', to: 'to-pink-100/50', border: 'border-rose-500/30', ring: 'ring-rose-500/30', text: 'text-rose-700', badge: 'from-rose-500 to-pink-500' },
                 { from: 'from-indigo-100/50', to: 'to-violet-100/50', border: 'border-indigo-500/30', ring: 'ring-indigo-500/30', text: 'text-indigo-700', badge: 'from-indigo-500 to-violet-500' },
               ];
-              
+
               // Get color scheme based on event index
               const colorScheme = colorSchemes[index % colorSchemes.length];
-              
+
               return (
                 <div
                   key={event.id}
                   className={`rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group backdrop-blur-sm bg-white/70 border border-gray-100 ${events.length === 1
-                      ? 'lg:max-w-4xl lg:mx-auto lg:flex lg:flex-col'
-                      : ''
+                    ? 'lg:max-w-4xl lg:mx-auto lg:flex lg:flex-col'
+                    : ''
                     }`}
                 >
                   {/* Event Image */}
                   <div className={`relative overflow-hidden ${events.length === 1
-                      ? 'lg:h-96'
-                      : 'h-48'
+                    ? 'lg:h-96'
+                    : 'h-48'
                     }`}>
                     {event.image_url && event.image_url.trim() !== '' ? (
                       <img
@@ -191,12 +191,12 @@ export function Events() {
                         }}
                       />
                     ) : null}
-                    
+
                     {/* Fallback placeholder when there's no image or image fails to load */}
                     {(!event.image_url || event.image_url.trim() === '') && (
                       <div className={`w-full h-full bg-gradient-to-r from-purple-500 to-pink-600 flex items-center justify-center ${events.length === 1
-                          ? 'lg:h-96'
-                          : ''
+                        ? 'lg:h-96'
+                        : ''
                         }`}>
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -219,26 +219,26 @@ export function Events() {
                   <div className={`p-6 ${events.length === 1 ? 'lg:p-10 lg:flex lg:flex-col' : ''}`}>
                     <div className={`flex justify-between items-start mb-3 ${events.length === 1 ? 'lg:mb-6' : ''}`}>
                       <h3 className={`font-bold text-gray-900 group-hover:text-purple-600 transition-colors ${events.length === 1
-                          ? 'text-2xl lg:text-3xl'
-                          : 'text-xl'
+                        ? 'text-2xl lg:text-3xl'
+                        : 'text-xl'
                         }`}>
                         {event.title}
                       </h3>
                       <div className="text-right">
                         <p className={`font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent ${events.length === 1
-                            ? 'text-lg lg:text-xl'
-                            : 'text-sm'
+                          ? 'text-lg lg:text-xl'
+                          : 'text-sm'
                           }`}>{event.time}</p>
                       </div>
                     </div>
 
                     <div className={`flex items-center text-gray-600 ${events.length === 1
-                        ? 'text-base lg:text-lg lg:mb-2'
-                        : 'text-sm mb-4'
+                      ? 'text-base lg:text-lg lg:mb-2'
+                      : 'text-sm mb-4'
                       }`}>
                       <svg xmlns="http://www.w3.org/2000/svg" className={`mr-2 ${events.length === 1
-                          ? 'h-5 w-5 lg:h-6 lg:w-6'
-                          : 'h-4 w-4'
+                        ? 'h-5 w-5 lg:h-6 lg:w-6'
+                        : 'h-4 w-4'
                         }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -247,8 +247,8 @@ export function Events() {
                     </div>
 
                     <p className={`text-gray-700 ${events.length === 1
-                        ? 'lg:text-lg lg:mb-8'
-                        : 'mb-6 line-clamp-3'
+                      ? 'lg:text-lg lg:mb-8'
+                      : 'mb-6 line-clamp-3'
                       }`}>
                       {event.description}
                     </p>
@@ -265,8 +265,8 @@ export function Events() {
                           {event.sponsor_logos.map((sponsor, idx) => (
                             <div key={idx} className="flex items-center justify-center bg-gray-50 rounded-lg p-2 h-16 w-24 border border-gray-200">
                               {sponsor.url ? (
-                                <img 
-                                  src={sponsor.url} 
+                                <img
+                                  src={sponsor.url}
                                   alt={sponsor.name}
                                   className="max-h-12 max-w-full object-contain"
                                 />
@@ -285,8 +285,8 @@ export function Events() {
                           <Button
                             size="sm"
                             className={`bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all duration-300 shadow-lg hover:shadow-xl ${events.length === 1
-                                ? 'text-base lg:text-lg lg:px-8 lg:py-3'
-                                : 'text-sm px-4 py-2'
+                              ? 'text-base lg:text-lg lg:px-8 lg:py-3'
+                              : 'text-sm px-4 py-2'
                               }`}
                           >
                             Get Tickets
