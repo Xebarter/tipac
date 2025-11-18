@@ -83,7 +83,7 @@ export default function InvitationCardScannerPage() {
   };
 
   // Verify card with the API
-  const verifyCard = async (id: string) {
+  const verifyCard = async (id: string) => {
     try {
       const { cardId: normalizedId, error: extractionError } = extractCardId(id);
 
