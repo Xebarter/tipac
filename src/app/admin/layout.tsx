@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import Sidebar from "./components/Sidebar";
+import Header from "./components/Header";
 import { cookies } from "next/headers";
 
 export default async function AdminLayout({
@@ -14,13 +14,11 @@ export default async function AdminLayout({
   const isAuthenticated = !!sessionCookie;
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {isAuthenticated ? (
-        <div className="fixed w-64 h-full bg-white shadow-md">
-          <Sidebar />
-        </div>
+        <Header />
       ) : null}
-      <div className={isAuthenticated ? "ml-64 flex-1" : "flex-1"}>
+      <div className="flex-1">
         <div className="p-8">
           {children}
         </div>
