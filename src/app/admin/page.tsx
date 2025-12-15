@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { Sidebar } from "./components/Sidebar";
+import Sidebar from "./components/Sidebar";
 
 export default function AdminDashboard() {
   const [events, setEvents] = useState<any[]>([]);

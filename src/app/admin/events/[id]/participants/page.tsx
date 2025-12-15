@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from '@/lib/supabaseClient';
-import { Sidebar } from "../../../components/Sidebar";
+import Sidebar from "../../../components/Sidebar";
 
 interface Participant {
   id: string;
