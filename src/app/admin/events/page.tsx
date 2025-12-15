@@ -29,6 +29,11 @@ interface TicketType {
   is_active: boolean;
 }
 
+// Add interface for existing ticket types when editing
+interface ExistingTicketType extends TicketType {
+  is_deleted?: boolean;
+}
+
 // Define interface for ticket types during event creation
 interface NewTicketType {
   name: string;
@@ -45,8 +50,9 @@ export default function AdminEventsManagement() {
   const [success, setSuccess] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  const [showTicketForm, setShowTicketForm] = useState<{ eventId: string, show: boolean } | null>(null);
+  const [showTicketForm, setShowTicketForm] = useState<{eventId: string, show: boolean} | null>(null);
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
+  const [existingTicketTypes, setExistingTicketTypes] = useState<ExistingTicketType[]>([]);
   const [newTicketType, setNewTicketType] = useState({
     name: '',
     price: 0,
@@ -389,7 +395,11 @@ export default function AdminEventsManagement() {
       sponsor_logos: event.sponsor_logos || []
     });
     setShowCreateForm(true);
-
+    
+    // Load existing ticket types for this event
+    const eventTicketTypes = ticketTypes.filter(t => t.event_id === event.id);
+    setExistingTicketTypes(eventTicketTypes);
+    
     // Reset ticket types for this event
     setEventTicketTypes([{ name: '', price: 0, is_active: true }]);
   };
@@ -398,10 +408,10 @@ export default function AdminEventsManagement() {
   const handleEditEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingEvent) return;
-
+    
     setIsSubmitting(true);
     setError(null);
-
+    
     try {
       // Upload organizer logo if file is selected
       let organizerLogoUrl = editingEvent.organizer_logo_url;
@@ -438,12 +448,56 @@ export default function AdminEventsManagement() {
         .single();
 
       if (error) throw error;
+      
+      // Delete marked ticket types
+      const ticketTypesToDelete = existingTicketTypes.filter(t => t.is_deleted);
+      if (ticketTypesToDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('ticket_types')
+          .delete()
+          .in('id', ticketTypesToDelete.map(t => t.id));
+          
+        if (deleteError) throw deleteError;
+      }
+      
+      // Update existing ticket types (not marked for deletion)
+      const ticketTypesToUpdate = existingTicketTypes.filter(t => !t.is_deleted);
+      for (const ticketType of ticketTypesToUpdate) {
+        const { error: updateError } = await supabase
+          .from('ticket_types')
+          .update({
+            name: ticketType.name,
+            price: ticketType.price,
+            is_active: ticketType.is_active
+          })
+          .eq('id', ticketType.id);
+          
+        if (updateError) throw updateError;
+      }
 
+      // Create new ticket types for the event if any are provided
+      const validTicketTypes = eventTicketTypes.filter(type => type.name.trim() !== "");
+      if (validTicketTypes.length > 0) {
+        const ticketTypesData = validTicketTypes.map(type => ({
+          event_id: editingEvent.id,
+          name: type.name.trim(),
+          price: type.price,
+          is_active: type.is_active
+        }));
+
+        const { error: insertError } = await supabase
+          .from('ticket_types')
+          .insert(ticketTypesData);
+          
+        if (insertError) throw insertError;
+      }
+      
       setSuccess('Event updated successfully!');
       setEditingEvent(null);
       setEditingOrganizerLogoFile(null);
       setEditingSponsorLogoFiles(new Map());
       loadEvents();
+      loadTicketTypes();
     } catch (err: any) {
       console.error('Error updating event:', err);
       setError(err.message || 'Failed to update event. Please try again.');
@@ -514,6 +568,24 @@ export default function AdminEventsManagement() {
     }
   }, [editingEvent]);
 
+  // Function to mark existing ticket type for deletion
+  const markTicketTypeForDeletion = (id: string) => {
+    setExistingTicketTypes(prev => 
+      prev.map(ticket => 
+        ticket.id === id ? { ...ticket, is_deleted: true } : ticket
+      )
+    );
+  };
+
+  // Function to unmark existing ticket type for deletion
+  const unmarkTicketTypeForDeletion = (id: string) => {
+    setExistingTicketTypes(prev => 
+      prev.map(ticket => 
+        ticket.id === id ? { ...ticket, is_deleted: false } : ticket
+      )
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="p-4 sm:p-6 max-w-7xl mx-auto">
@@ -548,7 +620,7 @@ export default function AdminEventsManagement() {
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-start gap-3">
-            <svg className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <p className="text-red-800 text-sm">{error}</p>
@@ -926,6 +998,116 @@ export default function AdminEventsManagement() {
                 </p>
               </div>
 
+              {/* Existing Ticket Types Section (when editing) */}
+              {editingEvent && existingTicketTypes.length > 0 && (
+                <div className="border-t border-gray-200 pt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Existing Ticket Types</h3>
+                  <div className="space-y-4">
+                    {existingTicketTypes.map((ticketType) => (
+                      <div 
+                        key={ticketType.id} 
+                        className={`grid grid-cols-1 md:grid-cols-12 gap-4 p-4 rounded-lg ${
+                          ticketType.is_deleted 
+                            ? 'bg-red-50 line-through opacity-75' 
+                            : 'bg-yellow-50'
+                        }`}
+                      >
+                        <div className="md:col-span-5">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Ticket Name
+                          </label>
+                          <input
+                            type="text"
+                            value={ticketType.name}
+                            onChange={(e) => {
+                              setExistingTicketTypes(prev =>
+                                prev.map(t =>
+                                  t.id === ticketType.id
+                                    ? { ...t, name: e.target.value }
+                                    : t
+                                )
+                              );
+                            }}
+                            disabled={ticketType.is_deleted}
+                            className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                              ticketType.is_deleted ? 'bg-gray-100' : ''
+                            }`}
+                          />
+                        </div>
+
+                        <div className="md:col-span-3">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Price (UGX)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={ticketType.price}
+                            onChange={(e) => {
+                              setExistingTicketTypes(prev =>
+                                prev.map(t =>
+                                  t.id === ticketType.id
+                                    ? { ...t, price: Number(e.target.value) }
+                                    : t
+                                )
+                              );
+                            }}
+                            disabled={ticketType.is_deleted}
+                            className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                              ticketType.is_deleted ? 'bg-gray-100' : ''
+                            }`}
+                          />
+                        </div>
+
+                        <div className="md:col-span-3 flex items-center">
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={ticketType.is_active}
+                              onChange={(e) => {
+                                setExistingTicketTypes(prev =>
+                                  prev.map(t =>
+                                    t.id === ticketType.id
+                                      ? { ...t, is_active: e.target.checked }
+                                      : t
+                                  )
+                                );
+                              }}
+                              disabled={ticketType.is_deleted}
+                              className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            />
+                            <span className="ml-2 text-sm text-gray-700">Active</span>
+                          </label>
+                        </div>
+
+                        <div className="md:col-span-1 flex items-center">
+                          {ticketType.is_deleted ? (
+                            <button
+                              type="button"
+                              onClick={() => unmarkTicketTypeForDeletion(ticketType.id)}
+                              className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                            >
+                              Restore
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => markTicketTypeForDeletion(ticketType.id)}
+                              className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-sm text-gray-500">
+                    Marked ticket types (with strikethrough) will be deleted when you save changes.
+                  </p>
+                </div>
+              )}
+
               <div className="pt-6 border-t border-gray-200 flex justify-end gap-3">
                 <button
                   type="button"
@@ -994,7 +1176,7 @@ export default function AdminEventsManagement() {
           ) : events.length === 0 ? (
             <div className="text-center py-12 px-6">
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8-4H4m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <h3 className="mt-2 text-sm font-medium text-gray-900">No events</h3>
               <p className="mt-1 text-sm text-gray-500">Get started by creating a new event.</p>
