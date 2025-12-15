@@ -63,30 +63,30 @@ export function Events() {
 
   if (error) {
     return (
-      <section className="py-16 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.1)_0%,transparent_70%)] pointer-events-none"></div>
+      <section className="py-16 bg-gradient-to-br from-rose-50 via-purple-50 to-rose-100 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(244,63,94,0.12)_0%,transparent_70%)] pointer-events-none"></div>
 
         {/* Decorative elements */}
-        <div className="absolute top-0 left-0 w-72 h-72 bg-gradient-to-r from-purple-400/20 to-indigo-400/20 rounded-full blur-3xl pointer-events-none -translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-r from-pink-400/20 to-rose-400/20 rounded-full blur-3xl pointer-events-none translate-x-1/2 translate-y-1/2" />
-        <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 left-0 w-72 h-72 bg-gradient-to-r from-rose-400/20 to-purple-400/20 rounded-full blur-3xl pointer-events-none -translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-r from-purple-400/20 to-fuchsia-400/20 rounded-full blur-3xl pointer-events-none translate-x-1/2 translate-y-1/2" />
+        <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-gradient-to-r from-rose-400/20 to-fuchsia-400/20 rounded-full blur-3xl pointer-events-none" />
 
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-12">
             <div className="inline-block mb-4">
-              <span className="bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow">
+              <span className="bg-gradient-to-r from-rose-600 to-purple-600 text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow">
                 Events
               </span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 bg-clip-text bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500">
+            <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 bg-clip-text bg-gradient-to-r from-rose-600 via-fuchsia-600 to-purple-600">
               Upcoming Events
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
               Join us for our upcoming theatre performances, workshops, and cultural events.
             </p>
           </div>
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 max-w-2xl mx-auto shadow-sm">
-            <p className="text-red-700 text-center">{error}</p>
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 max-w-2xl mx-auto shadow-sm">
+            <p className="text-rose-700 text-center">{error}</p>
           </div>
         </div>
       </section>
@@ -94,22 +94,22 @@ export function Events() {
   }
 
   return (
-    <section id="upcoming-events" className="py-16 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.1)_0%,transparent_70%)] pointer-events-none"></div>
+    <section id="upcoming-events" className="py-16 bg-gradient-to-br from-rose-50 via-purple-50 to-rose-100 relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(244,63,94,0.12)_0%,transparent_70%)] pointer-events-none"></div>
 
       {/* Decorative elements */}
-      <div className="absolute top-0 left-0 w-72 h-72 bg-gradient-to-r from-purple-400/20 to-indigo-400/20 rounded-full blur-3xl pointer-events-none -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-r from-pink-400/20 to-rose-400/20 rounded-full blur-3xl pointer-events-none translate-x-1/2 translate-y-1/2" />
-      <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 left-0 w-72 h-72 bg-gradient-to-r from-rose-400/20 to-purple-400/20 rounded-full blur-3xl pointer-events-none -translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-r from-purple-400/20 to-fuchsia-400/20 rounded-full blur-3xl pointer-events-none translate-x-1/2 translate-y-1/2" />
+      <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-gradient-to-r from-rose-400/20 to-fuchsia-400/20 rounded-full blur-3xl pointer-events-none" />
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-12">
           <div className="inline-block mb-4">
-            <span className="bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow">
+            <span className="bg-gradient-to-r from-rose-600 to-purple-600 text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow">
               Events
             </span>
           </div>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 bg-clip-text bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500">
+          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 bg-clip-text bg-gradient-to-r from-rose-600 via-fuchsia-600 to-purple-600">
             Upcoming Events
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
@@ -119,13 +119,13 @@ export function Events() {
 
         {loading ? (
           <div className="flex justify-center items-center h-64">
-            <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <div className="w-16 h-16 border-4 border-rose-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
           </div>
         ) : events.length === 0 ? (
           <div className="text-center py-12">
             <div className="bg-white rounded-2xl p-8 max-w-2xl mx-auto shadow-sm border border-gray-100 backdrop-blur-sm bg-white/80">
-              <div className="w-20 h-20 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="w-20 h-20 bg-gradient-to-r from-rose-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
@@ -134,7 +134,7 @@ export function Events() {
                 We don't have any events scheduled at the moment. Please check back later.
               </p>
               <Link href="/events">
-                <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg">
+                <Button className="bg-gradient-to-r from-rose-600 to-purple-600 hover:from-rose-700 hover:to-purple-700 shadow-lg">
                   View All Events
                 </Button>
               </Link>
@@ -150,12 +150,12 @@ export function Events() {
             {events.map((event, index) => {
               // Define color schemes for events
               const colorSchemes = [
-                { from: 'from-purple-100/50', to: 'to-pink-100/50', border: 'border-purple-500/30', ring: 'ring-purple-500/30', text: 'text-purple-700', badge: 'from-purple-500 to-pink-500' },
-                { from: 'from-blue-100/50', to: 'to-cyan-100/50', border: 'border-blue-500/30', ring: 'ring-blue-500/30', text: 'text-blue-700', badge: 'from-blue-500 to-cyan-500' },
-                { from: 'from-green-100/50', to: 'to-emerald-100/50', border: 'border-green-500/30', ring: 'ring-green-500/30', text: 'text-green-700', badge: 'from-green-500 to-emerald-500' },
-                { from: 'from-yellow-100/50', to: 'to-amber-100/50', border: 'border-yellow-500/30', ring: 'ring-yellow-500/30', text: 'text-yellow-700', badge: 'from-yellow-500 to-amber-500' },
-                { from: 'from-rose-100/50', to: 'to-pink-100/50', border: 'border-rose-500/30', ring: 'ring-rose-500/30', text: 'text-rose-700', badge: 'from-rose-500 to-pink-500' },
-                { from: 'from-indigo-100/50', to: 'to-violet-100/50', border: 'border-indigo-500/30', ring: 'ring-indigo-500/30', text: 'text-indigo-700', badge: 'from-indigo-500 to-violet-500' },
+                { from: 'from-rose-100/60', to: 'to-purple-100/60', border: 'border-rose-400/40', ring: 'ring-rose-400/30', text: 'text-rose-700', badge: 'from-rose-500 to-purple-500' },
+                { from: 'from-purple-100/60', to: 'to-rose-100/60', border: 'border-purple-400/40', ring: 'ring-purple-400/30', text: 'text-purple-700', badge: 'from-purple-500 to-rose-500' },
+                { from: 'from-fuchsia-100/60', to: 'to-rose-100/60', border: 'border-fuchsia-400/40', ring: 'ring-fuchsia-400/30', text: 'text-fuchsia-700', badge: 'from-fuchsia-500 to-rose-500' },
+                { from: 'from-rose-100/60', to: 'to-fuchsia-100/60', border: 'border-rose-400/40', ring: 'ring-rose-400/30', text: 'text-rose-700', badge: 'from-rose-500 to-fuchsia-500' },
+                { from: 'from-purple-100/60', to: 'to-fuchsia-100/60', border: 'border-purple-400/40', ring: 'ring-purple-400/30', text: 'text-purple-700', badge: 'from-purple-500 to-fuchsia-500' },
+                { from: 'from-rose-100/60', to: 'to-purple-100/60', border: 'border-rose-400/40', ring: 'ring-rose-400/30', text: 'text-rose-700', badge: 'from-rose-500 to-purple-500' },
               ];
 
               // Get color scheme based on event index
@@ -194,7 +194,7 @@ export function Events() {
 
                     {/* Fallback placeholder when there's no image or image fails to load */}
                     {(!event.image_url || event.image_url.trim() === '') && (
-                      <div className={`w-full h-full bg-gradient-to-r from-purple-500 to-pink-600 flex items-center justify-center ${events.length === 1
+                      <div className={`w-full h-full bg-gradient-to-r from-rose-500 to-purple-600 flex items-center justify-center ${events.length === 1
                         ? 'lg:h-96'
                         : ''
                         }`}>
@@ -218,14 +218,14 @@ export function Events() {
                   {/* Event Details */}
                   <div className={`p-6 ${events.length === 1 ? 'lg:p-10 lg:flex lg:flex-col' : ''}`}>
                     <div className={`flex justify-between items-start mb-3 ${events.length === 1 ? 'lg:mb-6' : ''}`}>
-                      <h3 className={`font-bold text-gray-900 group-hover:text-purple-600 transition-colors ${events.length === 1
+                      <h3 className={`font-bold text-gray-900 group-hover:text-rose-600 transition-colors ${events.length === 1
                         ? 'text-2xl lg:text-3xl'
                         : 'text-xl'
                         }`}>
                         {event.title}
                       </h3>
                       <div className="text-right">
-                        <p className={`font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent ${events.length === 1
+                        <p className={`font-semibold bg-gradient-to-r from-rose-600 to-purple-600 bg-clip-text text-transparent ${events.length === 1
                           ? 'text-lg lg:text-xl'
                           : 'text-sm'
                           }`}>{event.time}</p>
@@ -284,7 +284,7 @@ export function Events() {
                         <Link href={`/tickets?event=${event.id}`}>
                           <Button
                             size="sm"
-                            className={`bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all duration-300 shadow-lg hover:shadow-xl ${events.length === 1
+                            className={`bg-gradient-to-r from-rose-600 to-purple-600 hover:from-rose-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl ${events.length === 1
                               ? 'text-base lg:text-lg lg:px-8 lg:py-3'
                               : 'text-sm px-4 py-2'
                               }`}
@@ -303,7 +303,7 @@ export function Events() {
 
         <div className="text-center mt-12">
           <Link href="/events">
-            <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-3 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl">
+            <Button className="bg-gradient-to-r from-rose-600 to-purple-600 hover:from-rose-700 hover:to-purple-700 text-white px-8 py-3 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl">
               View All Events
             </Button>
           </Link>

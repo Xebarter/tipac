@@ -24,16 +24,21 @@ export default function AboutPage() {
         <meta name="keywords" content="TIPAC, Uganda, theatre, children, non-profit, arts education" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </Head>
-      <main className="min-h-screen flex flex-col bg-gray-50">
+      <main className="min-h-screen flex flex-col">
         <Navbar />
-        <section className="w-full py-28 md:py-36 px-6 lg:px-10 xl:px-16 bg-white">
-          <div className="container max-w-6xl mx-auto space-y-24">
+        <section className="flex-1 relative py-28 md:py-36 px-6 lg:px-10 xl:px-16 overflow-hidden bg-gradient-to-br from-rose-50 via-purple-50 to-rose-100">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(244,114,182,0.12)_0%,transparent_75%)] pointer-events-none" />
+          <div className="absolute top-0 left-0 w-72 h-72 md:w-96 md:h-96 bg-gradient-to-r from-rose-400/20 to-purple-400/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+          <div className="absolute bottom-0 right-0 w-96 h-96 md:w-[32rem] md:h-[32rem] bg-gradient-to-r from-purple-500/15 to-rose-500/15 rounded-full blur-3xl translate-x-1/3 translate-y-1/3 pointer-events-none" />
+          <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-gradient-to-r from-fuchsia-400/20 to-purple-500/20 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="container max-w-6xl mx-auto space-y-24 relative z-10">
             {/* Page Title */}
             <motion.div
               variants={sectionVariants}
               initial="hidden"
               animate="visible"
-              className="text-center"
+              className="text-center bg-white/70 backdrop-blur-sm rounded-3xl px-8 py-10 shadow-lg border border-white/40"
             >
               <h1 className="text-4xl md:text-5xl font-extrabold text-purple-900 tracking-tight mb-8">
                 About TIPAC
@@ -51,7 +56,7 @@ export default function AboutPage() {
               initial="hidden"
               animate="visible"
               transition={{ delay: 0.2 }}
-              className="rounded-xl overflow-hidden border border-purple-200 shadow-lg bg-gradient-to-r from-red-500 to-purple-600 text-white"
+              className="rounded-3xl overflow-hidden border border-purple-200 shadow-xl bg-gradient-to-r from-red-500 to-purple-600 text-white"
             >
               <div className="md:flex">
                 <img
@@ -94,7 +99,7 @@ export default function AboutPage() {
               initial="hidden"
               animate="visible"
               transition={{ delay: 0.4 }}
-              className="space-y-6"
+              className="space-y-6 bg-white/70 backdrop-blur-sm rounded-3xl px-8 py-10 shadow-lg border border-white/40"
             >
               <div className="flex items-center gap-3 text-red-600 mb-2">
                 <FaLightbulb className="text-xl" />
@@ -114,7 +119,7 @@ export default function AboutPage() {
               initial="hidden"
               animate="visible"
               transition={{ delay: 0.6 }}
-              className="space-y-6"
+              className="space-y-6 bg-white/70 backdrop-blur-sm rounded-3xl px-8 py-10 shadow-lg border border-white/40"
             >
               <div className="flex items-center gap-3 text-purple-900 mb-2">
                 <FaEye className="text-xl" />
@@ -134,7 +139,7 @@ export default function AboutPage() {
               initial="hidden"
               animate="visible"
               transition={{ delay: 0.8 }}
-              className="space-y-6"
+              className="space-y-6 bg-white/70 backdrop-blur-sm rounded-3xl px-8 py-10 shadow-lg border border-white/40"
             >
               <div className="flex items-center gap-3 text-red-600 mb-2">
                 <FaHistory className="text-xl" />
@@ -159,7 +164,7 @@ export default function AboutPage() {
               initial="hidden"
               animate="visible"
               transition={{ delay: 1 }}
-              className="bg-purple-50 rounded-xl p-12 border border-purple-200 shadow-md hover:shadow-lg transition-shadow duration-300 text-center"
+              className="bg-white/80 backdrop-blur-md rounded-3xl p-12 border border-white/40 shadow-lg hover:shadow-xl transition-shadow duration-300 text-center"
             >
               <div className="flex items-center justify-center gap-3 text-purple-900 mb-4">
                 <FaHeart className="text-xl" />

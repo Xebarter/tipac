@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 
 export default function SchoolApplicationPage() {
   const [formData, setFormData] = useState({
@@ -73,7 +75,44 @@ export default function SchoolApplicationPage() {
 
   if (submitSuccess) {
     return (
-      <div className="relative min-h-screen py-12 px-4 sm:px-6 lg:px-8 overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+      <main className="min-h-screen flex flex-col">
+        <Navbar />
+
+        <section className="flex-1 relative py-12 px-4 sm:px-6 lg:px-8 overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+          {/* Glassmorphic decorations */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.1)_0%,transparent_70%)] pointer-events-none" />
+          <div className="absolute top-0 left-0 w-48 h-48 sm:w-72 sm:h-72 bg-gradient-to-r from-purple-400/20 to-indigo-400/20 rounded-full blur-3xl pointer-events-none -translate-x-1/2 -translate-y-1/2" />
+          <div className="absolute bottom-0 right-0 w-64 h-64 sm:w-96 sm:h-96 bg-gradient-to-r from-pink-400/20 to-rose-400/20 rounded-full blur-3xl pointer-events-none translate-x-1/2 translate-y-1/2" />
+          <div className="absolute top-1/3 right-1/4 w-48 h-48 sm:w-64 sm:h-64 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="max-w-3xl mx-auto relative z-10">
+            <div className="bg-white/30 backdrop-blur-xl p-8 rounded-lg shadow-xl border border-white/20">
+              <h1 className="text-3xl font-bold text-center text-gray-800 mb-6 drop-shadow-lg">Application Submitted Successfully!</h1>
+              <p className="text-center text-gray-700 mb-6 drop-shadow-md">
+                Thank you for your interest in participating in TIPAC activities. We have received your application and will review it shortly.
+              </p>
+              <p className="text-center text-gray-700 drop-shadow-md">
+                We will contact you via email or phone within 5 business days.
+              </p>
+              <div className="mt-8 text-center">
+                <a href="/" className="text-indigo-600 hover:text-indigo-800 underline drop-shadow-sm">
+                  ← Back to Home
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <Footer />
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen flex flex-col">
+      <Navbar />
+
+      <section className="flex-1 relative py-12 px-4 sm:px-6 lg:px-8 overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
         {/* Glassmorphic decorations */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.1)_0%,transparent_70%)] pointer-events-none" />
         <div className="absolute top-0 left-0 w-48 h-48 sm:w-72 sm:h-72 bg-gradient-to-r from-purple-400/20 to-indigo-400/20 rounded-full blur-3xl pointer-events-none -translate-x-1/2 -translate-y-1/2" />
@@ -81,45 +120,17 @@ export default function SchoolApplicationPage() {
         <div className="absolute top-1/3 right-1/4 w-48 h-48 sm:w-64 sm:h-64 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 rounded-full blur-3xl pointer-events-none" />
         
         <div className="max-w-3xl mx-auto relative z-10">
-          <div className="bg-white/30 backdrop-blur-xl p-8 rounded-lg shadow-xl border border-white/20">
-            <h1 className="text-3xl font-bold text-center text-gray-800 mb-6 drop-shadow-lg">Application Submitted Successfully!</h1>
-            <p className="text-center text-gray-700 mb-6 drop-shadow-md">
-              Thank you for your interest in participating in TIPAC activities. We have received your application and will review it shortly.
+          <div className="text-center mb-10">
+            <h1 className="text-3xl font-extrabold text-gray-800 sm:text-4xl drop-shadow-sm">
+              Apply for TIPAC Participation
+            </h1>
+            <p className="mt-3 text-xl text-gray-700 drop-shadow-sm">
+              Submit your institution's application to participate in TIPAC activities
             </p>
-            <p className="text-center text-gray-700 drop-shadow-md">
-              We will contact you via email or phone within 5 business days.
-            </p>
-            <div className="mt-8 text-center">
-              <a href="/" className="text-indigo-600 hover:text-indigo-800 underline drop-shadow-sm">
-                ← Back to Home
-              </a>
-            </div>
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="relative min-h-screen py-12 px-4 sm:px-6 lg:px-8 overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-      {/* Glassmorphic decorations */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.1)_0%,transparent_70%)] pointer-events-none" />
-      <div className="absolute top-0 left-0 w-48 h-48 sm:w-72 sm:h-72 bg-gradient-to-r from-purple-400/20 to-indigo-400/20 rounded-full blur-3xl pointer-events-none -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-64 h-64 sm:w-96 sm:h-96 bg-gradient-to-r from-pink-400/20 to-rose-400/20 rounded-full blur-3xl pointer-events-none translate-x-1/2 translate-y-1/2" />
-      <div className="absolute top-1/3 right-1/4 w-48 h-48 sm:w-64 sm:h-64 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 rounded-full blur-3xl pointer-events-none" />
-      
-      <div className="max-w-3xl mx-auto relative z-10">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-extrabold text-gray-800 sm:text-4xl drop-shadow-sm">
-            Apply for TIPAC Participation
-          </h1>
-          <p className="mt-3 text-xl text-gray-700 drop-shadow-sm">
-            Submit your institution's application to participate in TIPAC activities
-          </p>
-        </div>
-        
-        <div className="bg-white/80 backdrop-blur-xl py-8 px-4 shadow-xl sm:rounded-lg sm:px-10 border border-white/30">
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          
+          <div className="bg-white/80 backdrop-blur-xl py-8 px-4 shadow-xl sm:rounded-lg sm:px-10 border border-white/30">
+            <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <h2 className="text-lg font-medium text-gray-800 mb-4">Institution Information</h2>
               
@@ -307,6 +318,9 @@ export default function SchoolApplicationPage() {
           </form>
         </div>
       </div>
-    </div>
+      </section>
+
+      <Footer />
+    </main>
   );
 }

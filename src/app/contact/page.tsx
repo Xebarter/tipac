@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
+
 import { useState } from "react";
 import validator from "validator";
 
@@ -105,8 +106,13 @@ export default function ContactPage() {
   return (
     <main className="min-h-screen flex flex-col">
       <Navbar />
-      <section className="w-full py-16 md:py-24">
-        <div className="container">
+      <section className="flex-1 relative py-16 md:py-24 overflow-hidden bg-gradient-to-br from-rose-50 via-purple-50 to-rose-100">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(244,114,182,0.12)_0%,transparent_70%)] pointer-events-none" />
+        <div className="absolute top-0 left-0 w-64 h-64 md:w-80 md:h-80 bg-gradient-to-r from-rose-400/20 to-purple-400/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-80 h-80 md:w-[28rem] md:h-[28rem] bg-gradient-to-r from-purple-500/15 to-rose-500/15 rounded-full blur-3xl translate-x-1/3 translate-y-1/3 pointer-events-none" />
+        <div className="absolute top-1/3 right-1/5 w-56 h-56 bg-gradient-to-r from-fuchsia-400/20 to-purple-500/20 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="container relative z-10">
           <div className="max-w-3xl mx-auto">
             <h1 className="text-4xl font-bold mb-6">Contact Us</h1>
             <p className="text-lg text-muted-foreground mb-8">
@@ -195,7 +201,7 @@ export default function ContactPage() {
 
               <div>
                 <h2 className="text-2xl font-bold mb-4">Contact Information</h2>
-                <div className="bg-muted/30 p-6 rounded-lg border border-border">
+                <div className="bg-white/70 backdrop-blur-sm p-6 rounded-lg border border-white/30 shadow-sm">
                   <div className="mb-6">
                     <h3 className="font-bold mb-2">Address</h3>
                     <p className="text-muted-foreground">
