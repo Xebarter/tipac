@@ -16,6 +16,14 @@ console.log("[ENV] PESAPAL_CALLBACK_URL:", callbackUrl);
 console.log("[ENV] PESAPAL_BASE_URL:", baseUrl);
 console.log("[ENV] PESAPAL_IPN_ID:", notificationId);
 
+interface PesapalError {
+  error: {
+    type: string;
+    code: string;
+    message: string;
+  };
+}
+
 async function getAccessToken() {
   if (!consumerKey || !consumerSecret) {
     throw new Error("Missing PESAPAL_CONSUMER_KEY or PESAPAL_CONSUMER_SECRET environment variables");
@@ -48,7 +56,19 @@ async function getAccessToken() {
         throw new Error(`Failed to fetch access token: ${res.status} - HTML response received (likely incorrect endpoint)`);
       }
 
-      const errorData = JSON.parse(responseBody);
+      let errorData: PesapalError | any;
+      try {
+        errorData = JSON.parse(responseBody);
+      } catch (parseError) {
+        throw new Error(`Failed to fetch access token: ${res.status} - ${responseBody}`);
+      }
+
+      // Handle error according to Pesapal API 3.0 error structure
+      if ((errorData as PesapalError).error) {
+        const pesapalError = (errorData as PesapalError).error;
+        throw new Error(`Pesapal Auth Error: ${pesapalError.type} - ${pesapalError.message}`);
+      }
+
       throw new Error(`Failed to fetch access token: ${res.status} - ${JSON.stringify(errorData)}`);
     }
 
@@ -142,13 +162,29 @@ export async function POST(req: NextRequest) {
     if (!res.ok) {
       let errorMessage = `Failed to submit payment request: ${res.status}`;
       
+      let errorData: PesapalError | any;
       try {
-        const errData = JSON.parse(responseBody);
-        console.error("[PESAPAL SUBMIT ERROR]", res.status, errData);
-        errorMessage = `Payment request failed: ${errData.message || errData.error || JSON.stringify(errData)}`;
+        errorData = JSON.parse(responseBody);
       } catch (parseError) {
         console.error("[ERROR PARSING RESPONSE]", parseError);
         errorMessage = `Payment request failed with status ${res.status}: ${responseBody.substring(0, 200)}`;
+        
+        // Update ticket status to failed
+        await supabase
+          .from('tickets')
+          .update({ status: 'failed' })
+          .eq('id', ticketData.id);
+          
+        throw new Error(errorMessage);
+      }
+      
+      // Handle error according to Pesapal API 3.0 error structure
+      if ((errorData as PesapalError).error) {
+        const pesapalError = (errorData as PesapalError).error;
+        errorMessage = `Pesapal Submit Order Error: ${pesapalError.type} - ${pesapalError.message}`;
+      } else {
+        console.error("[PESAPAL SUBMIT ERROR]", res.status, errorData);
+        errorMessage = `Payment request failed: ${errorData.message || errorData.error || JSON.stringify(errorData)}`;
       }
       
       // Update ticket status to failed

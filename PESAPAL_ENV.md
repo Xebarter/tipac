@@ -15,6 +15,9 @@ PESAPAL_CALLBACK_URL=https://yourdomain.com/payment-complete
 # PesaPal IPN ID (obtained after registering your IPN)
 PESAPAL_IPN_ID=your_ipn_id_here
 
+# PesaPal IPN URL (your endpoint to receive IPN notifications)
+PESAPAL_IPN_URL=https://yourdomain.com/api/pesapal-ipn
+
 # PesaPal Base URL
 # For production:
 PESAPAL_BASE_URL=https://pay.pesapal.com/v3
@@ -26,8 +29,9 @@ PESAPAL_BASE_URL=https://pay.pesapal.com/v3
 
 1. **Consumer Key & Secret**: Register your application on the PesaPal Merchant Dashboard
 2. **Callback URL**: This should point to your payment completion page (`/payment-complete`)
-3. **IPN ID**: Register your IPN URL (`/api/pesapal-ipn`) in the PesaPal dashboard and obtain the ID
-4. **Base URL**: Use sandbox for testing and production URL for live transactions
+3. **IPN ID**: Register your IPN URL (`/api/pesapal-ipn`) using the new `/api/pesapal/register-ipn` endpoint or in the PesaPal dashboard and obtain the ID
+4. **IPN URL**: This is the URL where Pesapal will send IPN notifications
+5. **Base URL**: Use sandbox for testing and production URL for live transactions
 
 ## Testing
 
@@ -38,3 +42,11 @@ For testing purposes, use the PesaPal Sandbox environment:
 For production, use:
 - Dashboard: https://merchant.pesapal.com/
 - Base URL: https://pay.pesapal.com/v3
+
+## IPN Registration
+
+You can now register your IPN URL programmatically using the new endpoint:
+- POST `/api/pesapal/register-ipn` - Register your IPN URL
+- GET `/api/pesapal/register-ipn` - Get list of registered IPNs
+
+This ensures your integration follows the Pesapal API 3.0 documentation properly.

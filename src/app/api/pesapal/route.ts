@@ -15,6 +15,14 @@ console.log("[ENV] PESAPAL_CALLBACK_URL:", callbackUrl);
 console.log("[ENV] PESAPAL_BASE_URL:", baseUrl);
 console.log("[ENV] PESAPAL_IPN_ID:", notificationId);
 
+interface PesapalError {
+  error: {
+    type: string;
+    code: string;
+    message: string;
+  };
+}
+
 async function getAccessToken() {
   if (!consumerKey || !consumerSecret) {
     throw new Error("Missing PESAPAL_CONSUMER_KEY or PESAPAL_CONSUMER_SECRET environment variables");
@@ -47,7 +55,19 @@ async function getAccessToken() {
         throw new Error(`Failed to fetch access token: ${res.status} - HTML response received (likely incorrect endpoint)`);
       }
 
-      const errorData = JSON.parse(responseBody);
+      let errorData: PesapalError | any;
+      try {
+        errorData = JSON.parse(responseBody);
+      } catch (parseError) {
+        throw new Error(`Failed to fetch access token: ${res.status} - ${responseBody}`);
+      }
+
+      // Handle error according to Pesapal API 3.0 error structure
+      if ((errorData as PesapalError).error) {
+        const pesapalError = (errorData as PesapalError).error;
+        throw new Error(`Pesapal Auth Error: ${pesapalError.type} - ${pesapalError.message}`);
+      }
+
       throw new Error(`Failed to fetch access token: ${res.status} - ${JSON.stringify(errorData)}`);
     }
 
@@ -114,6 +134,19 @@ export async function POST(req: NextRequest) {
     console.log("[SUBMIT ORDER RESPONSE] Body:", responseBody);
 
     if (!res.ok) {
+      let errorData: PesapalError | any;
+      try {
+        errorData = JSON.parse(responseBody);
+      } catch (parseError) {
+        throw new Error(`Failed to submit donation request: ${res.status} - ${responseBody.substring(0, 200)}`);
+      }
+
+      // Handle error according to Pesapal API 3.0 error structure
+      if ((errorData as PesapalError).error) {
+        const pesapalError = (errorData as PesapalError).error;
+        throw new Error(`Pesapal Submit Order Error: ${pesapalError.type} - ${pesapalError.message}`);
+      }
+
       const errData = JSON.parse(responseBody);
       console.error("[PESAPAL SUBMIT ERROR]", res.status, errData);
       throw new Error(`Failed to submit donation request: ${res.status} - ${JSON.stringify(errData)}`);
