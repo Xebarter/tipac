@@ -50,7 +50,7 @@ export default function AdminEventsManagement() {
   const [success, setSuccess] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  const [showTicketForm, setShowTicketForm] = useState<{eventId: string, show: boolean} | null>(null);
+  const [showTicketForm, setShowTicketForm] = useState<{ eventId: string, show: boolean } | null>(null);
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
   const [existingTicketTypes, setExistingTicketTypes] = useState<ExistingTicketType[]>([]);
   const [newTicketType, setNewTicketType] = useState({
@@ -395,11 +395,11 @@ export default function AdminEventsManagement() {
       sponsor_logos: event.sponsor_logos || []
     });
     setShowCreateForm(true);
-    
+
     // Load existing ticket types for this event
     const eventTicketTypes = ticketTypes.filter(t => t.event_id === event.id);
     setExistingTicketTypes(eventTicketTypes);
-    
+
     // Reset ticket types for this event
     setEventTicketTypes([{ name: '', price: 0, is_active: true }]);
   };
@@ -408,10 +408,10 @@ export default function AdminEventsManagement() {
   const handleEditEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingEvent) return;
-    
+
     setIsSubmitting(true);
     setError(null);
-    
+
     try {
       // Upload organizer logo if file is selected
       let organizerLogoUrl = editingEvent.organizer_logo_url;
@@ -448,7 +448,7 @@ export default function AdminEventsManagement() {
         .single();
 
       if (error) throw error;
-      
+
       // Delete marked ticket types
       const ticketTypesToDelete = existingTicketTypes.filter(t => t.is_deleted);
       if (ticketTypesToDelete.length > 0) {
@@ -456,10 +456,10 @@ export default function AdminEventsManagement() {
           .from('ticket_types')
           .delete()
           .in('id', ticketTypesToDelete.map(t => t.id));
-          
+
         if (deleteError) throw deleteError;
       }
-      
+
       // Update existing ticket types (not marked for deletion)
       const ticketTypesToUpdate = existingTicketTypes.filter(t => !t.is_deleted);
       for (const ticketType of ticketTypesToUpdate) {
@@ -471,7 +471,7 @@ export default function AdminEventsManagement() {
             is_active: ticketType.is_active
           })
           .eq('id', ticketType.id);
-          
+
         if (updateError) throw updateError;
       }
 
@@ -488,10 +488,10 @@ export default function AdminEventsManagement() {
         const { error: insertError } = await supabase
           .from('ticket_types')
           .insert(ticketTypesData);
-          
+
         if (insertError) throw insertError;
       }
-      
+
       setSuccess('Event updated successfully!');
       setEditingEvent(null);
       setEditingOrganizerLogoFile(null);
@@ -570,8 +570,8 @@ export default function AdminEventsManagement() {
 
   // Function to mark existing ticket type for deletion
   const markTicketTypeForDeletion = (id: string) => {
-    setExistingTicketTypes(prev => 
-      prev.map(ticket => 
+    setExistingTicketTypes(prev =>
+      prev.map(ticket =>
         ticket.id === id ? { ...ticket, is_deleted: true } : ticket
       )
     );
@@ -579,8 +579,8 @@ export default function AdminEventsManagement() {
 
   // Function to unmark existing ticket type for deletion
   const unmarkTicketTypeForDeletion = (id: string) => {
-    setExistingTicketTypes(prev => 
-      prev.map(ticket => 
+    setExistingTicketTypes(prev =>
+      prev.map(ticket =>
         ticket.id === id ? { ...ticket, is_deleted: false } : ticket
       )
     );
@@ -1004,13 +1004,12 @@ export default function AdminEventsManagement() {
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Existing Ticket Types</h3>
                   <div className="space-y-4">
                     {existingTicketTypes.map((ticketType) => (
-                      <div 
-                        key={ticketType.id} 
-                        className={`grid grid-cols-1 md:grid-cols-12 gap-4 p-4 rounded-lg ${
-                          ticketType.is_deleted 
-                            ? 'bg-red-50 line-through opacity-75' 
+                      <div
+                        key={ticketType.id}
+                        className={`grid grid-cols-1 md:grid-cols-12 gap-4 p-4 rounded-lg ${ticketType.is_deleted
+                            ? 'bg-red-50 line-through opacity-75'
                             : 'bg-yellow-50'
-                        }`}
+                          }`}
                       >
                         <div className="md:col-span-5">
                           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1029,9 +1028,8 @@ export default function AdminEventsManagement() {
                               );
                             }}
                             disabled={ticketType.is_deleted}
-                            className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                              ticketType.is_deleted ? 'bg-gray-100' : ''
-                            }`}
+                            className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${ticketType.is_deleted ? 'bg-gray-100' : ''
+                              }`}
                           />
                         </div>
 
@@ -1053,9 +1051,8 @@ export default function AdminEventsManagement() {
                               );
                             }}
                             disabled={ticketType.is_deleted}
-                            className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                              ticketType.is_deleted ? 'bg-gray-100' : ''
-                            }`}
+                            className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${ticketType.is_deleted ? 'bg-gray-100' : ''
+                              }`}
                           />
                         </div>
 
@@ -1244,8 +1241,8 @@ export default function AdminEventsManagement() {
                         </td>
                         <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
                           <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${event.is_published
-                              ? "bg-green-100 text-green-800"
-                              : "bg-yellow-100 text-yellow-800"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-yellow-100 text-yellow-800"
                             }`}>
                             {event.is_published ? "Published" : "Draft"}
                           </span>
