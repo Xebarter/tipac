@@ -71,26 +71,35 @@ export async function GET(req: NextRequest) {
 
     const data = await res.json();
     
-    // Update ticket status in our database based on PesaPal status
-    if (data.payment_status_description) {
-      let ticketStatus = 'pending';
+    // Find the ticket that corresponds to this orderTrackingId
+    const { data: ticket, error: ticketError } = await supabase
+      .from('tickets')
+      .select('*')
+      .eq('pesapal_transaction_id', orderTrackingId)
+      .single();
       
-      if (data.payment_status_description.toLowerCase().includes('completed') || 
-          data.payment_status_description.toLowerCase().includes('successful')) {
-        ticketStatus = 'confirmed';
-      } else if (data.payment_status_description.toLowerCase().includes('failed') ||
-                 data.payment_status_description.toLowerCase().includes('cancelled')) {
-        ticketStatus = 'failed';
+    if (ticket && !ticketError) {
+      // Update ticket status in our database based on PesaPal status
+      if (data.payment_status_description) {
+        let ticketStatus = 'pending';
+        
+        if (data.payment_status_description.toLowerCase().includes('completed') || 
+            data.payment_status_description.toLowerCase().includes('successful')) {
+          ticketStatus = 'confirmed';
+        } else if (data.payment_status_description.toLowerCase().includes('failed') ||
+                  data.payment_status_description.toLowerCase().includes('cancelled')) {
+          ticketStatus = 'failed';
+        }
+        
+        // Update ticket with status
+        await supabase
+          .from('tickets')
+          .update({ 
+            status: ticketStatus,
+            pesapal_status: data.payment_status_description
+          })
+          .eq('id', ticket.id);
       }
-      
-      // Update ticket with status
-      await supabase
-        .from('tickets')
-        .update({ 
-          status: ticketStatus,
-          pesapal_status: data.payment_status_description
-        })
-        .eq('id', orderTrackingId);
     }
     
     return NextResponse.json({ 
@@ -100,7 +109,10 @@ export async function GET(req: NextRequest) {
       confirmation_code: data.confirmation_code
     });
   } catch (error: any) {
-    console.error("[PESAPAL STATUS ERROR]", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Error checking payment status:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to check payment status" },
+      { status: 500 }
+    );
   }
 }

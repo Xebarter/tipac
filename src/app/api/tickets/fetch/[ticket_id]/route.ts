@@ -9,8 +9,8 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
       return NextResponse.json({ error: "Missing ticket ID" }, { status: 400 });
     }
 
-    // Fetch ticket with event and ticket type information
-    const { data: ticket, error: ticketError } = await supabase
+    // First try to fetch by ticket ID
+    let { data: ticket, error: ticketError } = await supabase
       .from('tickets')
       .select(`
         *,
@@ -28,6 +28,28 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
       `)
       .eq('id', ticketId)
       .single();
+
+    // If not found by ID, try to find by pesapal_transaction_id
+    if ((!ticket || ticketError) && ticketId) {
+      ({ data: ticket, error: ticketError } = await supabase
+        .from('tickets')
+        .select(`
+          *,
+          events (
+            id,
+            title,
+            date,
+            location,
+            organizer_name,
+            organizer_logo_url
+          ),
+          ticket_types (
+            name
+          )
+        `)
+        .eq('pesapal_transaction_id', ticketId)
+        .single());
+    }
 
     if (ticketError) {
       console.error('Supabase error:', ticketError);

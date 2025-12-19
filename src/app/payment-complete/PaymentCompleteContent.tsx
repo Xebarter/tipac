@@ -97,8 +97,9 @@ export default function PaymentCompleteContent() {
 
         if (finalDesc.includes("completed") || finalDesc.includes("successful")) {
           // Try to fetch ticket data without marking it used (use new fetch endpoint)
+          // First try to get ticket by pesapal_transaction_id
           let ticketResponse = await fetch(`/api/tickets/fetch/${orderTrackingId}`);
-
+          
           // Fallback to the existing verify endpoint if fetch isn't available
           if (!ticketResponse.ok) {
             ticketResponse = await fetch(`/api/tickets/verify/${orderTrackingId}`);
@@ -117,6 +118,13 @@ export default function PaymentCompleteContent() {
               console.warn("Automatic ticket download failed - user can use manual download button");
             }
           } else {
+            // Try alternative approach - find ticket by pesapal_transaction_id
+            const ticketByPesapalIdResponse = await fetch('/api/tickets');
+            if (ticketByPesapalIdResponse.ok) {
+              // This would need a new endpoint to search by pesapal_transaction_id
+              console.log("Need to implement search by pesapal_transaction_id");
+            }
+            
             setPaymentStatus("Ticket retrieval failed");
           }
         } else {
