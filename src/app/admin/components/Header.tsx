@@ -118,48 +118,55 @@ export default function Header() {
 
       {/* Mobile Sidebar Overlay */}
       {isMenuOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-background/95 xl:hidden transition-transform duration-300 ease-in-out"
-          style={{ top: "64px", height: "calc(100vh - 64px)" }}
-        >
-          <nav className="flex flex-col h-full p-6 overflow-y-auto">
-            <div className="space-y-2">
-              {navigation.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setIsMenuOpen(false)}
-                    className={`flex items-center justify-between w-full p-4 rounded-xl text-base font-medium transition-all ${isActive
-                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                      }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <item.icon className="h-5 w-5" />
-                      {item.name}
-                    </div>
-                    <ChevronRight className={`h-4 w-4 opacity-50 ${isActive ? "block" : "hidden sm:block"}`} />
-                  </Link>
-                );
-              })}
-            </div>
+        <>
+          <div 
+            className="fixed inset-0 z-40 xl:hidden"
+            onClick={() => setIsMenuOpen(false)}
+            style={{ top: "64px", height: "calc(100vh - 64px)" }}
+          />
+          <div
+            className="fixed right-0 top-16 z-50 w-64 bg-background border-l xl:hidden transform transition-transform duration-300 ease-in-out"
+            style={{ height: "calc(100vh - 64px)" }}
+          >
+            <nav className="flex flex-col h-full p-4 overflow-y-auto">
+              <div className="space-y-2">
+                {navigation.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={() => setIsMenuOpen(false)}
+                      className={`flex items-center justify-between w-full p-3 rounded-lg text-base font-medium transition-all ${isActive
+                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                        }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <item.icon className="h-5 w-5" />
+                        {item.name}
+                      </div>
+                      <ChevronRight className={`h-4 w-4 opacity-50 ${isActive ? "block" : "hidden sm:block"}`} />
+                    </Link>
+                  );
+                })}
+              </div>
 
-            <div className="mt-auto pt-10 pb-6">
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setIsMenuOpen(false);
-                }}
-                className="flex items-center justify-center gap-2 w-full p-4 text-red-500 font-semibold bg-red-50 rounded-xl hover:bg-red-100 transition-colors"
-              >
-                <LogOut className="h-5 w-5" />
-                Logout from Admin
-              </button>
-            </div>
-          </nav>
-        </div>
+              <div className="mt-auto pt-6 pb-4">
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsMenuOpen(false);
+                  }}
+                  className="flex items-center justify-center gap-2 w-full p-3 text-red-500 font-semibold bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                >
+                  <LogOut className="h-5 w-5" />
+                  Logout from Admin
+                </button>
+              </div>
+            </nav>
+          </div>
+        </>
       )}
     </header>
   );
