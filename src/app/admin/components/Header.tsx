@@ -117,49 +117,50 @@ export default function Header() {
       </div>
 
       {/* Mobile Sidebar Overlay */}
-      <div
-        className={`fixed inset-0 z-50 bg-background/95 xl:hidden transition-transform duration-300 ease-in-out ${isMenuOpen ? "translate-x-0" : "translate-x-full"
-          }`}
-        style={{ top: "64px", height: "calc(100vh - 64px)" }}
-      >
-        <nav className="flex flex-col h-full p-6 overflow-y-auto">
-          <div className="space-y-2">
-            {navigation.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  onClick={() => setIsMenuOpen(false)}
-                  className={`flex items-center justify-between w-full p-4 rounded-xl text-base font-medium transition-all ${isActive
-                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                    }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <item.icon className="h-5 w-5" />
-                    {item.name}
-                  </div>
-                  <ChevronRight className={`h-4 w-4 opacity-50 ${isActive ? "block" : "hidden sm:block"}`} />
-                </Link>
-              );
-            })}
-          </div>
+      {isMenuOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-background/95 xl:hidden transition-transform duration-300 ease-in-out"
+          style={{ top: "64px", height: "calc(100vh - 64px)" }}
+        >
+          <nav className="flex flex-col h-full p-6 overflow-y-auto">
+            <div className="space-y-2">
+              {navigation.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={`flex items-center justify-between w-full p-4 rounded-xl text-base font-medium transition-all ${isActive
+                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <item.icon className="h-5 w-5" />
+                      {item.name}
+                    </div>
+                    <ChevronRight className={`h-4 w-4 opacity-50 ${isActive ? "block" : "hidden sm:block"}`} />
+                  </Link>
+                );
+              })}
+            </div>
 
-          <div className="mt-auto pt-10 pb-6">
-            <button
-              onClick={() => {
-                handleLogout();
-                setIsMenuOpen(false);
-              }}
-              className="flex items-center justify-center gap-2 w-full p-4 text-red-500 font-semibold bg-red-50 rounded-xl hover:bg-red-100 transition-colors"
-            >
-              <LogOut className="h-5 w-5" />
-              Logout from Admin
-            </button>
-          </div>
-        </nav>
-      </div>
+            <div className="mt-auto pt-10 pb-6">
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setIsMenuOpen(false);
+                }}
+                className="flex items-center justify-center gap-2 w-full p-4 text-red-500 font-semibold bg-red-50 rounded-xl hover:bg-red-100 transition-colors"
+              >
+                <LogOut className="h-5 w-5" />
+                Logout from Admin
+              </button>
+            </div>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
