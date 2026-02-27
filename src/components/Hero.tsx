@@ -17,34 +17,6 @@ interface GalleryImage {
 // OPTIMIZATION: Define placeholder to prevent layout shift before images load
 const IMAGE_ASPECT_RATIO = 16 / 9; // Common wide ratio for hero images
 
-const HERO_PLACEHOLDER_IMAGES: GalleryImage[] = [
-  {
-    id: "hero-placeholder-1",
-    url: "/Hero images/20241101_091935.jpg",
-    alt: "TIPAC hero placeholder image 1",
-  },
-  {
-    id: "hero-placeholder-2",
-    url: "/Hero images/20250427_121317.jpg",
-    alt: "TIPAC hero placeholder image 2",
-  },
-  {
-    id: "hero-placeholder-3",
-    url: "/Hero images/20250427_121426.jpg",
-    alt: "TIPAC hero placeholder image 3",
-  },
-  {
-    id: "hero-placeholder-4",
-    url: "/Hero images/20250427_124715.jpg",
-    alt: "TIPAC hero placeholder image 4",
-  },
-  {
-    id: "hero-placeholder-5",
-    url: "/Hero images/20250427_151333.jpg",
-    alt: "TIPAC hero placeholder image 5",
-  },
-];
-
 // OPTIMIZATION: Configure the Supabase URL loader for automatic optimization (if Next.js is configured for it)
 // If not using Next.js image domains config, these images won't be optimized, and you must pre-optimize the files.
 const NEXT_IMAGE_SUPABASE_LOADER = ({ src, width, quality }: { src: string; width: number; quality?: number }) => {
@@ -113,7 +85,7 @@ export function Hero() {
     };
   }, []);
 
-  const displayImages = galleryImages.length > 0 ? galleryImages : HERO_PLACEHOLDER_IMAGES;
+  const displayImages = galleryImages;
 
   useEffect(() => {
     setCurrentImageIndex(0);
@@ -183,9 +155,9 @@ export function Hero() {
               // OPTIMIZATION: loader property uses the custom loader defined above
               // loader={NEXT_IMAGE_SUPABASE_LOADER} // Uncomment if you set up the loader
               // OPTIMIZATION: 'eager' loading for the LCP element (initial image)
-              loading={currentImageIndex === 0 ? 'eager' : 'lazy'} 
+              loading={currentImageIndex === 0 ? 'eager' : 'lazy'}
               // OPTIMIZATION: Set priority={true} only for the *very first* image loaded.
-              priority={currentImageIndex === 0} 
+              priority={currentImageIndex === 0}
               className="object-cover transition-opacity duration-1000"
               sizes="100vw"
               quality={80}
@@ -209,7 +181,7 @@ export function Hero() {
               quality={1} // Minimal quality needed since it's only for preloading
             />
           )}
-          
+
           <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/10 to-black/55"></div>
         </div>
       </div>
