@@ -16,7 +16,34 @@ interface GalleryImage {
 
 // OPTIMIZATION: Define placeholder to prevent layout shift before images load
 const IMAGE_ASPECT_RATIO = 16 / 9; // Common wide ratio for hero images
-const DUMMY_FALLBACK_URL = '/placeholder-tipac.jpg'; // Add a tiny placeholder image to your public folder
+
+const HERO_PLACEHOLDER_IMAGES: GalleryImage[] = [
+  {
+    id: "hero-placeholder-1",
+    url: "/Hero images/20241101_091935.jpg",
+    alt: "TIPAC hero placeholder image 1",
+  },
+  {
+    id: "hero-placeholder-2",
+    url: "/Hero images/20250427_121317.jpg",
+    alt: "TIPAC hero placeholder image 2",
+  },
+  {
+    id: "hero-placeholder-3",
+    url: "/Hero images/20250427_121426.jpg",
+    alt: "TIPAC hero placeholder image 3",
+  },
+  {
+    id: "hero-placeholder-4",
+    url: "/Hero images/20250427_124715.jpg",
+    alt: "TIPAC hero placeholder image 4",
+  },
+  {
+    id: "hero-placeholder-5",
+    url: "/Hero images/20250427_151333.jpg",
+    alt: "TIPAC hero placeholder image 5",
+  },
+];
 
 // OPTIMIZATION: Configure the Supabase URL loader for automatic optimization (if Next.js is configured for it)
 // If not using Next.js image domains config, these images won't be optimized, and you must pre-optimize the files.
@@ -67,7 +94,7 @@ export function Hero() {
             }));
             setGalleryImages(formattedImages);
           } else {
-            setError('No images available');
+            setGalleryImages([]);
           }
           setIsLoadingInitial(false);
         }
@@ -86,13 +113,19 @@ export function Hero() {
     };
   }, []);
 
+  const displayImages = galleryImages.length > 0 ? galleryImages : HERO_PLACEHOLDER_IMAGES;
+
+  useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [galleryImages.length]);
+
   // Auto-rotation (rest of the logic remains the same)
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     const startRotation = () => {
-      if (galleryImages.length > 1 && !isUserInteracting) {
+      if (displayImages.length > 1 && !isUserInteracting) {
         interval = setInterval(() => {
-          setCurrentImageIndex(prevIndex => (prevIndex + 1) % galleryImages.length);
+          setCurrentImageIndex(prevIndex => (prevIndex + 1) % displayImages.length);
         }, 5000);
       }
     };
@@ -102,7 +135,7 @@ export function Hero() {
         clearInterval(interval);
       }
     };
-  }, [galleryImages.length, isUserInteracting]);
+  }, [displayImages.length, isUserInteracting]);
 
   const handleUserInteraction = useCallback(() => {
     setIsUserInteracting(true);
@@ -112,16 +145,16 @@ export function Hero() {
   const goToPrevious = () => {
     handleUserInteraction();
     setCurrentImageIndex(prevIndex =>
-      prevIndex === 0 ? galleryImages.length - 1 : prevIndex - 1
+      prevIndex === 0 ? displayImages.length - 1 : prevIndex - 1
     );
   };
 
   const goToNext = () => {
     handleUserInteraction();
-    setCurrentImageIndex(prevIndex => (prevIndex + 1) % galleryImages.length);
+    setCurrentImageIndex(prevIndex => (prevIndex + 1) % displayImages.length);
   };
 
-  const nextImageIndex = (currentImageIndex + 1) % galleryImages.length;
+  const nextImageIndex = (currentImageIndex + 1) % displayImages.length;
 
 
   return (
@@ -129,8 +162,8 @@ export function Hero() {
       {/* Glassmorphic overlay - always present, more opaque while loading */}
       <div
         className={`absolute inset-0 z-0 pointer-events-none transition-all duration-700
-             bg-white/30 backdrop-blur-xl
-             ${isLoadingInitial ? 'opacity-80' : 'opacity-40'}`}
+             bg-black/20 backdrop-blur-md
+             ${isLoadingInitial ? 'opacity-70' : 'opacity-35'}`}
       />
       {/* REMOVED: Head tag preloading. Next/Image's 'priority' handles this effectively */}
       {/* Decorative elements (rest of your decorative elements remain the same) */}
@@ -141,24 +174,11 @@ export function Hero() {
 
       <div className="absolute inset-0 z-0">
         <div className="relative w-full h-full">
-          {/* OPTIMIZATION: Fallback if images haven't loaded yet. Prevents flickering */}
-          {(galleryImages.length === 0 && !isLoadingInitial) ? (
-            <Image
-              src={DUMMY_FALLBACK_URL}
-              alt="Loading placeholder"
-              fill
-              className="object-cover transition-opacity duration-1000"
-              sizes="100vw"
-              priority={true} // Load this immediately if the real images fail.
-              quality={80}
-            />
-          ) : null}
-
           {/* Primary Image: Current visible image */}
-          {galleryImages.length > 0 ? (
+          {displayImages.length > 0 ? (
             <Image
-              src={galleryImages[currentImageIndex].url}
-              alt={galleryImages[currentImageIndex].alt || "TIPAC Performance"}
+              src={displayImages[currentImageIndex].url}
+              alt={displayImages[currentImageIndex].alt || "TIPAC Performance"}
               fill
               // OPTIMIZATION: loader property uses the custom loader defined above
               // loader={NEXT_IMAGE_SUPABASE_LOADER} // Uncomment if you set up the loader
@@ -173,11 +193,11 @@ export function Hero() {
           ) : null}
 
           {/* OPTIMIZATION: Preload the NEXT image in the sequence (if not currently loading the first) */}
-          {galleryImages.length > 1 && currentImageIndex !== 0 && (
+          {displayImages.length > 1 && currentImageIndex !== 0 && (
             <Image
-              key={galleryImages[nextImageIndex].id} // Ensure re-render on index change
-              src={galleryImages[nextImageIndex].url}
-              alt={galleryImages[nextImageIndex].alt || "Next TIPAC Performance"}
+              key={displayImages[nextImageIndex].id} // Ensure re-render on index change
+              src={displayImages[nextImageIndex].url}
+              alt={displayImages[nextImageIndex].alt || "Next TIPAC Performance"}
               // OPTIMIZATION: Use a tiny opacity to force the image to load but remain invisible
               className="absolute inset-0 object-cover opacity-0 pointer-events-none"
               // OPTIMIZATION: Use 'lazy' load (or default) as it's not immediately visible, but prioritize
@@ -190,7 +210,7 @@ export function Hero() {
             />
           )}
           
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-black/40"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/10 to-black/55"></div>
         </div>
       </div>
 
@@ -198,24 +218,24 @@ export function Hero() {
         {/* ... (Hero content, buttons, text remain the same) ... */}
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-block mb-4 sm:mb-6">
-            <span className="bg-gradient-to-r from-red-600 to-purple-600 text-white text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1 sm:py-1.5 rounded-full shadow">
-              Theater Initiative for the Pearl of Africa Children.
+            <span className="bg-white/10 text-white text-xs sm:text-sm font-medium px-3 sm:px-4 py-1 sm:py-1.5 rounded-full border border-white/20 backdrop-blur-md shadow-sm">
+              Theatre for children
             </span>
           </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-4 sm:mb-6 drop-shadow-lg bg-clip-text bg-gradient-to-r from-white via-white to-gray-200 leading-tight">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white mb-3 sm:mb-5 tracking-tight drop-shadow-lg leading-[0.95]">
             TIPAC
           </h1>
-          <p className="text-lg sm:text-xl text-gray-100 mb-6 sm:mb-10 max-w-2xl mx-auto drop-shadow-md">
-            {/* Add content here if needed; currently empty */}
+          <p className="text-base sm:text-lg md:text-xl text-white/90 mb-7 sm:mb-10 max-w-xl mx-auto drop-shadow-md">
+            Learn. Perform. Shine.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
             <Link href="/tickets">
-              <Button className="bg-gradient-to-r from-red-600 to-purple-600 hover:from-red-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 min-h-[44px]">
+              <Button className="bg-gradient-to-r from-purple-600 via-purple-500 to-rose-500 hover:from-purple-700 hover:via-purple-600 hover:to-rose-600 text-white shadow-xl hover:shadow-2xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-xl transition-all duration-300 transform hover:scale-[1.02] min-h-[44px] border border-white/20">
                 Buy Ticket
               </Button>
             </Link>
             <Link href="/events">
-              <Button className="bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 shadow-lg hover:shadow-xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-xl transition-all duration-300 min-h-[44px]">
+              <Button className="bg-white/10 backdrop-blur-md border border-white/25 text-white hover:bg-white/15 shadow-lg hover:shadow-xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-xl transition-all duration-300 min-h-[44px]">
                 Upcoming Events
               </Button>
             </Link>
