@@ -61,7 +61,7 @@ export function YouTubeVideos() {
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
   // Test mode - set to true to force using gallery images as fallback
   const testMode = false;
-  
+
   // Fetch gallery images for fallback thumbnails
   useEffect(() => {
     async function fetchGalleryImages() {
@@ -116,17 +116,21 @@ export function YouTubeVideos() {
   // Error state (enhanced with auto-retry info)
   if (error) {
     return (
-      <section className="py-16 bg-gradient-to-r from-secondary to-primary">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Watch TIPAC</h2>
-            <p className="text-white/80 max-w-2xl mx-auto">Check out our latest performances and behind-the-scenes content.</p>
+      <section className="py-24 bg-slate-950 border-t border-slate-800 relative overflow-hidden">
+        {/* Cinematic subtle glow */}
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[400px] opacity-20 bg-primary/20 blur-[120px] rounded-full pointer-events-none"></div>
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 tracking-tight">Watch TIPAC</h2>
+            <p className="text-slate-400 max-w-2xl mx-auto text-lg">Check out our latest performances and behind-the-scenes content.</p>
           </div>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-2xl mx-auto">
-            <p className="text-red-700 mb-4" role="alert" aria-live="polite">
+          <div className="bg-slate-900/50 backdrop-blur border border-red-900/30 rounded-2xl p-8 max-w-2xl mx-auto flex flex-col items-center">
+            <p className="text-red-400 mb-6 text-center" role="alert" aria-live="polite">
               {error.message.includes("timeout") ? "Request timed out. Retrying..." : error.message}
             </p>
-            <Button onClick={handleRetry} className="bg-red-600 hover:bg-red-700 text-white">
+            <Button onClick={handleRetry} className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-6">
               Retry Loading Videos
             </Button>
           </div>
@@ -139,80 +143,82 @@ export function YouTubeVideos() {
   // Example: <script type="application/ld+json">{JSON.stringify({ "@context": "https://schema.org", "@type": "ItemList", itemListElement: videos.map((v, i) => ({ "@type": "VideoObject", position: i+1, name: v.title, thumbnailUrl: v.thumbnail, uploadDate: v.publishedAt })) })}</script>
 
   return (
-    <section className="py-16 bg-gradient-to-r from-secondary to-primary">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Watch TIPAC</h2>
-          <p className="text-white/80 max-w-2xl mx-auto">
-            Check out our latest performances and behind-the-scenes content from our YouTube channel.
+    <section className="py-24 bg-slate-950 border-t border-slate-800 relative overflow-hidden">
+      {/* Cinematic styling elements */}
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[500px] opacity-10 bg-primary/20 blur-[150px] rounded-full pointer-events-none"></div>
+
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 border border-slate-800 text-slate-300 text-sm font-semibold mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-red-500">
+              <path fillRule="evenodd" d="M1.5 4.5a3 3 0 013-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 01-.694 1.955l-1.293.97c-.135.101-.164.249-.126.352a11.285 11.285 0 006.697 6.697c.103.038.25.009.352-.126l.97-1.293a1.875 1.875 0 011.955-.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 01-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5z" clipRule="evenodd" />
+              <path d="M11.973 3.99A8.995 8.995 0 0120.01 12.027c.007.49-.074.962-.224 1.41l-2.062-.516a7 7 0 00-5.741-5.741l-.515-2.063c.448-.15.92-.231 1.41-.224h.095z" />
+            </svg>
+            Video Archive
+          </div>
+          <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">Watch TIPAC</h2>
+          <p className="text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
+            Check out our latest performances and behind-the-scenes content directly from our YouTube channel.
           </p>
         </div>
 
         {isLoading ? (
-          // Enhanced skeleton with better animation
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          // Enhanced skeleton with better animation for dark mode
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
             {[...Array(4)].map((_, index) => (
-              <div key={`skeleton-${index}`} className="bg-white rounded-2xl overflow-hidden shadow-xl border border-white/20 animate-pulse">
-                <div className="relative h-48 bg-gradient-to-br from-gray-200 to-gray-300"></div>
-                <div className="p-6 space-y-4">
-                  <div className="h-6 bg-gray-200 rounded w-full"></div>
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              <div key={`skeleton-${index}`} className="bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 animate-pulse">
+                <div className="relative h-56 bg-slate-800/50"></div>
+                <div className="p-8 space-y-4">
+                  <div className="h-6 bg-slate-800 rounded w-full"></div>
+                  <div className="h-4 bg-slate-800 rounded w-3/4"></div>
+                  <div className="h-4 bg-slate-800 rounded w-1/4 mt-4"></div>
                 </div>
               </div>
             ))}
           </div>
         ) : videos.length === 0 ? (
-          // Empty state (unchanged, but added analytics potential)
-          <div className="text-center py-16">
-            <div className="w-24 h-24 mx-auto mb-6 bg-white rounded-full flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          // Empty state 
+          <div className="text-center py-20 bg-slate-900/50 backdrop-blur rounded-3xl border border-slate-800 max-w-3xl mx-auto">
+            <div className="w-20 h-20 mx-auto mb-6 bg-slate-800 rounded-2xl flex items-center justify-center border border-slate-700">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">No videos available</h3>
-            <p className="text-white/80 mb-6">Check back later for new performances and behind-the-scenes content.</p>
+            <h3 className="text-2xl font-bold text-white mb-3">No videos available</h3>
+            <p className="text-slate-400 mb-8 max-w-md mx-auto">Check back later for new performances, interviews, and behind-the-scenes content.</p>
             <Link href="https://www.youtube.com/@TIPAC-UG" target="_blank" rel="noopener noreferrer">
-              <Button className="tipac-gradient hover:from-secondary/90 hover:to-primary/90 text-white px-8 py-3 text-lg font-semibold rounded-xl shadow-lg">
+              <Button className="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 font-medium rounded-xl shadow-lg transition-colors h-auto">
                 Visit YouTube Channel
               </Button>
             </Link>
           </div>
         ) : (
-          <div className={`grid gap-8 max-w-4xl mx-auto ${
-            videos.length === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
-          }`}>
+          <div className={`grid gap-8 max-w-5xl mx-auto ${videos.length === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
+            }`}>
             {videos.map((video) => {
-              // New: Parse duration (assumes ISO 8601, e.g., PT4M30S -> "4:30")
+              // Parse duration (assumes ISO 8601, e.g., PT4M30S -> "4:30")
               const duration = video.duration ? new Date(video.duration.slice(2)).toISOString().slice(11, 19).replace(/^0(?:0:)?0?/, '') : null;
-              
+
               // Use video thumbnail or fallback to a random gallery image
-              let thumbnailSrc = "https://via.placeholder.com/320x180?text=TIPAC+Performance";
-              
+              let thumbnailSrc = "https://via.placeholder.com/640x360/0f172a/334155?text=TIPAC+Play";
+
               // In test mode, always use gallery images
               if (testMode) {
                 if (galleryImages.length > 0) {
                   const randomImage = galleryImages[Math.floor(Math.random() * galleryImages.length)];
                   thumbnailSrc = randomImage.url;
-                  console.log(`TEST MODE: Using gallery image for video ${video.id}:`, randomImage.url);
                 }
-              } 
+              }
               // Normal mode - check if we have a valid video thumbnail
               else if (video.thumbnail && video.thumbnail.trim() !== '' && !video.thumbnail.includes('default.jpg')) {
                 thumbnailSrc = video.thumbnail.replace('default.jpg', 'maxresdefault.jpg');
-              } 
+              }
               // If no valid video thumbnail, try to use a random gallery image
               else if (galleryImages.length > 0) {
                 const randomImage = galleryImages[Math.floor(Math.random() * galleryImages.length)];
                 thumbnailSrc = randomImage.url;
-                console.log(`Using gallery image for video ${video.id}:`, randomImage.url);
-              } 
-              // If neither works, we'll use the placeholder (already set as default)
-              else {
-                console.log(`Using placeholder for video ${video.id}`);
               }
-
-              console.log(`Video ${video.id} thumbnail:`, thumbnailSrc);
 
               return (
                 <Link
@@ -220,83 +226,77 @@ export function YouTubeVideos() {
                   href={`https://www.youtube.com/watch?v=${video.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`bg-white rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 group border border-gray-200 block focus:outline-none focus:ring-2 focus:ring-primary/50 ${
-                    videos.length === 1 ? 'lg:max-w-4xl lg:mx-auto' : ''
-                  }`}
-                  // New: Accessibility - role and tabIndex for keyboard nav
+                  className={`bg-slate-900 rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 group border border-slate-800 hover:border-slate-700 block focus:outline-none focus:ring-2 focus:ring-primary/50 flex flex-col h-full transform hover:-translate-y-1 ${videos.length === 1 ? 'lg:max-w-4xl lg:mx-auto' : ''
+                    }`}
+                  // Accessibility - role and tabIndex for keyboard nav
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => e.key === 'Enter' && window.open(`https://www.youtube.com/watch?v=${video.id}`, '_blank')}
                   aria-label={`Watch ${video.title} on YouTube`}
                 >
-                  <div className={`relative overflow-hidden ${
-                    videos.length === 1 ? 'lg:h-96' : 'h-48'
-                  }`}>
-                    {/* New: Next.js Image for lazy loading/optimization */}
+                  <div className={`relative overflow-hidden shrink-0 ${videos.length === 1 ? 'lg:h-96' : 'h-60'
+                    }`}>
+                    {/* Next.js Image for lazy loading/optimization */}
                     <Image
                       src={thumbnailSrc}
                       alt={`${video.title} thumbnail`}
                       fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      className="object-cover transition-transform duration-700 group-hover:scale-105"
                       sizes="(max-width: 768px) 100vw, 50vw"
                       placeholder="blur"
                       blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8Alt4YsmAJqJ5zVQR5qY2n1k4R1Qe0J2/9k="
                       onError={(e) => {
-                        // If both video thumbnail and gallery image fail, use placeholder
-                        console.log(`Thumbnail failed for video ${video.id}, using placeholder`);
-                        e.currentTarget.src = "https://via.placeholder.com/320x180?text=TIPAC+Performance";
+                        e.currentTarget.src = "https://via.placeholder.com/640x360/0f172a/334155?text=TIPAC+Play";
                       }}
-                      // New: Analytics on load (e.g., track impressions)
-                      onLoad={() => console.log(`Thumbnail loaded for video ${video.id}`)} // Replace with gtag or similar
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent opacity-80 group-hover:opacity-60 transition-opacity duration-300"></div>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className={`bg-red-600 rounded-full p-4 transform transition-transform duration-300 group-hover:scale-110 shadow-lg flex items-center gap-2 ${
-                        videos.length === 1 ? 'lg:p-6' : ''
-                      }`}>
-                        <svg xmlns="http://www.w3.org/2000/svg" className={`text-white ${
-                          videos.length === 1 ? 'h-8 w-8 lg:h-12 lg:w-12' : 'h-8 w-8'
-                        }`} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <div className={`bg-white/10 backdrop-blur-md rounded-full p-4 transform transition-all duration-300 group-hover:scale-110 group-hover:bg-red-600 border border-white/20 shadow-2xl flex items-center justify-center ${videos.length === 1 ? 'lg:p-6 w-20 h-20' : 'w-16 h-16'
+                        }`}>
+                        <svg xmlns="http://www.w3.org/2000/svg" className={`text-white translate-x-0.5 ${videos.length === 1 ? 'h-8 w-8 lg:h-10 lg:w-10' : 'h-8 w-8'
+                          }`} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                         </svg>
-                        {duration && <span className="text-white text-xs font-medium">{duration}</span>}
                       </div>
                     </div>
-                    {/* New: Duration badge fallback if no overlay space */}
-                    {duration && videos.length > 1 && (
-                      <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs">
+                    {/* Duration badge */}
+                    {duration && (
+                      <div className="absolute bottom-4 right-4 bg-black/80 backdrop-blur text-white px-2 py-1 rounded-md text-xs font-medium tracking-wide border border-white/10">
                         {duration}
                       </div>
                     )}
                   </div>
-                  
-                  <div className={`p-6 ${
-                    videos.length === 1 ? 'lg:p-10' : ''
-                  }`}>
-                    <h3 className={`font-bold text-gray-900 group-hover:text-red-600 transition-colors line-clamp-2 ${
-                      videos.length === 1 ? 'text-xl lg:text-3xl' : 'text-xl'
+
+                  <div className={`p-8 flex flex-col flex-grow ${videos.length === 1 ? 'lg:p-10' : ''
                     }`}>
+                    <h3 className={`font-bold text-white group-hover:text-primary transition-colors leading-tight mb-3 line-clamp-2 ${videos.length === 1 ? 'text-2xl lg:text-3xl' : 'text-xl'
+                      }`}>
                       {video.title}
                     </h3>
-                    <p className="text-gray-600 mt-2 line-clamp-2">
-                      Published: {new Date(video.publishedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-                    </p>
-                    {video.viewCount && (
-                      <p className="text-gray-500 text-sm mt-1">
-                        {video.viewCount.toLocaleString()} views
-                      </p>
-                    )}
+                    <div className="flex items-center text-slate-400 text-sm mt-auto font-medium">
+                      <span>{new Date(video.publishedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                      {video.viewCount && (
+                        <>
+                          <span className="mx-2 w-1 h-1 bg-slate-600 rounded-full"></span>
+                          <span>{video.viewCount.toLocaleString()} views</span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </Link>
               );
             })}
           </div>
         )}
-        
-        <div className="text-center mt-12">
+
+        <div className="text-center mt-16">
           <Link href="https://www.youtube.com/@TIPAC-UG" target="_blank" rel="noopener noreferrer">
-            <Button className="tipac-gradient hover:from-secondary/90 hover:to-primary/90 text-white px-8 py-3 text-lg font-semibold rounded-xl shadow-lg">
-              Watch More Videos
+            <Button className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-8 py-6 text-base font-semibold rounded-xl shadow-lg transition-all h-auto group">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 mr-3 text-red-500 group-hover:scale-110 transition-transform">
+                <path fillRule="evenodd" d="M1.5 4.5a3 3 0 013-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 01-.694 1.955l-1.293.97c-.135.101-.164.249-.126.352a11.285 11.285 0 006.697 6.697c.103.038.25.009.352-.126l.97-1.293a1.875 1.875 0 011.955-.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 01-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5z" clipRule="evenodd" />
+                <path d="M11.973 3.99A8.995 8.995 0 0120.01 12.027c.007.49-.074.962-.224 1.41l-2.062-.516a7 7 0 00-5.741-5.741l-.515-2.063c.448-.15.92-.231 1.41-.224h.095z" />
+              </svg>
+              View More on YouTube
             </Button>
           </Link>
         </div>

@@ -208,7 +208,7 @@ export default function GenerateBatchTickets() {
               min="1"
               max="1000"
               value={numTickets}
-              onChange={(e) => setNumTickets(parseInt(e.target.value) || 1)}
+              onChange={(e) => setNumTickets(Number.parseInt(e.target.value) || 1)}
               className="mt-2 bg-black/30 border-gray-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500"
               required
             />

@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import PDFDocument from "pdfkit";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 type PdfBlock =
   | { type: "h1"; text: string }
   | { type: "h2"; text: string }
@@ -11,106 +13,97 @@ type PdfBlock =
   | { type: "ol"; items: string[] }
   | { type: "ul"; items: string[] }
   | {
-      type: "table";
-      title?: string;
-      headers: [string, string, string, string];
-      rows: Array<[string, string, string, string]>;
-    };
+    type: "table";
+    title?: string;
+    headers: [string, string, string, string];
+    rows: Array<[string, string, string, string]>;
+  };
 
-function isAllCapsHeading(line: string) {
-  const trimmed = line.trim();
-  if (!trimmed) {
-    return false;
-  }
+// ─── Colours (exact Tailwind values from the View modal) ─────────────────────
+const P7 = "#6D28D9";   // purple-700
+const P5 = "#8B5CF6";   // purple-500
+const P2 = "#DDD6FE";   // purple-200  (used for divider)
+const R6 = "#DC2626";   // red-600
+const G900 = "#111827";
+const G800 = "#1F2937";
+const G700 = "#374151";
+const G600 = "#4B5563";
+const G500 = "#6B7280";
+const G200 = "#E5E7EB";
+const G100 = "#F3F4F6";   // gray-50 ≈ thead bg
+const G50 = "#F9FAFB";
+const WHT = "#FFFFFF";
 
-  const letters = trimmed.replace(/[^A-Za-z]/g, "");
-  if (letters.length < 4) {
-    return false;
-  }
+// A4 dimensions in points
+const PW = 595.28;
+const PH = 841.89;
 
-  return letters === letters.toUpperCase();
+// Margins
+const ML = 48;
+const MR = 48;
+const MB = 48;
+const BW = PW - ML - MR;  // 499.28 pt
+
+// ─── Parser ───────────────────────────────────────────────────────────────────
+
+function isCaps(line: string) {
+  const t = line.trim();
+  if (!t) return false;
+  const letters = t.replace(/[^A-Za-z]/g, "");
+  return letters.length >= 4 && letters === letters.toUpperCase();
 }
 
-function parseCompetitionTable(lines: string[], startIndex: number) {
+function parseCompTable(lines: string[], si: number) {
   const rows: Array<[string, string, string, string]> = [];
-  let i = startIndex;
-
+  let i = si;
   while (i < lines.length) {
-    const l1 = (lines[i] ?? "").trim();
-    if (!l1) {
-      i += 1;
-      continue;
-    }
-
-    if (isAllCapsHeading(l1) || /^Please take note/i.test(l1) || /^GUIDELINES/i.test(l1)) {
-      break;
-    }
-
-    if (/^(\d+\.|\d+)$/.test(l1)) {
-      const sn = l1.replace(/\.$/, "");
+    const l = (lines[i] ?? "").trim();
+    if (!l) { i++; continue; }
+    if (isCaps(l) || /^Please take note/i.test(l) || /^GUIDELINES/i.test(l)) break;
+    if (/^(\d+\.|\d+)$/.test(l)) {
+      const sn = l.replace(/\.$/, "");
       const item = (lines[i + 1] ?? "").trim();
-      const theme = (lines[i + 2] ?? "").trim();
-      const stageTime = (lines[i + 3] ?? "").trim();
-
-      if (item && theme && stageTime) {
-        rows.push([sn, item, theme, stageTime]);
-        i += 4;
-        continue;
-      }
-
+      const thm = (lines[i + 2] ?? "").trim();
+      const tm = (lines[i + 3] ?? "").trim();
+      if (item && thm && tm) { rows.push([sn, item, thm, tm]); i += 4; continue; }
       break;
     }
-
     break;
   }
-
   return { rows, nextIndex: i };
 }
 
 function parseSyllabus(text: string): PdfBlock[] {
-  const rawLines = text.replace(/\r\n/g, "\n").split("\n");
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
   const blocks: PdfBlock[] = [];
-
   let i = 0;
   let pendingOl: string[] = [];
   let pendingUl: string[] = [];
   let lastHeading: string | undefined;
 
-  const flushLists = () => {
-    if (pendingOl.length) {
-      blocks.push({ type: "ol", items: pendingOl });
-      pendingOl = [];
-    }
-    if (pendingUl.length) {
-      blocks.push({ type: "ul", items: pendingUl });
-      pendingUl = [];
-    }
+  const flush = () => {
+    if (pendingOl.length) { blocks.push({ type: "ol", items: pendingOl }); pendingOl = []; }
+    if (pendingUl.length) { blocks.push({ type: "ul", items: pendingUl }); pendingUl = []; }
   };
 
-  while (i < rawLines.length) {
-    const line = (rawLines[i] ?? "").trimEnd();
-    const trimmed = line.trim();
+  while (i < lines.length) {
+    const trimmed = (lines[i] ?? "").trim();
+    if (!trimmed) { flush(); i++; continue; }
 
-    if (!trimmed) {
-      flushLists();
-      i += 1;
-      continue;
-    }
-
-    const isTableHeader =
+    const isTableStart =
       trimmed === "S/N" &&
-      (rawLines[i + 1] ?? "").trim() === "ITEM" &&
-      (rawLines[i + 2] ?? "").trim() === "THEME" &&
-      (rawLines[i + 3] ?? "").trim() === "STAGE TIME";
+      (lines[i + 1] ?? "").trim() === "ITEM" &&
+      (lines[i + 2] ?? "").trim() === "THEME" &&
+      (lines[i + 3] ?? "").trim() === "STAGE TIME";
 
-    if (isTableHeader) {
-      flushLists();
-      const { rows, nextIndex } = parseCompetitionTable(rawLines, i + 4);
+    if (isTableStart) {
+      flush();
+      const { rows, nextIndex } = parseCompTable(lines, i + 4);
       if (rows.length) {
         blocks.push({
           type: "table",
           title: lastHeading,
-          headers: ["S/N", "Item", "Theme", "Stage time"],
+          headers: ["S/N", "Item", "Theme", "Stage Time"],
           rows,
         });
       }
@@ -118,23 +111,15 @@ function parseSyllabus(text: string): PdfBlock[] {
       continue;
     }
 
-    const olMatch = trimmed.match(/^(\d+)\.\s*(.+)$/);
-    if (olMatch) {
-      pendingOl.push(olMatch[2]);
-      i += 1;
-      continue;
-    }
+    const olM = trimmed.match(/^(\d+)\.\s*(.+)$/);
+    if (olM) { pendingOl.push(olM[2]); i++; continue; }
 
-    const ulMatch = trimmed.match(/^(?:·|\-|\*)\s*(.+)$/);
-    if (ulMatch) {
-      pendingUl.push(ulMatch[1]);
-      i += 1;
-      continue;
-    }
+    const ulM = trimmed.match(/^(?:·|-|\*)\s*(.+)$/);
+    if (ulM) { pendingUl.push(ulM[1]); i++; continue; }
 
-    flushLists();
+    flush();
 
-    if (isAllCapsHeading(trimmed)) {
+    if (isCaps(trimmed)) {
       lastHeading = trimmed;
       if (blocks.length === 0) {
         blocks.push({ type: "h1", text: trimmed });
@@ -143,557 +128,618 @@ function parseSyllabus(text: string): PdfBlock[] {
       } else {
         blocks.push({ type: "h3", text: trimmed });
       }
-      i += 1;
+      i++;
       continue;
     }
 
     blocks.push({ type: "p", text: trimmed });
-    i += 1;
+    i++;
   }
 
-  flushLists();
+  flush();
   return blocks;
 }
 
-function stripDuplicatedHeaderBlocks(blocks: PdfBlock[]) {
-  const startIndex = blocks.findIndex((b) => {
+function stripDupe(blocks: PdfBlock[]) {
+  const idx = blocks.findIndex((b) => {
     if (b.type === "p" || b.type === "h1" || b.type === "h2" || b.type === "h3") {
       return /^main theme\s*:/i.test(b.text.trim());
     }
     return false;
   });
-
-  if (startIndex === -1) {
-    return blocks;
-  }
-
-  return blocks.slice(startIndex);
+  return idx === -1 ? blocks : blocks.slice(idx);
 }
 
-function drawBrandBars(doc: PDFKit.PDFDocument, pageWidth: number, pageHeight: number) {
-  doc.save();
-  
-  // Create gradient effect with multiple bars at the top
-  const barHeight = 8;
-  const gradientSteps = 5;
-  
-  for (let i = 0; i < gradientSteps; i++) {
-    const alpha = 1 - (i * 0.15);
-    doc.fillOpacity(alpha);
-    
-    // Purple to red gradient across top
-    const gradient = doc.linearGradient(0, i * 2, pageWidth, i * 2);
-    gradient.stop(0, "#7C3AED").stop(0.5, "#C026D3").stop(1, "#DC2626");
-    
-    doc.rect(0, i * 2, pageWidth, 2).fill(gradient);
-  }
-  
-  // Solid accent bar at top
-  doc.fillOpacity(1);
-  const topGradient = doc.linearGradient(0, 0, pageWidth, 0);
-  topGradient.stop(0, "#6D28D9").stop(0.5, "#A855F7").stop(1, "#DC2626");
-  doc.rect(0, 0, pageWidth, 4).fill(topGradient);
-  
-  // Bottom brand bar with gradient
-  const bottomGradient = doc.linearGradient(0, pageHeight - barHeight, pageWidth, pageHeight - barHeight);
-  bottomGradient.stop(0, "#6D28D9").stop(0.5, "#A855F7").stop(1, "#DC2626");
-  doc.rect(0, pageHeight - barHeight, pageWidth, barHeight).fill(bottomGradient);
-  
-  doc.restore();
+// ─── Drawing helpers ──────────────────────────────────────────────────────────
+
+/** Purple→purple→red horizontal gradient spanning x1..x2 at a given y. */
+function makeGrad(doc: PDFKit.PDFDocument, x1: number, x2: number, y: number) {
+  const g = doc.linearGradient(x1, y, x2, y);
+  g.stop(0, P7).stop(0.5, P5).stop(1, R6);
+  return g;
 }
 
-function drawWatermark(doc: PDFKit.PDFDocument) {
-  const cx = doc.page.width / 2;
-  const cy = doc.page.height / 2;
+/** Full-width top accent bar (mirrors h-1.5 gradient) */
+function drawTopBar(doc: PDFKit.PDFDocument) {
+  const h = 5;
+  doc.rect(0, 0, PW, h).fill(makeGrad(doc, 0, PW, 0));
+}
 
-  doc.save();
-  doc.translate(cx, cy);
-  doc.rotate(-25);
-  doc.fillOpacity(0.03);
-  
-  // Main watermark
+/** Full-width bottom accent bar */
+function drawBottomBar(doc: PDFKit.PDFDocument) {
+  const h = 5;
+  const y = PH - h;
+  doc.rect(0, y, PW, h).fill(makeGrad(doc, 0, PW, y));
+}
+
+/** Page footer */
+function drawFooter(doc: PDFKit.PDFDocument, pageNum: number) {
+  const fy = PH - MB + 6;
+
   doc
-    .font("Helvetica-Bold")
-    .fontSize(72)
-    .fillColor("#7C3AED")
-    .text("TIPAC", -doc.page.width / 2, -50, {
-      width: doc.page.width,
-      align: "center",
-    });
-  
-  // Subtitle watermark
+    .moveTo(ML, fy)
+    .lineTo(ML + BW, fy)
+    .lineWidth(0.4)
+    .strokeColor(G200)
+    .stroke();
+
   doc
     .font("Helvetica")
-    .fontSize(18)
-    .fillColor("#DC2626")
-    .text("Festival 2026", -doc.page.width / 2, 10, {
-      width: doc.page.width,
-      align: "center",
-    });
-  
-  doc.fillOpacity(1);
-  doc.restore();
-}
+    .fontSize(7.5)
+    .fillColor(G500)
+    .text(
+      "www.tipac.co.ug  ·  info@tipac.org  ·  +256 772 470 972",
+      ML,
+      fy + 7,
+      { width: BW * 0.7 },
+    );
 
-function drawFooter(doc: PDFKit.PDFDocument, pageNumber: number) {
-  const left = doc.page.margins.left;
-  const right = doc.page.width - doc.page.margins.right;
-  const y = doc.page.height - doc.page.margins.bottom + 20;
-
-  doc.save();
-  
-  // Gradient line separator
-  const gradient = doc.linearGradient(left, y - 12, right, y - 12);
-  gradient.stop(0, "#7C3AED").stop(0.5, "#A855F7").stop(1, "#DC2626");
-  
-  doc
-    .lineWidth(1.5)
-    .moveTo(left, y - 12)
-    .lineTo(right, y - 12)
-    .stroke(gradient);
-
-  // Footer text with modern styling
   doc
     .font("Helvetica-Bold")
-    .fontSize(9)
-    .fillColor("#374151")
-    .text("TIPAC Festival 2026", left, y, { continued: false });
-  
-  // Page number in a rounded pill
-  const pageText = `Page ${pageNumber}`;
-  const pageWidth = doc.widthOfString(pageText) + 16;
-  const pillX = right - pageWidth;
-  const pillY = y - 4;
-  
-  doc.roundedRect(pillX, pillY, pageWidth, 18, 9).fill("#F3F4F6");
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(9)
-    .fillColor("#6D28D9")
-    .text(pageText, pillX + 8, y);
-  
-  doc.restore();
+    .fontSize(7.5)
+    .fillColor(G600)
+    .text(`Page ${pageNum}`, ML, fy + 7, { width: BW, align: "right" });
 }
 
-function drawHeader(doc: PDFKit.PDFDocument, logoBuffer: Buffer | null) {
-  const marginLeft = doc.page.margins.left;
-  const marginRight = doc.page.margins.right;
-  const usableWidth = doc.page.width - marginLeft - marginRight;
-  const headerTopY = doc.page.margins.top + 6;
+// ─── Letterhead (mirrors the View modal header exactly) ───────────────────────
+//
+//  [purple→red bar 5pt]
+//  [Logo 48pt  |  org label   title   subtitle]   [Main Theme badge]
+//  [Festival dates card]  [Venue card]  [Document card]
+//  [1pt thin gradient divider via purple-200]
+//
 
-  // Background card with subtle shadow effect
-  doc.save();
-  doc.roundedRect(marginLeft, headerTopY - 4, usableWidth, 106, 16).fill("#FFFFFF");
-  
-  // Subtle border
-  doc.roundedRect(marginLeft, headerTopY - 4, usableWidth, 106, 16)
-     .lineWidth(1)
-     .strokeColor("#E5E7EB")
-     .stroke();
-  doc.restore();
+function drawLetterhead(doc: PDFKit.PDFDocument, logoBuffer: Buffer | null): number {
+  // 1. Top bar
+  drawTopBar(doc);
+  let y = 5;
 
-  const logoBox = 64;
+  const PAD = 28;   // vertical padding inside header card (≈ py-8)
+  const LOGO = 48;   // logo box size (≈ h-14 w-14 = 56px)
+
+  y += PAD;  // start of content inside header
+
+  // 2. Logo
+  const logoX = ML;
+  const logoY = y;
+
   if (logoBuffer) {
-    doc.save();
-    
-    // Logo container with gradient border
-    const logoGradient = doc.linearGradient(marginLeft + 10, headerTopY, marginLeft + 10 + logoBox, headerTopY);
-    logoGradient.stop(0, "#7C3AED").stop(1, "#DC2626");
-    
-    doc.roundedRect(marginLeft + 10, headerTopY, logoBox, logoBox, 14)
-       .lineWidth(2.5)
-       .stroke(logoGradient);
-    
-    // White background for logo
-    doc.roundedRect(marginLeft + 10, headerTopY, logoBox, logoBox, 14).fill("#FFFFFF");
-    
-    doc.image(logoBuffer, marginLeft + 16, headerTopY + 6, { fit: [logoBox - 12, logoBox - 12] });
-    doc.restore();
+    // border box
+    doc
+      .roundedRect(logoX, logoY, LOGO, LOGO, 8)
+      .lineWidth(1)
+      .strokeColor(G200)
+      .stroke();
+    // white fill
+    doc.roundedRect(logoX, logoY, LOGO, LOGO, 8).fill(WHT);
+    // image with 3pt inner padding
+    doc.image(logoBuffer, logoX + 3, logoY + 3, { fit: [LOGO - 6, LOGO - 6] });
   }
 
-  const headerTextX = marginLeft + (logoBuffer ? logoBox + 24 : 14);
-  const headerTextWidth = usableWidth - (logoBuffer ? logoBox + 34 : 24);
+  // 3. Text next to logo (gap-4 = 12pt)
+  const tx = logoX + LOGO + 12;
+  const tw = PW - tx - MR - 148;  // leave room for badge on right
 
-  // Organization name with smaller, uppercase styling
+  // org label — text-xs font-bold uppercase tracking-wide text-gray-500
   doc
     .font("Helvetica-Bold")
-    .fontSize(8)
-    .fillColor("#9333EA")
-    .text("THEATRE INITIATIVE FOR THE PEARL OF AFRICA CHILDREN", headerTextX, headerTopY + 4, {
-      width: headerTextWidth,
-      characterSpacing: 0.5,
+    .fontSize(7)
+    .fillColor(G500)
+    .text("THEATRE INITIATIVE FOR THE PEARL OF AFRICA CHILDREN", tx, y + 1, {
+      width: tw,
+      characterSpacing: 0.4,
     });
 
-  // Main title with gradient effect simulation (using purple)
+  // title — text-xl font-black text-gray-900
   doc
     .font("Helvetica-Bold")
-    .fontSize(22)
-    .fillColor("#111827")
-    .text("TIPAC FESTIVAL 2026", headerTextX, headerTopY + 18, {
-      width: headerTextWidth,
-      characterSpacing: 0.3,
-    });
+    .fontSize(17)
+    .fillColor(G900)
+    .text("TIPAC Festival 2026", tx, y + 12, { width: tw });
 
-  // Subtitle with refined typography
+  // subtitle — text-sm text-gray-600
   doc
     .font("Helvetica")
-    .fontSize(9.5)
-    .fillColor("#6B7280")
-    .text("Syllabus for Pre-Primary, Primary and Secondary Schools", headerTextX, headerTopY + 44, {
-      width: headerTextWidth,
+    .fontSize(9)
+    .fillColor(G600)
+    .text("Syllabus for Pre-Primary, Primary & Secondary Schools", tx, y + 31, {
+      width: tw,
     });
 
-  // Info boxes with modern design
-  const boxY = headerTopY + 62;
-  const boxHeight = 26;
-  const boxSpacing = 6;
-  const totalBoxWidth = headerTextWidth;
-  const singleBoxWidth = (totalBoxWidth - boxSpacing) / 2;
+  // 4. Main Theme badge — rounded-xl border border-gray-200 bg-gray-50 px-4 py-3
+  const BW2 = 140;
+  const BH = 46;
+  const badX = PW - MR - BW2;
+  const badY = y;
 
-  // Dates box
-  doc.save();
-  doc.roundedRect(headerTextX, boxY, singleBoxWidth, boxHeight, 10).fill("#F9FAFB");
-  doc.roundedRect(headerTextX, boxY, singleBoxWidth, boxHeight, 10)
-     .lineWidth(1)
-     .strokeColor("#E5E7EB")
-     .stroke();
-  
-  doc.fillColor("#9333EA").font("Helvetica-Bold").fontSize(7).text("📅  FESTIVAL DATES", headerTextX + 10, boxY + 6, {
-    width: singleBoxWidth - 20,
-  });
-  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(9).text("24th–26th April 2026", headerTextX + 10, boxY + 15, {
-    width: singleBoxWidth - 20,
-  });
-  doc.restore();
+  doc.roundedRect(badX, badY, BW2, BH, 8).fill(G50);
+  doc
+    .roundedRect(badX, badY, BW2, BH, 8)
+    .lineWidth(1)
+    .strokeColor(G200)
+    .stroke();
 
-  // Venue box
-  const venueX = headerTextX + singleBoxWidth + boxSpacing;
-  doc.save();
-  doc.roundedRect(venueX, boxY, singleBoxWidth, boxHeight, 10).fill("#F9FAFB");
-  doc.roundedRect(venueX, boxY, singleBoxWidth, boxHeight, 10)
-     .lineWidth(1)
-     .strokeColor("#E5E7EB")
-     .stroke();
-  
-  doc.fillColor("#DC2626").font("Helvetica-Bold").fontSize(7).text("📍  VENUE", venueX + 10, boxY + 6, {
-    width: singleBoxWidth - 20,
-  });
-  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(9).text("UNCC, Kampala", venueX + 10, boxY + 15, {
-    width: singleBoxWidth - 20,
-  });
-  doc.restore();
+  // "MAIN THEME" label — text-xs font-bold uppercase tracking-wide text-gray-500
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(6.5)
+    .fillColor(G500)
+    .text("MAIN THEME", badX + 10, badY + 9, { characterSpacing: 0.4 });
 
-  // Theme badge - centered below info boxes
-  const themeY = boxY + boxHeight + 8;
-  const themeBadgeWidth = totalBoxWidth;
-  const themeBadgeHeight = 28;
-  
-  doc.save();
-  // Gradient background for theme
-  const themeGradient = doc.linearGradient(headerTextX, themeY, headerTextX + themeBadgeWidth, themeY);
-  themeGradient.stop(0, "#7C3AED").stop(0.5, "#A855F7").stop(1, "#DC2626");
-  
-  doc.roundedRect(headerTextX, themeY, themeBadgeWidth, themeBadgeHeight, 12).fill(themeGradient);
-  
-  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(8).text("🌍  MAIN THEME", headerTextX + 14, themeY + 6, {
-    width: themeBadgeWidth - 28,
-  });
-  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(12).text("Environmental Sustainability", headerTextX + 14, themeY + 16, {
-    width: themeBadgeWidth - 28,
-  });
-  doc.restore();
-}
+  // Value — text-sm font-extrabold purple (gradient not supported, use purple-700)
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(9.5)
+    .fillColor(P7)
+    .text("Environmental Sustainability", badX + 10, badY + 20, { width: BW2 - 20 });
 
-function ensureSpace(doc: PDFKit.PDFDocument, neededHeight: number, startNewPage: () => void) {
-  const bottom = doc.page.height - doc.page.margins.bottom - 20;
-  const currentY = doc.y;
-  
-  // Only create new page if we're not at the very top and content won't fit
-  if (currentY > doc.page.margins.top + 130 && currentY + neededHeight > bottom) {
-    startNewPage();
+  // 5. Three info cards (mt-6, grid cols-3 gap-3)
+  const infoY = y + LOGO + 10;
+  const col = (BW - 2 * 8) / 3;   // gap-3 ≈ 8pt
+
+  const infos = [
+    { label: "FESTIVAL DATES", value: "24th–26th April 2026" },
+    { label: "VENUE", value: "Uganda National Cultural Centre, Kampala" },
+    { label: "DOCUMENT", value: "Official Syllabus" },
+  ];
+
+  for (let ci = 0; ci < infos.length; ci++) {
+    const cx = ML + ci * (col + 8);
+    const info = infos[ci];
+    const IH = 40;
+
+    // card — rounded-xl border border-gray-200 bg-white p-4
+    doc.roundedRect(cx, infoY, col, IH, 8).fill(WHT);
+    doc
+      .roundedRect(cx, infoY, col, IH, 8)
+      .lineWidth(1)
+      .strokeColor(G200)
+      .stroke();
+
+    // label — text-xs font-bold uppercase tracking-wide text-gray-500
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(6.5)
+      .fillColor(G500)
+      .text(info.label, cx + 10, infoY + 8, { width: col - 20, characterSpacing: 0.3 });
+
+    // value — text-sm font-bold text-gray-900
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(8.5)
+      .fillColor(G900)
+      .text(info.value, cx + 10, infoY + 18, { width: col - 20 });
   }
+
+  y = infoY + 40 + PAD;
+
+  // 6. Thin gradient divider (transparent → purple-200 → transparent)
+  // PDFKit gradient stop(pos, color, opacity) — use opacity for transparency
+  const divG = doc.linearGradient(ML, y, ML + BW, y);
+  divG.stop(0, P2, 0).stop(0.5, P2, 1).stop(1, P2, 0);
+  doc.rect(ML, y, BW, 1).fill(divG);
+  y += 1;
+
+  // Return Y where body content begins (py-8 gap after divider)
+  return y + PAD;
 }
 
-function renderBlocks(doc: PDFKit.PDFDocument, blocks: PdfBlock[], startNewPage: () => void) {
+// ─── Continuation page header ─────────────────────────────────────────────────
+
+function drawContinuationHeader(doc: PDFKit.PDFDocument): number {
+  drawTopBar(doc);
+
+  const lineY = 14;
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(8.5)
+    .fillColor(G900)
+    .text("TIPAC Festival 2026 — Official Syllabus", ML, lineY);
+
+  doc
+    .font("Helvetica")
+    .fontSize(8.5)
+    .fillColor(G500)
+    .text("(continued)", ML, lineY, { width: BW, align: "right" });
+
+  const divY = lineY + 15;
+  doc
+    .moveTo(ML, divY)
+    .lineTo(ML + BW, divY)
+    .lineWidth(0.5)
+    .strokeColor(G200)
+    .stroke();
+
+  return divY + 12;
+}
+
+// ─── Space guard ─────────────────────────────────────────────────────────────
+
+function hasRoom(doc: PDFKit.PDFDocument, needed: number) {
+  return doc.y + needed < PH - MB - 44;
+}
+
+// ─── Block renderer (mirrors renderSyllabusBlocks in page.tsx) ────────────────
+
+function renderBlocks(
+  doc: PDFKit.PDFDocument,
+  blocks: PdfBlock[],
+  newPage: () => void,
+) {
   for (const block of blocks) {
+
+    // ── h1 — text-2xl sm:text-3xl font-black text-gray-900 ──────────────────
     if (block.type === "h1") {
-      ensureSpace(doc, 32, startNewPage);
-      doc.moveDown(0.3);
-      
-      // Add a subtle accent line before h1
-      const left = doc.page.margins.left;
-      const y = doc.y;
-      doc.save();
-      doc.rect(left, y, 4, 20).fill("#7C3AED");
-      doc.restore();
-      
-      doc.font("Helvetica-Bold").fontSize(18).fillColor("#000000").text(block.text, {
-        indent: 12,
-        align: 'left',
-      });
-      doc.moveDown(0.7);
-      doc.font("Helvetica").fontSize(11).fillColor("#000000");
-      continue;
-    }
-
-    if (block.type === "h2") {
-      ensureSpace(doc, 28, startNewPage);
-      doc.moveDown(0.6);
-      
-      // Background highlight for h2
-      const left = doc.page.margins.left;
-      const right = doc.page.width - doc.page.margins.right;
-      const y = doc.y;
-      
-      doc.save();
-      doc.roundedRect(left, y - 2, right - left, 26, 8).fill("#F9FAFB");
-      doc.restore();
-      
-      doc.font("Helvetica-Bold").fontSize(14).fillColor("#000000").text(block.text, left + 10, y + 4);
-      doc.y = y + 26;
-      doc.moveDown(0.4);
-      doc.font("Helvetica").fontSize(11).fillColor("#000000");
-      continue;
-    }
-
-    if (block.type === "h3") {
-      ensureSpace(doc, 24, startNewPage);
+      if (!hasRoom(doc, 36)) newPage();
       doc.moveDown(0.5);
-      doc.font("Helvetica-Bold").fontSize(12).fillColor("#000000").text(block.text);
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(18)
+        .fillColor(G900)
+        .text(block.text, ML, doc.y, { width: BW });
+      doc.moveDown(0.4);
+      continue;
+    }
+
+    // ── h2 — pt-4 text-xl font-extrabold text-gray-900 ──────────────────────
+    if (block.type === "h2") {
+      if (!hasRoom(doc, 28)) newPage();
+      doc.moveDown(0.8);
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(14)
+        .fillColor(G900)
+        .text(block.text, ML, doc.y, { width: BW });
+      doc.moveDown(0.35);
+      continue;
+    }
+
+    // ── h3 — pt-3 text-lg font-extrabold text-gray-900 ──────────────────────
+    if (block.type === "h3") {
+      if (!hasRoom(doc, 22)) newPage();
+      doc.moveDown(0.6);
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(11)
+        .fillColor(G900)
+        .text(block.text, ML, doc.y, { width: BW });
       doc.moveDown(0.3);
-      doc.font("Helvetica").fontSize(11).fillColor("#000000");
       continue;
     }
 
+    // ── p — text-sm text-gray-700 leading-relaxed ────────────────────────────
     if (block.type === "p") {
-      ensureSpace(doc, 18, startNewPage);
-      doc.font("Helvetica").fontSize(10.5).fillColor("#000000").text(block.text, {
-        lineGap: 3,
-        align: 'left',
-      });
+      if (!hasRoom(doc, 16)) newPage();
+      doc
+        .font("Helvetica")
+        .fontSize(9.5)
+        .fillColor(G700)
+        .text(block.text, ML, doc.y, { width: BW, lineGap: 2.5 });
       doc.moveDown(0.4);
       continue;
     }
 
+    // ── ol — list-decimal pl-6 space-y-2 text-sm text-gray-700 ─────────────
     if (block.type === "ol") {
-      for (let i = 0; i < block.items.length; i += 1) {
-        ensureSpace(doc, 18, startNewPage);
-        
-        const left = doc.page.margins.left;
-        const y = doc.y;
-        
-        // Number in a colored circle
-        doc.save();
-        doc.circle(left + 8, y + 6, 8).fill("#E0E7FF");
-        doc.fillColor("#000000").font("Helvetica-Bold").fontSize(9).text(`${i + 1}`, left + 4, y + 2, {
-          width: 8,
-          align: 'center',
-        });
-        doc.restore();
-        
-        doc.font("Helvetica").fontSize(10.5).fillColor("#000000").text(block.items[i], left + 22, y, {
-          lineGap: 3,
-          align: 'left',
-        });
-        doc.moveDown(0.15);
+      for (let idx = 0; idx < block.items.length; idx++) {
+        if (!hasRoom(doc, 18)) newPage();
+
+        const by = doc.y;
+        const num = `${idx + 1}.`;
+
+        // number aligns right in a ~22pt column
+        doc
+          .font("Helvetica")
+          .fontSize(9.5)
+          .fillColor(G700)
+          .text(num, ML, by, { width: 22, align: "right" });
+
+        // item text
+        const itemText = block.items[idx] ?? "";
+        const itemH = doc
+          .font("Helvetica")
+          .fontSize(9.5)
+          .heightOfString(itemText, { width: BW - 28, lineGap: 2 });
+
+        doc
+          .font("Helvetica")
+          .fontSize(9.5)
+          .fillColor(G700)
+          .text(itemText, ML + 26, by, { width: BW - 26, lineGap: 2 });
+
+        doc.y = by + Math.max(itemH, 13) + 4;
       }
-      doc.moveDown(0.4);
+      doc.moveDown(0.3);
       continue;
     }
 
+    // ── ul — list-disc pl-6 space-y-2 text-sm text-gray-700 ─────────────────
     if (block.type === "ul") {
       for (const item of block.items) {
-        ensureSpace(doc, 18, startNewPage);
-        
-        const left = doc.page.margins.left;
-        const y = doc.y;
-        
-        // Custom bullet point
-        doc.save();
-        doc.circle(left + 8, y + 6, 3).fill("#DC2626");
-        doc.restore();
-        
-        doc.font("Helvetica").fontSize(10.5).fillColor("#000000").text(item, left + 22, y, {
-          lineGap: 3,
-          align: 'left',
-        });
-        doc.moveDown(0.15);
+        if (!hasRoom(doc, 18)) newPage();
+
+        const by = doc.y;
+
+        // disc bullet (filled circle)
+        doc
+          .circle(ML + 8, by + 5.5, 2.8)
+          .fill(G800);
+
+        const itemH = doc
+          .font("Helvetica")
+          .fontSize(9.5)
+          .heightOfString(item, { width: BW - 22, lineGap: 2 });
+
+        doc
+          .font("Helvetica")
+          .fontSize(9.5)
+          .fillColor(G700)
+          .text(item, ML + 18, by, { width: BW - 18, lineGap: 2 });
+
+        doc.y = by + Math.max(itemH, 13) + 4;
       }
-      doc.moveDown(0.4);
+      doc.moveDown(0.3);
       continue;
     }
 
+    // ── table — mirrors web table (thead bg-gray-50, alternating rows) ───────
     if (block.type === "table") {
-      ensureSpace(doc, 80, startNewPage);
-      doc.moveDown(0.3);
+      if (!hasRoom(doc, 70)) newPage();
+      doc.moveDown(0.35);
 
+      // Optional category label (text-xs font-bold uppercase text-gray-600)
       if (block.title) {
-        doc.font("Helvetica-Bold").fontSize(10).fillColor("#6D28D9").text(block.title.toUpperCase(), {
-          characterSpacing: 0.8,
-        });
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(7)
+          .fillColor(G600)
+          .text("ITEMS FOR COMPETITION", ML, doc.y, {
+            width: BW,
+            characterSpacing: 0.5,
+          });
         doc.moveDown(0.4);
       }
 
-      const startX = doc.page.margins.left;
-      const tableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-      const colWidths = [tableWidth * 0.1, tableWidth * 0.28, tableWidth * 0.46, tableWidth * 0.16];
-      const padX = 8;
-      const padY = 6;
+      // Column widths — web: w-20 | min-w-52 | auto | w-32
+      const TW = BW;
+      const cols = [
+        Math.floor(TW * 0.08),   // S/N
+        Math.floor(TW * 0.27),   // Item
+        Math.floor(TW * 0.44),   // Theme
+        TW - Math.floor(TW * 0.08) - Math.floor(TW * 0.27) - Math.floor(TW * 0.44), // Stage Time
+      ];
 
-      const getRowHeight = (cells: string[], isHeader: boolean) => {
+      const PX = 10;   // cell horizontal pad
+      const PY = 7;    // cell vertical pad
+      const FS = 9;    // cell font size
+
+      // Measure a row's height
+      const rowH = (cells: string[], bold: boolean): number => {
         let max = 0;
-        const fontSize = isHeader ? 9.5 : 9.5;
-        doc.font(isHeader ? "Helvetica-Bold" : "Helvetica").fontSize(fontSize);
-        for (let i = 0; i < 4; i += 1) {
-          const h = doc.heightOfString(cells[i] ?? "", {
-            width: colWidths[i] - padX * 2,
+        doc.font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(FS);
+        for (let c = 0; c < 4; c++) {
+          const h = doc.heightOfString(cells[c] ?? "", {
+            width: cols[c] - PX * 2,
+            lineGap: 1.5,
           });
-          max = Math.max(max, h);
+          if (h > max) max = h;
         }
-
-        return Math.max(20, max + padY * 2);
+        return Math.max(PY * 2 + 11, max + PY * 2);
       };
 
-      const drawRow = (cells: string[], y: number, height: number, isHeader: boolean, shaded: boolean) => {
-        // Background fill
-        if (isHeader) {
-          doc.save();
-          const gradient = doc.linearGradient(startX, y, startX + tableWidth, y);
-          gradient.stop(0, "#7C3AED").stop(1, "#DC2626");
-          doc.rect(startX, y, tableWidth, height).fill(gradient);
-          doc.restore();
-        } else if (shaded) {
-          doc.save();
-          doc.rect(startX, y, tableWidth, height).fill("#F9FAFB");
-          doc.restore();
-        }
+      // Draw a row
+      const drawRow = (
+        cells: string[],
+        ry: number,
+        rh: number,
+        isHeader: boolean,
+        altRow: boolean,
+      ) => {
+        // background — thead bg-gray-100, even rows white, odd rows gray-50
+        const bg = isHeader ? G100 : altRow ? G50 : WHT;
+        doc.rect(ML, ry, TW, rh).fill(bg);
 
-        // Outer border
-        doc.save();
-        doc.lineWidth(isHeader ? 0 : 0.5).strokeColor("#E5E7EB");
-        doc.rect(startX, y, tableWidth, height).stroke();
-        doc.restore();
+        // bottom border — border-b border-gray-200 (header) / border-gray-100 (body)
+        doc
+          .moveTo(ML, ry + rh)
+          .lineTo(ML + TW, ry + rh)
+          .lineWidth(isHeader ? 0.75 : 0.4)
+          .strokeColor(isHeader ? G200 : G100)
+          .stroke();
 
-        let x = startX;
-        for (let i = 0; i < 4; i += 1) {
-          // Cell borders
-          doc.save();
-          doc.lineWidth(0.5).strokeColor(isHeader ? "#FFFFFF" : "#E5E7EB");
-          if (i > 0) {
-            doc.moveTo(x, y).lineTo(x, y + height).stroke();
+        // outer vertical edges
+        doc.moveTo(ML, ry).lineTo(ML, ry + rh).lineWidth(0.5).strokeColor(G200).stroke();
+        doc.moveTo(ML + TW, ry).lineTo(ML + TW, ry + rh).lineWidth(0.5).strokeColor(G200).stroke();
+
+        // cell content
+        let cx = ML;
+        for (let c = 0; c < 4; c++) {
+          // vertical divider
+          if (c > 0) {
+            doc
+              .moveTo(cx, ry)
+              .lineTo(cx, ry + rh)
+              .lineWidth(0.4)
+              .strokeColor(G200)
+              .stroke();
           }
-          doc.restore();
+
+          // font + colour matching web:
+          //   header th: text-xs font-extrabold uppercase text-gray-700
+          //   S/N   td:  text-sm font-bold text-gray-800
+          //   Item  td:  text-sm text-gray-800
+          //   Theme td:  text-sm text-gray-700
+          //   Time  td:  text-sm font-semibold text-gray-800
+          let font = "Helvetica";
+          let color = G700;
+          let size = FS;
+          let track = 0;
+          let upcase = false;
+
+          if (isHeader) {
+            font = "Helvetica-Bold";
+            color = G700;
+            size = 7.5;
+            track = 0.4;
+            upcase = true;
+          } else if (c === 0 || c === 1 || c === 3) {
+            font = c === 2 ? "Helvetica" : "Helvetica-Bold";
+            color = G800;
+          } else {
+            color = G700;
+          }
+
+          const cellText = upcase
+            ? (cells[c] ?? "").toUpperCase()
+            : (cells[c] ?? "");
 
           doc
-            .font(isHeader ? "Helvetica-Bold" : i === 0 || i === 3 ? "Helvetica-Bold" : "Helvetica")
-            .fontSize(isHeader ? 9.5 : 9.5)
-            .fillColor(isHeader ? "#FFFFFF" : "#000000")
-            .text(cells[i] ?? "", x + padX, y + padY, {
-              width: colWidths[i] - padX * 2,
-              lineGap: 2,
-              align: 'left',
+            .font(font)
+            .fontSize(size)
+            .fillColor(color)
+            .text(cellText, cx + PX, ry + PY, {
+              width: cols[c] - PX * 2,
+              lineGap: 1.5,
+              characterSpacing: track,
             });
-          x += colWidths[i];
+
+          cx += cols[c];
         }
       };
 
-      // Add rounded container background
-      const tableY = doc.y;
-      const estimatedHeight = getRowHeight(block.headers, true) + 
-        block.rows.reduce((sum, row) => sum + getRowHeight(row, false), 0);
-      
-      doc.save();
-      doc.roundedRect(startX - 4, tableY - 4, tableWidth + 8, estimatedHeight + 8, 12)
-         .lineWidth(1.5)
-         .strokeColor("#E5E7EB")
-         .stroke();
-      doc.restore();
+      // Draw header
+      const tableTopY = doc.y;
 
-      const headerY = doc.y;
-      const headerHeight = getRowHeight(block.headers, true);
-      drawRow(block.headers, headerY, headerHeight, true, false);
-      doc.y = headerY + headerHeight;
+      // top border line
+      doc
+        .moveTo(ML, tableTopY)
+        .lineTo(ML + TW, tableTopY)
+        .lineWidth(0.5)
+        .strokeColor(G200)
+        .stroke();
 
-      for (let r = 0; r < block.rows.length; r += 1) {
-        const row = block.rows[r];
-        const rowHeight = getRowHeight(row, false);
-        ensureSpace(doc, rowHeight + 14, startNewPage);
-        const y = doc.y;
-        drawRow(row, y, rowHeight, false, r % 2 === 1);
-        doc.y = y + rowHeight;
+      const hh = rowH(block.headers, true);
+      drawRow(block.headers, tableTopY, hh, true, false);
+      doc.y = tableTopY + hh;
+
+      // Draw data rows
+      for (let r = 0; r < block.rows.length; r++) {
+        const rh2 = rowH(block.rows[r], false);
+        if (!hasRoom(doc, rh2 + 10)) newPage();
+        const ry = doc.y;
+        drawRow(block.rows[r], ry, rh2, false, r % 2 === 1);
+        doc.y = ry + rh2;
       }
 
       doc.moveDown(0.8);
-      doc.font("Helvetica").fontSize(10.5).fillColor("#000000");
+      continue;
     }
   }
 }
 
-async function generatePdfBuffer(text: string, logoBuffer: Buffer | null) {
+// ─── PDF buffer ───────────────────────────────────────────────────────────────
+
+async function generatePdf(text: string, logoBuffer: Buffer | null): Promise<Buffer> {
   const doc = new PDFDocument({
     size: "A4",
-    margins: { top: 54, bottom: 54, left: 54, right: 54 },
+    margin: 0,
+    bufferPages: true,
     info: {
-      Title: "TIPAC Festival 2026 Syllabus",
+      Title: "TIPAC Festival 2026 — Official Syllabus",
+      Author: "Theatre Initiative for the Pearl of Africa Children (TIPAC)",
+      Subject: "Festival Syllabus 2026",
+      Creator: "TIPAC · tipac.co.ug",
+      Keywords: "TIPAC, 2026, festival, syllabus, performing arts, Uganda",
     },
   });
 
   const chunks: Buffer[] = [];
-  doc.on("data", (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+  doc.on("data", (chunk) =>
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)),
+  );
 
-  const endPromise = new Promise<Buffer>((resolve, reject) => {
+  const done = new Promise<Buffer>((resolve, reject) => {
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
   });
 
-  let pageNumber = 1;
+  let pageNum = 1;
 
-  const applyTemplate = () => {
-    drawBrandBars(doc, doc.page.width, doc.page.height);
-    drawHeader(doc, logoBuffer);
-    drawFooter(doc, pageNumber);
-    doc.y = doc.page.margins.top + 120;
+  const addNewPage = () => {
+    pageNum++;
+    doc.addPage({ size: "A4", margin: 0 });
+    drawBottomBar(doc);
+    drawFooter(doc, pageNum);
+    doc.y = drawContinuationHeader(doc);
   };
 
-  const startNewPage = () => {
-    pageNumber += 1;
-    doc.addPage();
-    applyTemplate();
-  };
+  // First page
+  drawBottomBar(doc);
+  drawFooter(doc, pageNum);
+  doc.y = drawLetterhead(doc, logoBuffer);
 
-  applyTemplate();
-
-  const blocks = stripDuplicatedHeaderBlocks(parseSyllabus(text));
-  renderBlocks(doc, blocks, startNewPage);
+  // Render content
+  const blocks = stripDupe(parseSyllabus(text));
+  renderBlocks(doc, blocks, addNewPage);
 
   doc.end();
-  return endPromise;
+  return done;
 }
+
+// ─── Route ───────────────────────────────────────────────────────────────────
 
 export async function GET() {
   try {
-    const syllabusPath = path.join(process.cwd(), "syllabus.txt");
-    const logoPath = path.join(process.cwd(), "public", "logo.jpg");
-    const text = await readFile(syllabusPath, "utf8");
+    const text = await readFile(
+      path.join(process.cwd(), "syllabus.txt"),
+      "utf8",
+    );
 
     let logoBuffer: Buffer | null = null;
     try {
-      logoBuffer = await readFile(logoPath);
+      logoBuffer = await readFile(
+        path.join(process.cwd(), "public", "logo.jpg"),
+      );
     } catch {
-      logoBuffer = null;
+      // Logo is optional — continue without it
     }
 
-    const pdfBuffer = await generatePdfBuffer(text, logoBuffer);
+    const pdf = await generatePdf(text, logoBuffer);
 
-    return new Response(new Uint8Array(pdfBuffer), {
+    return new Response(new Uint8Array(pdf), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": 'attachment; filename="TIPAC-Festival-2026-Syllabus.pdf"',
-        "Cache-Control": "public, max-age=60",
+        "Content-Disposition": 'attachment; filename="TIPAC-Festival-2026-Official-Syllabus.pdf"',
+        "Cache-Control": "public, max-age=300, stale-while-revalidate=60",
       },
     });
-  } catch {
-    return NextResponse.json({ error: "Failed to generate syllabus PDF" }, { status: 500 });
+  } catch (err) {
+    console.error("[PDF generation error]", err);
+    return NextResponse.json(
+      { error: "Failed to generate syllabus PDF" },
+      { status: 500 },
+    );
   }
 }

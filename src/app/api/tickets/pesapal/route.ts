@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
         email: email,
         quantity: quantity,
         status: 'pending',
-        price: Math.round(parseFloat(amount) / quantity), // Calculate price per ticket
+        price: Math.round(Number.parseFloat(amount) / quantity), // Calculate price per ticket
         purchase_channel: 'online',
         buyer_name: `${firstName} ${lastName}`,
         buyer_phone: phoneNumber
@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
     const payload = {
       id: orderTrackingId,
       currency: "UGX",
-      amount: parseFloat(amount),
+      amount: Number.parseFloat(amount),
       description: "Ticket purchase for TIPAC event",
       callback_url: callbackUrl,
       notification_id: notificationId,

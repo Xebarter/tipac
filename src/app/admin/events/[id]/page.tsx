@@ -53,6 +53,16 @@ export default function EditEvent() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
+  // Organizer logo upload state
+  const organizerLogoInputRef = useRef<HTMLInputElement>(null);
+  const [selectedOrganizerLogo, setSelectedOrganizerLogo] = useState<File | null>(null);
+  const [organizerLogoPreview, setOrganizerLogoPreview] = useState<string | null>(null);
+
+  // Sponsor logo upload state — keyed by sponsor index
+  const sponsorLogoInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [selectedSponsorLogos, setSelectedSponsorLogos] = useState<(File | null)[]>([]);
+  const [sponsorLogoPreviews, setSponsorLogoPreviews] = useState<(string | null)[]>([]);
+
   useEffect(() => {
     loadEventAndTickets();
   }, [eventId]);
@@ -76,6 +86,11 @@ export default function EditEvent() {
       if (eventData.image_url) {
         setImagePreview(eventData.image_url);
       }
+
+      // Initialise sponsor logo state arrays to match loaded sponsors
+      const sponsorCount = (eventData.sponsor_logos || []).length;
+      setSelectedSponsorLogos(Array(sponsorCount).fill(null));
+      setSponsorLogoPreviews(Array(sponsorCount).fill(null));
 
       // Load ticket types
       const { data: ticketTypesData, error: ticketTypesError } = await supabase
@@ -145,11 +160,57 @@ export default function EditEvent() {
     }
 
     setSelectedImage(file);
-    
+
     // Generate preview
     const preview = URL.createObjectURL(file);
     setImagePreview(preview);
     handleEventChange("image_url", preview);
+  };
+
+  const handleOrganizerLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setError("Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("File too large. Maximum file size is 5MB.");
+      return;
+    }
+
+    setSelectedOrganizerLogo(file);
+    const preview = URL.createObjectURL(file);
+    setOrganizerLogoPreview(preview);
+  };
+
+  const handleSponsorLogoChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setError("Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("File too large. Maximum file size is 5MB.");
+      return;
+    }
+
+    setSelectedSponsorLogos(prev => {
+      const updated = [...prev];
+      updated[index] = file;
+      return updated;
+    });
+    const preview = URL.createObjectURL(file);
+    setSponsorLogoPreviews(prev => {
+      const updated = [...prev];
+      updated[index] = preview;
+      return updated;
+    });
   };
 
   const uploadImage = async (file: File): Promise<string> => {
@@ -190,10 +251,28 @@ export default function EditEvent() {
 
       let imageUrl = event.image_url;
 
-      // Upload image if a new one was selected
+      // Upload event banner image if a new one was selected
       if (selectedImage) {
         imageUrl = await uploadImage(selectedImage);
       }
+
+      // Upload organizer logo if a new file was selected
+      let organizerLogoUrl = event.organizer_logo_url;
+      if (selectedOrganizerLogo) {
+        organizerLogoUrl = await uploadImage(selectedOrganizerLogo);
+      }
+
+      // Upload sponsor logos if new files were selected
+      const updatedSponsors = await Promise.all(
+        (event.sponsor_logos || []).map(async (sponsor, index) => {
+          const file = selectedSponsorLogos[index];
+          if (file) {
+            const uploadedUrl = await uploadImage(file);
+            return { ...sponsor, url: uploadedUrl };
+          }
+          return sponsor;
+        })
+      );
 
       // Update event details
       const { error: eventError } = await supabase
@@ -207,8 +286,8 @@ export default function EditEvent() {
           image_url: imageUrl,
           is_published: event.is_published,
           organizer_name: event.organizer_name,
-          organizer_logo_url: event.organizer_logo_url,
-          sponsor_logos: event.sponsor_logos
+          organizer_logo_url: organizerLogoUrl,
+          sponsor_logos: updatedSponsors
         })
         .eq("id", event.id);
 
@@ -248,8 +327,12 @@ export default function EditEvent() {
       setSuccess("Event and ticket types updated successfully!");
       // Reset new ticket types form
       setNewTicketTypes([{ name: "", price: 0, is_active: true }]);
-      // Reset image selection
+      // Reset image/logo selections
       setSelectedImage(null);
+      setSelectedOrganizerLogo(null);
+      setOrganizerLogoPreview(null);
+      setSelectedSponsorLogos([]);
+      setSponsorLogoPreviews([]);
       // Reload data
       await loadEventAndTickets();
 
@@ -263,13 +346,13 @@ export default function EditEvent() {
 
   const handleSponsorChange = (index: number, field: keyof Event['sponsor_logos'][0], value: string) => {
     if (!event) return;
-    
+
     const updatedSponsors = [...(event.sponsor_logos || [])];
     updatedSponsors[index] = {
       ...updatedSponsors[index],
       [field]: value
     };
-    
+
     setEvent({
       ...event,
       sponsor_logos: updatedSponsors
@@ -278,23 +361,24 @@ export default function EditEvent() {
 
   const addSponsor = () => {
     if (!event) return;
-    
     setEvent({
       ...event,
       sponsor_logos: [...(event.sponsor_logos || []), { name: '', url: '' }]
     });
+    setSelectedSponsorLogos(prev => [...prev, null]);
+    setSponsorLogoPreviews(prev => [...prev, null]);
   };
 
   const removeSponsor = (index: number) => {
     if (!event) return;
-    
     const updatedSponsors = [...(event.sponsor_logos || [])];
     updatedSponsors.splice(index, 1);
-    
     setEvent({
       ...event,
       sponsor_logos: updatedSponsors
     });
+    setSelectedSponsorLogos(prev => prev.filter((_, i) => i !== index));
+    setSponsorLogoPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   if (loading) {
@@ -443,23 +527,7 @@ export default function EditEvent() {
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="organizer_name">Organizer Name</Label>
-                <Input
-                  id="organizer_name"
-                  value={event.organizer_name || ""}
-                  onChange={(e) => handleEventChange("organizer_name", e.target.value)}
-                />
-              </div>
 
-              <div>
-                <Label htmlFor="organizer_logo_url">Organizer Logo URL</Label>
-                <Input
-                  id="organizer_logo_url"
-                  value={event.organizer_logo_url || ""}
-                  onChange={(e) => handleEventChange("organizer_logo_url", e.target.value)}
-                />
-              </div>
 
               <div className="flex items-center space-x-2">
                 <input
@@ -477,7 +545,7 @@ export default function EditEvent() {
           {/* Organizer Information */}
           <div className="bg-card rounded-lg p-6 space-y-4">
             <h2 className="text-xl font-semibold mb-4">Organizer Information</h2>
-            
+
             <div className="space-y-4">
               <div>
                 <Label htmlFor="organizer_name">Organizer Name</Label>
@@ -489,12 +557,54 @@ export default function EditEvent() {
               </div>
 
               <div>
-                <Label htmlFor="organizer_logo_url">Organizer Logo URL</Label>
-                <Input
-                  id="organizer_logo_url"
-                  value={event.organizer_logo_url || ""}
-                  onChange={(e) => handleEventChange("organizer_logo_url", e.target.value)}
+                <Label>Organizer Logo</Label>
+                <input
+                  type="file"
+                  ref={organizerLogoInputRef}
+                  onChange={handleOrganizerLogoChange}
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  className="hidden"
                 />
+                <div className="mt-1 flex items-start gap-4">
+                  <div className="flex flex-col gap-2 flex-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => organizerLogoInputRef.current?.click()}
+                    >
+                      {selectedOrganizerLogo ? "Change Logo File" : "Upload Logo File"}
+                    </Button>
+                    {selectedOrganizerLogo && (
+                      <p className="text-xs text-green-600">✓ {selectedOrganizerLogo.name}</p>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400">or paste URL:</span>
+                    </div>
+                    <Input
+                      id="organizer_logo_url"
+                      value={event.organizer_logo_url || ""}
+                      onChange={(e) => handleEventChange("organizer_logo_url", e.target.value)}
+                      placeholder="https://example.com/logo.png"
+                      disabled={!!selectedOrganizerLogo}
+                    />
+                    {selectedOrganizerLogo && (
+                      <p className="text-xs text-gray-400">URL field disabled — uploaded file will be used.</p>
+                    )}
+                  </div>
+                  {(organizerLogoPreview || (!selectedOrganizerLogo && event.organizer_logo_url)) && (
+                    <div className="flex flex-col items-center">
+                      <p className="text-xs text-gray-500 mb-1">Preview:</p>
+                      <img
+                        src={organizerLogoPreview || event.organizer_logo_url || ""}
+                        alt="Organizer logo preview"
+                        className="w-20 h-20 object-contain rounded border bg-white"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">JPEG, PNG, GIF, or WebP (max 5MB)</p>
               </div>
             </div>
           </div>
@@ -507,7 +617,7 @@ export default function EditEvent() {
                 Add Sponsor
               </Button>
             </div>
-            
+
             <div className="space-y-4">
               {event.sponsor_logos && event.sponsor_logos.length > 0 ? (
                 event.sponsor_logos.map((sponsor, index) => (
@@ -522,12 +632,47 @@ export default function EditEvent() {
                         />
                       </div>
                       <div>
-                        <Label>Sponsor Logo URL</Label>
-                        <Input
-                          value={sponsor.url}
-                          onChange={(e) => handleSponsorChange(index, "url", e.target.value)}
-                          placeholder="Sponsor logo URL"
+                        <Label>Sponsor Logo</Label>
+                        <input
+                          type="file"
+                          ref={el => { sponsorLogoInputRefs.current[index] = el; }}
+                          onChange={(e) => handleSponsorLogoChange(index, e)}
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                          className="hidden"
                         />
+                        <div className="mt-1 flex flex-col gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => sponsorLogoInputRefs.current[index]?.click()}
+                          >
+                            {selectedSponsorLogos[index] ? "Change Logo File" : "Upload Logo File"}
+                          </Button>
+                          {selectedSponsorLogos[index] && (
+                            <p className="text-xs text-green-600">✓ {selectedSponsorLogos[index]!.name}</p>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-400">or paste URL:</span>
+                          </div>
+                          <Input
+                            value={sponsor.url}
+                            onChange={(e) => handleSponsorChange(index, "url", e.target.value)}
+                            placeholder="https://example.com/sponsor-logo.png"
+                            disabled={!!selectedSponsorLogos[index]}
+                          />
+                          {selectedSponsorLogos[index] && (
+                            <p className="text-xs text-gray-400">URL disabled — uploaded file will be used.</p>
+                          )}
+                          {(sponsorLogoPreviews[index] || (!selectedSponsorLogos[index] && sponsor.url)) && (
+                            <img
+                              src={sponsorLogoPreviews[index] || sponsor.url || ""}
+                              alt="Sponsor logo preview"
+                              className="w-16 h-16 object-contain rounded border bg-white"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            />
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="mt-3">

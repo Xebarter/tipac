@@ -2,87 +2,145 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  Image, 
-  Mail, 
-  Ticket, 
+import {
+  LayoutDashboard,
+  Calendar,
+  Image as ImageIcon,
+  Mail,
+  Ticket,
   ShieldCheck,
   Users,
-  Mailbox
+  Mailbox,
+  LogOut,
+  ChevronRight,
+  Shield,
 } from "lucide-react";
 
-export default function Sidebar() {
+const navigation = [
+  {
+    group: "Overview",
+    items: [
+      { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    ],
+  },
+  {
+    group: "Content",
+    items: [
+      { name: "Events", href: "/admin/events", icon: Calendar },
+      { name: "Gallery", href: "/admin/gallery", icon: ImageIcon },
+      { name: "Messages", href: "/admin/messages", icon: Mail },
+    ],
+  },
+  {
+    group: "Ticketing",
+    items: [
+      { name: "Tickets", href: "/admin/tickets", icon: Ticket },
+      { name: "Invitation Cards", href: "/admin/invitation-cards", icon: Mailbox },
+      { name: "Applications", href: "/admin/applications", icon: Users },
+    ],
+  },
+  {
+    group: "Verification",
+    items: [
+      { name: "Verify Ticket", href: "/admin/verify", icon: ShieldCheck },
+      { name: "Verify Invitations", href: "/admin/verify-invitations", icon: ShieldCheck },
+    ],
+  },
+];
+
+interface SidebarContentProps {
+  onNavClick?: () => void;
+}
+
+export function SidebarContent({ onNavClick }: SidebarContentProps) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const navigation = [
-    { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { name: "Events", href: "/admin/events", icon: Calendar },
-    { name: "Gallery", href: "/admin/gallery", icon: Image },
-    { name: "Messages", href: "/admin/messages", icon: Mail },
-    { name: "Tickets", href: "/admin/tickets", icon: Ticket },
-    { name: "Invitation Cards", href: "/admin/invitation-cards", icon: Mailbox },
-    { name: "Applications", href: "/admin/applications", icon: Users },
-    { name: "Verify Ticket", href: "/admin/verify", icon: ShieldCheck },
-    { name: "Verify Invitations", href: "/admin/verify-invitations", icon: ShieldCheck },
-  ];
-
   const handleLogout = async () => {
     try {
-      const res = await fetch("/admin/api/logout", {
-        method: "POST",
-      });
-
+      const res = await fetch("/admin/api/logout", { method: "POST" });
       if (res.ok) {
         router.push("/admin/login");
         router.refresh();
-      } else {
-        console.error("Failed to logout");
       }
-    } catch (error) {
-      console.error("Error logging out:", error);
+    } catch (err) {
+      console.error("Logout error:", err);
     }
   };
 
   return (
-    <div className="flex flex-col h-full border-r bg-card">
-      <div className="p-4 border-b">
-        <h1 className="text-lg font-semibold">TIPAC Admin</h1>
+    <div className="flex flex-col h-full">
+      {/* Brand */}
+      <div className="flex items-center gap-3 px-5 py-5 border-b border-white/10">
+        <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/15 backdrop-blur-sm">
+          <Shield className="h-5 w-5 text-white" />
+        </div>
+        <div>
+          <p className="text-white font-bold text-base leading-tight tracking-tight">TIPAC</p>
+          <p className="text-white/50 text-xs font-medium uppercase tracking-wider">Admin Panel</p>
+        </div>
       </div>
-      
-      <nav className="flex-1 p-2">
-        <ul className="space-y-1">
-          {navigation.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <li key={item.name}>
-                <Link
-                  href={item.href}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                  }`}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.name}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+        {navigation.map((group) => (
+          <div key={group.group}>
+            <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-white/35">
+              {group.group}
+            </p>
+            <ul className="space-y-0.5">
+              {group.items.map((item) => {
+                const isActive =
+                  item.href === "/admin"
+                    ? pathname === "/admin"
+                    : pathname.startsWith(item.href);
+                return (
+                  <li key={item.name}>
+                    <Link
+                      href={item.href}
+                      onClick={onNavClick}
+                      className={`group flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 ${isActive
+                          ? "bg-white/15 text-white shadow-sm"
+                          : "text-white/60 hover:bg-white/8 hover:text-white/90"
+                        }`}
+                    >
+                      <span className="flex items-center gap-3">
+                        <item.icon
+                          className={`h-4 w-4 flex-shrink-0 transition-colors ${isActive ? "text-white" : "text-white/50 group-hover:text-white/80"
+                            }`}
+                        />
+                        {item.name}
+                      </span>
+                      {isActive && (
+                        <ChevronRight className="h-3.5 w-3.5 text-white/50" />
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
       </nav>
-      
-      <div className="p-4 border-t">
+
+      {/* Footer / Logout */}
+      <div className="p-3 border-t border-white/10">
         <button
           onClick={handleLogout}
-          className="w-full text-left text-sm text-red-500 hover:bg-accent rounded-lg px-3 py-2 transition-colors"
+          className="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-sm font-medium text-white/60 hover:bg-red-500/20 hover:text-red-300 transition-all duration-150"
         >
-          Logout
+          <LogOut className="h-4 w-4" />
+          Sign Out
         </button>
       </div>
     </div>
+  );
+}
+
+export default function Sidebar() {
+  return (
+    <aside className="hidden lg:flex flex-col w-60 xl:w-64 flex-shrink-0 bg-gradient-to-b from-[hsl(270,76%,22%)] to-[hsl(270,76%,16%)] min-h-screen sticky top-0">
+      <SidebarContent />
+    </aside>
   );
 }

@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
     const payload = {
       id: orderTrackingId,
       currency: "UGX",
-      amount: parseFloat(amount),
+      amount: Number.parseFloat(amount),
       description: "Donation to TIPAC",
       callback_url: callbackUrl,
       notification_id: notificationId, // Use the provided IPN ID

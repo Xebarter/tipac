@@ -382,7 +382,7 @@ export default function TicketsPage() {
   }, []);
 
   const handleQuantityChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuantity(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)));
+    setQuantity(Math.max(1, Math.min(10, Number.parseInt(e.target.value) || 1)));
   }, []);
 
   const getTicketTypeById = useCallback((ticketTypeId: string) => {

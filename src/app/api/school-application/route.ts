@@ -40,7 +40,7 @@ export async function POST(request: Request) {
           email: email,
           phone: phone,
           institution_type: institutionType,
-          number_of_students: parseInt(numberOfStudents),
+          number_of_students: Number.parseInt(numberOfStudents),
           grade_levels: gradeLevels,
           interest_reason: interestReason,
           status: 'pending'

@@ -517,7 +517,7 @@ export default function AdminEventsManagement() {
   const formatTime = (timeString: string) => {
     if (!timeString) return "";
     const [hours, minutes] = timeString.split(":");
-    const hour = parseInt(hours, 10);
+    const hour = Number.parseInt(hours, 10);
     return hour > 12 ? `${hour - 12}:${minutes} PM` : `${hour}:${minutes} AM`;
   };
 

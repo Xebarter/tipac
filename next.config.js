@@ -46,7 +46,7 @@ const nextConfig = {
       ...config.resolve.alias,
       "fontkit": false,
     };
-    
+
     config.module.rules.push({
       test: /\.m?js/,
       resolve: {

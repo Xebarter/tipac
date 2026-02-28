@@ -94,26 +94,24 @@ export function Events() {
   }
 
   return (
-    <section id="upcoming-events" className="py-16 bg-gradient-to-br from-rose-50 via-purple-50 to-rose-100 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(244,63,94,0.12)_0%,transparent_70%)] pointer-events-none"></div>
-
-      {/* Decorative elements */}
-      <div className="absolute top-0 left-0 w-72 h-72 bg-gradient-to-r from-rose-400/20 to-purple-400/20 rounded-full blur-3xl pointer-events-none -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-r from-purple-400/20 to-fuchsia-400/20 rounded-full blur-3xl pointer-events-none translate-x-1/2 translate-y-1/2" />
-      <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-gradient-to-r from-rose-400/20 to-fuchsia-400/20 rounded-full blur-3xl pointer-events-none" />
+    <section id="upcoming-events" className="py-24 bg-slate-50 relative overflow-hidden border-t border-slate-200">
+      {/* Subtle grid background for modern technical feel */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
 
       <div className="container mx-auto px-4 relative z-10">
-        <div className="text-center mb-12">
-          <div className="inline-block mb-4">
-            <span className="bg-gradient-to-r from-rose-600 to-purple-600 text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow">
-              Events
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-800 text-sm font-semibold shadow-sm mb-6">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary/60 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
             </span>
+            Schedule & Tickets
           </div>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 bg-clip-text bg-gradient-to-r from-rose-600 via-fuchsia-600 to-purple-600">
+          <h2 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-6 tracking-tight">
             Upcoming Events
           </h2>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Join us for our upcoming theatre performances, workshops, and cultural events.
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
+            Join us for our upcoming theatre performances, workshops, and exclusive cultural events. Secure your spot today.
           </p>
         </div>
 
@@ -122,19 +120,19 @@ export function Events() {
             <div className="w-16 h-16 border-4 border-rose-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
           </div>
         ) : events.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="bg-white rounded-2xl p-8 max-w-2xl mx-auto shadow-sm border border-gray-100 backdrop-blur-sm bg-white/80">
-              <div className="w-20 h-20 bg-gradient-to-r from-rose-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="text-center py-16">
+            <div className="bg-white rounded-3xl p-10 max-w-2xl mx-auto shadow-sm border border-slate-200">
+              <div className="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-slate-100">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">No Upcoming Events</h3>
-              <p className="text-gray-600 mb-6">
-                We don't have any events scheduled at the moment. Please check back later.
+              <h3 className="text-2xl font-bold text-slate-900 mb-3">No Upcoming Events</h3>
+              <p className="text-slate-500 mb-8 text-lg">
+                We don't have any events scheduled at the moment. Please check back later or view past events.
               </p>
               <Link href="/events">
-                <Button className="bg-gradient-to-r from-rose-600 to-purple-600 hover:from-rose-700 hover:to-purple-700 shadow-lg">
+                <Button className="bg-slate-900 hover:bg-slate-800 text-white shadow-md font-medium px-6 py-2.5 rounded-xl transition-all h-auto text-base">
                   View All Events
                 </Button>
               </Link>
@@ -148,31 +146,17 @@ export function Events() {
               : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
             }`}>
             {events.map((event, index) => {
-              // Define color schemes for events
-              const colorSchemes = [
-                { from: 'from-rose-100/60', to: 'to-purple-100/60', border: 'border-rose-400/40', ring: 'ring-rose-400/30', text: 'text-rose-700', badge: 'from-rose-500 to-purple-500' },
-                { from: 'from-purple-100/60', to: 'to-rose-100/60', border: 'border-purple-400/40', ring: 'ring-purple-400/30', text: 'text-purple-700', badge: 'from-purple-500 to-rose-500' },
-                { from: 'from-fuchsia-100/60', to: 'to-rose-100/60', border: 'border-fuchsia-400/40', ring: 'ring-fuchsia-400/30', text: 'text-fuchsia-700', badge: 'from-fuchsia-500 to-rose-500' },
-                { from: 'from-rose-100/60', to: 'to-fuchsia-100/60', border: 'border-rose-400/40', ring: 'ring-rose-400/30', text: 'text-rose-700', badge: 'from-rose-500 to-fuchsia-500' },
-                { from: 'from-purple-100/60', to: 'to-fuchsia-100/60', border: 'border-purple-400/40', ring: 'ring-purple-400/30', text: 'text-purple-700', badge: 'from-purple-500 to-fuchsia-500' },
-                { from: 'from-rose-100/60', to: 'to-purple-100/60', border: 'border-rose-400/40', ring: 'ring-rose-400/30', text: 'text-rose-700', badge: 'from-rose-500 to-purple-500' },
-              ];
-
-              // Get color scheme based on event index
-              const colorScheme = colorSchemes[index % colorSchemes.length];
-
               return (
                 <div
                   key={event.id}
-                  className={`rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group backdrop-blur-sm bg-white/70 border border-gray-100 ${events.length === 1
-                    ? 'lg:max-w-4xl lg:mx-auto lg:flex lg:flex-col'
+                  className={`bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group border border-slate-200 flex flex-col h-full transform hover:-translate-y-1 ${events.length === 1
+                    ? 'lg:max-w-4xl lg:mx-auto lg:flex-row lg:h-auto'
                     : ''
                     }`}
                 >
-                  {/* Event Image */}
-                  <div className={`relative overflow-hidden ${events.length === 1
-                    ? 'lg:h-96'
-                    : 'h-48'
+                  <div className={`relative overflow-hidden shrink-0 ${events.length === 1
+                    ? 'lg:w-[45%] h-64 lg:h-auto'
+                    : 'h-56'
                     }`}>
                     {event.image_url && event.image_url.trim() !== '' ? (
                       <img
@@ -194,18 +178,15 @@ export function Events() {
 
                     {/* Fallback placeholder when there's no image or image fails to load */}
                     {(!event.image_url || event.image_url.trim() === '') && (
-                      <div className={`w-full h-full bg-gradient-to-r from-rose-500 to-purple-600 flex items-center justify-center ${events.length === 1
-                        ? 'lg:h-96'
-                        : ''
-                        }`}>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <div className={`w-full h-full bg-slate-100 flex items-center justify-center`}>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-gray-900/70 to-transparent"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent opacity-80"></div>
                     <div className="absolute top-4 right-4">
-                      <span className={`inline-block px-3 py-1 text-xs font-semibold text-white bg-gradient-to-r ${colorScheme.badge} rounded-full backdrop-blur-sm shadow`}>
+                      <span className={`inline-flex items-center px-3.5 py-1.5 rounded-full text-xs font-bold text-white bg-slate-900/50 backdrop-blur-md border border-white/20 shadow-sm uppercase tracking-wide`}>
                         {new Date(event.date).toLocaleDateString("en-US", {
                           weekday: "short",
                           month: "short",
@@ -216,39 +197,33 @@ export function Events() {
                   </div>
 
                   {/* Event Details */}
-                  <div className={`p-6 ${events.length === 1 ? 'lg:p-10 lg:flex lg:flex-col' : ''}`}>
-                    <div className={`flex justify-between items-start mb-3 ${events.length === 1 ? 'lg:mb-6' : ''}`}>
-                      <h3 className={`font-bold text-gray-900 group-hover:text-rose-600 transition-colors ${events.length === 1
-                        ? 'text-2xl lg:text-3xl'
-                        : 'text-xl'
+                  <div className={`p-8 flex flex-col flex-grow ${events.length === 1 ? 'lg:w-[55%]' : ''}`}>
+                    <div className={`flex flex-col gap-2 mb-4`}>
+                      <div className="flex items-center text-slate-500 text-sm font-medium">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {event.time}
+                      </div>
+                      <h3 className={`font-bold text-slate-900 group-hover:text-primary transition-colors leading-tight ${events.length === 1
+                        ? 'text-3xl'
+                        : 'text-2xl'
                         }`}>
                         {event.title}
                       </h3>
-                      <div className="text-right">
-                        <p className={`font-semibold bg-gradient-to-r from-rose-600 to-purple-600 bg-clip-text text-transparent ${events.length === 1
-                          ? 'text-lg lg:text-xl'
-                          : 'text-sm'
-                          }`}>{event.time}</p>
-                      </div>
                     </div>
 
-                    <div className={`flex items-center text-gray-600 ${events.length === 1
-                      ? 'text-base lg:text-lg lg:mb-2'
-                      : 'text-sm mb-4'
-                      }`}>
-                      <svg xmlns="http://www.w3.org/2000/svg" className={`mr-2 ${events.length === 1
-                        ? 'h-5 w-5 lg:h-6 lg:w-6'
-                        : 'h-4 w-4'
-                        }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className={`flex items-center text-slate-500 mb-6 font-medium text-sm`}>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="mr-2 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
                       <span className="truncate">{event.location}</span>
                     </div>
 
-                    <p className={`text-gray-700 ${events.length === 1
-                      ? 'lg:text-lg lg:mb-8'
-                      : 'mb-6 line-clamp-3'
+                    <p className={`text-slate-600 mb-8 leading-relaxed ${events.length === 1
+                      ? 'text-lg'
+                      : 'line-clamp-3 text-base'
                       }`}>
                       {event.description}
                     </p>
@@ -279,20 +254,18 @@ export function Events() {
                       </div>
                     )}
 
-                    <div className={`${events.length === 1 ? 'lg:mt-auto' : ''}`}>
-                      <div className="flex justify-center">
-                        <Link href={`/tickets?event=${event.id}`}>
-                          <Button
-                            size="sm"
-                            className={`bg-gradient-to-r from-rose-600 to-purple-600 hover:from-rose-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl ${events.length === 1
-                              ? 'text-base lg:text-lg lg:px-8 lg:py-3'
-                              : 'text-sm px-4 py-2'
-                              }`}
-                          >
-                            Get Tickets
-                          </Button>
-                        </Link>
+                    <div className="mt-auto pt-6 border-t border-slate-100 flex items-center justify-between">
+                      <div className="text-sm font-semibold text-slate-800">
+                        {event.sponsor_logos && event.sponsor_logos.length > 0 ? "Sponsored Event" : "Standard Ticket"}
                       </div>
+                      <Link href={`/tickets?event=${event.id}`}>
+                        <Button
+                          size="sm"
+                          className="bg-slate-900 hover:bg-primary text-white transition-colors duration-300 shadow-sm font-medium h-10 px-6 rounded-lg text-sm"
+                        >
+                          Book Now
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -301,10 +274,10 @@ export function Events() {
           </div>
         )}
 
-        <div className="text-center mt-12">
+        <div className="text-center mt-16 pb-8">
           <Link href="/events">
-            <Button className="bg-gradient-to-r from-rose-600 to-purple-600 hover:from-rose-700 hover:to-purple-700 text-white px-8 py-3 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl">
-              View All Events
+            <Button className="bg-white text-slate-900 border border-slate-300 hover:border-slate-400 hover:bg-slate-50 px-8 py-6 text-base font-semibold rounded-xl shadow-sm transition-all duration-300 h-auto">
+              View All Upcoming Events
             </Button>
           </Link>
         </div>
