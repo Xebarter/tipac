@@ -1,13 +1,6 @@
 import type { Metadata } from "next";
-import { Roboto_Condensed } from "next/font/google";
 import "./globals.css";
 import ClientBody from "./ClientBody";
-
-const robotoCondensed = Roboto_Condensed({
-  variable: "--font-roboto-condensed",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
   title: "TIPAC - Theatre Initiative for The Pearl of Africa Children",
   description: "Empowering children through the art of theatre in Uganda",
@@ -41,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${robotoCondensed.variable}`}>
+    <html lang="en">
       <body className="antialiased">
         <ClientBody>{children}</ClientBody>
       </body>

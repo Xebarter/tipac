@@ -72,9 +72,9 @@ export default {
           xl: '1280px',
           '2xl': '1536px',
         },
-        fontFamily: {
-          sans: ["var(--font-roboto-condensed)", "sans-serif"],
-        },
+      },
+      fontFamily: {
+        sans: ["'Product Sans'", "'Google Sans'", "sans-serif"],
       },
     }
   },
