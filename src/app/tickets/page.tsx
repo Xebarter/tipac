@@ -781,14 +781,14 @@ export default function TicketsPage() {
               Event Tickets
             </h1>
             <p className="text-sm sm:text-base md:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed px-1">
-              Pick an event, then choose a ticket type — each type has its own color. On your phone, tap a type and continue below.
+              Pick an event, then choose a ticket type — each type has its own color. Selecting a type opens checkout in a dialog.
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 max-w-7xl mx-auto">
+          <div className="mx-auto max-w-4xl">
             {/* Events List with Ticket Types */}
             <motion.div
-              className="lg:col-span-2 backdrop-blur-sm bg-white/80 rounded-2xl sm:rounded-3xl shadow-xl border border-white/30 p-4 sm:p-6 relative overflow-hidden"
+              className="backdrop-blur-sm bg-white/80 rounded-2xl sm:rounded-3xl shadow-xl border border-white/30 p-4 sm:p-6 relative overflow-hidden"
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
@@ -950,12 +950,12 @@ export default function TicketsPage() {
                                           if (e.key === "Enter" || e.key === " ") {
                                             e.preventDefault();
                                             setSelectedTicketType(ticketType.id);
-                                            if (isMobile) setIsModalOpen(true);
+                                            setIsModalOpen(true);
                                           }
                                         }}
                                         onClick={() => {
                                           setSelectedTicketType(ticketType.id);
-                                          if (isMobile) setIsModalOpen(true);
+                                          setIsModalOpen(true);
                                         }}
                                       >
                                         <div
@@ -1037,55 +1037,6 @@ export default function TicketsPage() {
                 </div>
               )}
             </motion.div>
-
-            {/* Purchase Form - Hidden on mobile */}
-            <motion.div
-              className="hidden lg:block backdrop-blur-sm bg-white/80 rounded-3xl shadow-xl border border-white/30 p-5 sm:p-6 relative overflow-hidden sticky top-6"
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.7 }}
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Ticket Information</h2>
-                <div className="bg-gradient-to-r from-red-500 to-purple-600 w-9 h-9 rounded-lg flex items-center justify-center shadow">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-red-50 to-purple-50 rounded-2xl p-5 mb-6 border border-red-100 shadow-sm">
-                <div className="flex items-start">
-                  <div className="mr-3 bg-gradient-to-r from-red-500 to-purple-600 rounded-lg p-2 shadow">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    Fill in your details to receive your tickets. All fields marked with <span className="text-red-500">*</span> are required.
-                  </p>
-                </div>
-              </div>
-
-              <TicketForm
-                formData={formData}
-                onInputChange={handleInputChange}
-                onQuantityChange={handleQuantityChange}
-                error={error}
-                success={success}
-                onSubmit={handleSubmit}
-                getTotalPrice={getTotalPrice}
-                getTicketTypeById={getTicketTypeById}
-                loading={loading}
-                selectedTicketType={selectedTicketType}
-                downloadableTickets={downloadableTickets}
-                onDownloadTicket={downloadTicket}
-                onDownloadAll={onDownloadAll}
-                onClose={closeModal}
-                quantity={quantity}
-              />
-            </motion.div>
           </div>
 
           {/* Mobile: fixed bar after selecting a ticket type */}
@@ -1115,68 +1066,6 @@ export default function TicketsPage() {
             );
           })()}
 
-          {/* Mobile Modal */}
-          {isMobile && isModalOpen && (
-            <motion.div
-              className="fixed inset-0 z-50"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <motion.div
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-                onClick={closeModal}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              />
-              <motion.div
-                className="absolute bottom-0 left-0 right-0 flex max-h-[min(92dvh,920px)] w-full flex-col overflow-hidden rounded-t-[1.25rem] bg-white shadow-2xl"
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                transition={{ type: "spring", damping: 28, stiffness: 380 }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex shrink-0 justify-center pt-2 pb-1" aria-hidden>
-                  <div className="h-1 w-10 rounded-full bg-gray-300" />
-                </div>
-                <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 pb-3 pt-1">
-                  <h2 className="pr-2 text-lg font-bold text-gray-900">Complete purchase</h2>
-                  <button
-                    type="button"
-                    onClick={closeModal}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-gray-100 active:bg-gray-200"
-                    aria-label="Close"
-                  >
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
-                  <TicketForm
-                    formData={formData}
-                    onInputChange={handleInputChange}
-                    onQuantityChange={handleQuantityChange}
-                    error={error}
-                    success={success}
-                    onSubmit={handleSubmit}
-                    getTotalPrice={getTotalPrice}
-                    getTicketTypeById={getTicketTypeById}
-                    loading={loading}
-                    selectedTicketType={selectedTicketType}
-                    downloadableTickets={downloadableTickets}
-                    onDownloadTicket={downloadTicket}
-                    onDownloadAll={onDownloadAll}
-                    onClose={closeModal}
-                    quantity={quantity}
-                  />
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-
           <motion.div
             className="text-center mt-8 sm:mt-12"
             initial={{ opacity: 0, y: 20 }}
@@ -1195,6 +1084,87 @@ export default function TicketsPage() {
           </motion.div>
         </div>
       </section>
+
+      {/* Outside page container (z-10) so this stacks above Navbar (z-50) */}
+      {isModalOpen && (
+        <motion.div
+          className="fixed inset-0 z-[100] flex flex-col justify-end lg:items-center lg:justify-center lg:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ticket-modal-title"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <motion.div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={closeModal}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          />
+          <motion.div
+            className="relative z-10 flex w-full max-h-[min(92dvh,920px)] flex-col overflow-hidden rounded-t-[1.25rem] bg-white shadow-2xl lg:max-h-[min(90vh,760px)] lg:max-w-lg lg:rounded-2xl"
+            initial={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.96, y: 12 }}
+            animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
+            exit={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.96, y: 12 }}
+            transition={
+              isMobile
+                ? { type: "spring", damping: 28, stiffness: 380 }
+                : { type: "spring", damping: 26, stiffness: 320 }
+            }
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex shrink-0 justify-center pt-2 pb-1 lg:hidden" aria-hidden>
+              <div className="h-1 w-10 rounded-full bg-gray-300" />
+            </div>
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-100 px-4 pb-3 pt-1 lg:px-5 lg:pt-4">
+              <div className="min-w-0">
+                <h2 id="ticket-modal-title" className="pr-2 text-lg font-bold text-gray-900 lg:text-xl">
+                  Ticket information
+                </h2>
+                <p className="mt-0.5 hidden text-sm text-gray-600 lg:block">
+                  Fill in your details to receive your tickets. Fields marked{" "}
+                  <span className="text-red-500">*</span> are required.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-gray-100 active:bg-gray-200"
+                aria-label="Close dialog"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 lg:px-5 lg:pb-6">
+              <p className="mb-3 text-sm text-gray-600 lg:hidden">
+                Fill in your details. Fields marked <span className="text-red-500">*</span> are required.
+              </p>
+              <TicketForm
+                formData={formData}
+                onInputChange={handleInputChange}
+                onQuantityChange={handleQuantityChange}
+                error={error}
+                success={success}
+                onSubmit={handleSubmit}
+                getTotalPrice={getTotalPrice}
+                getTicketTypeById={getTicketTypeById}
+                loading={loading}
+                selectedTicketType={selectedTicketType}
+                downloadableTickets={downloadableTickets}
+                onDownloadTicket={downloadTicket}
+                onDownloadAll={onDownloadAll}
+                onClose={closeModal}
+                quantity={quantity}
+              />
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
       <Footer />
     </main>
   );
