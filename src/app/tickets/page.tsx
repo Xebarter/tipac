@@ -11,6 +11,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { generateTicketPDF, generateMultiTicketPDF } from "@/lib/ticketGenerator";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { splitFullNameForPesapal } from "@/lib/utils";
 
 interface Event {
   id: string;
@@ -31,11 +32,69 @@ interface TicketType {
 }
 
 interface FormData {
-  firstName: string;
-  lastName: string;
+  fullName: string;
   email: string;
   phone: string;
 }
+
+/** Distinct card styles so multiple ticket types per event are easy to tell apart */
+const TICKET_TYPE_VARIANTS = [
+  {
+    accent: "bg-rose-500",
+    accentSoft: "bg-rose-100 text-rose-800",
+    border: "border-rose-200",
+    borderHover: "hover:border-rose-400",
+    cardBg: "bg-gradient-to-br from-rose-50/90 to-white",
+    selectedRing: "ring-rose-500/35",
+    selectedBorder: "border-rose-500",
+    priceClass: "text-rose-700",
+    stripe: "from-rose-500 to-pink-600",
+  },
+  {
+    accent: "bg-violet-500",
+    accentSoft: "bg-violet-100 text-violet-800",
+    border: "border-violet-200",
+    borderHover: "hover:border-violet-400",
+    cardBg: "bg-gradient-to-br from-violet-50/90 to-white",
+    selectedRing: "ring-violet-500/35",
+    selectedBorder: "border-violet-500",
+    priceClass: "text-violet-700",
+    stripe: "from-violet-500 to-purple-600",
+  },
+  {
+    accent: "bg-amber-500",
+    accentSoft: "bg-amber-100 text-amber-900",
+    border: "border-amber-200",
+    borderHover: "hover:border-amber-400",
+    cardBg: "bg-gradient-to-br from-amber-50/90 to-white",
+    selectedRing: "ring-amber-500/35",
+    selectedBorder: "border-amber-500",
+    priceClass: "text-amber-800",
+    stripe: "from-amber-500 to-orange-600",
+  },
+  {
+    accent: "bg-sky-500",
+    accentSoft: "bg-sky-100 text-sky-900",
+    border: "border-sky-200",
+    borderHover: "hover:border-sky-400",
+    cardBg: "bg-gradient-to-br from-sky-50/90 to-white",
+    selectedRing: "ring-sky-500/35",
+    selectedBorder: "border-sky-500",
+    priceClass: "text-sky-800",
+    stripe: "from-sky-500 to-cyan-600",
+  },
+  {
+    accent: "bg-emerald-500",
+    accentSoft: "bg-emerald-100 text-emerald-800",
+    border: "border-emerald-200",
+    borderHover: "hover:border-emerald-400",
+    cardBg: "bg-gradient-to-br from-emerald-50/90 to-white",
+    selectedRing: "ring-emerald-500/35",
+    selectedBorder: "border-emerald-500",
+    priceClass: "text-emerald-800",
+    stripe: "from-emerald-500 to-teal-600",
+  },
+] as const;
 
 interface TicketFormProps {
   formData: FormData;
@@ -118,42 +177,31 @@ const TicketForm: React.FC<TicketFormProps> = ({
         </Button>
       </div>
     ) : (
-      <form onSubmit={onSubmit} className="space-y-5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="firstName" className="text-gray-700 mb-2 block text-sm font-medium">
-              First Name <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="firstName"
-              name="firstName"
-              value={formData.firstName}
-              onChange={onInputChange}
-              placeholder="John"
-              className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-red-500 focus:border-red-500 h-12 rounded-xl text-base shadow-sm"
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="lastName" className="text-gray-700 mb-2 block text-sm font-medium">
-              Last Name <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="lastName"
-              name="lastName"
-              value={formData.lastName}
-              onChange={onInputChange}
-              placeholder="Doe"
-              className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-red-500 focus:border-red-500 h-12 rounded-xl text-base shadow-sm"
-              required
-            />
-          </div>
+      <form onSubmit={onSubmit} className="space-y-4 sm:space-y-5">
+        <div>
+          <Label htmlFor="fullName" className="text-gray-700 mb-2 block text-sm font-medium">
+            Full name <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="fullName"
+            name="fullName"
+            value={formData.fullName}
+            onChange={onInputChange}
+            placeholder="John Doe"
+            className="h-12 min-h-[48px] rounded-xl border-gray-300 bg-white text-base text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-red-500 focus:ring-2 focus:ring-red-500"
+            required
+            autoComplete="name"
+          />
         </div>
 
         <div>
           <Label htmlFor="email" className="text-gray-700 mb-2 block text-sm font-medium">
             Email Address
+            {getTotalPrice() > 0 ? (
+              <span className="text-red-500"> *</span>
+            ) : (
+              <span className="text-gray-500 font-normal"> (optional for free tickets)</span>
+            )}
           </Label>
           <Input
             type="email"
@@ -162,7 +210,9 @@ const TicketForm: React.FC<TicketFormProps> = ({
             value={formData.email}
             onChange={onInputChange}
             placeholder="john.doe@example.com"
-            className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-red-500 focus:border-red-500 h-12 rounded-xl text-base shadow-sm"
+            className="h-12 min-h-[48px] rounded-xl border-gray-300 bg-white text-base text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-red-500 focus:ring-2 focus:ring-red-500"
+            required={getTotalPrice() > 0}
+            autoComplete="email"
           />
         </div>
 
@@ -180,10 +230,10 @@ const TicketForm: React.FC<TicketFormProps> = ({
             placeholder="07xxxxxxxx"
             pattern="^07[0-9]{8}$"
             maxLength={10}
-            className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-red-500 focus:border-red-500 h-12 rounded-xl text-base shadow-sm"
+            className="h-12 min-h-[48px] rounded-xl border-gray-300 bg-white text-base text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-red-500 focus:ring-2 focus:ring-red-500"
             required
           />
-          <p className="text-xs text-gray-500 mt-1">Format: 07xxxxxxxx (10 digits)</p>
+          <p className="mt-1 text-xs text-gray-500">Format: 07xxxxxxxx (10 digits)</p>
         </div>
 
         <div>
@@ -198,7 +248,7 @@ const TicketForm: React.FC<TicketFormProps> = ({
             max="10"
             value={quantity}
             onChange={onQuantityChange}
-            className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-red-500 focus:border-red-500 h-12 rounded-xl text-base shadow-sm"
+            className="h-12 min-h-[48px] rounded-xl border-gray-300 bg-white text-base text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-red-500 focus:ring-2 focus:ring-red-500"
             required
           />
         </div>
@@ -214,7 +264,7 @@ const TicketForm: React.FC<TicketFormProps> = ({
           </div>
         )}
 
-        <div className="p-5 bg-gradient-to-br from-red-50 to-purple-50 rounded-2xl border border-red-100 shadow-sm">
+        <div className="rounded-2xl border border-red-100 bg-gradient-to-br from-red-50 to-purple-50 p-4 shadow-sm sm:p-5">
           <div className="flex justify-between items-center mb-3 text-sm">
             <p className="text-gray-600">Ticket Type:</p>
             <p className="font-medium text-gray-900">
@@ -251,7 +301,7 @@ const TicketForm: React.FC<TicketFormProps> = ({
         >
           <Button
             type="submit"
-            className="w-full h-14 text-base bg-gradient-to-r from-red-600 to-purple-700 text-white shadow-lg hover:shadow-xl hover:from-red-700 hover:to-purple-800 transition-all duration-300 rounded-xl group relative overflow-hidden disabled:opacity-50"
+            className="group relative h-14 min-h-[52px] w-full touch-manipulation rounded-xl bg-gradient-to-r from-red-600 to-purple-700 text-base text-white shadow-lg transition-all duration-300 hover:from-red-700 hover:to-purple-800 hover:shadow-xl disabled:opacity-50"
             disabled={loading || !selectedTicketType}
           >
             <span className="absolute inset-0 bg-gradient-to-r from-transparent to-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -287,8 +337,7 @@ export default function TicketsPage() {
   const [selectedTicketType, setSelectedTicketType] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
   const [formData, setFormData] = useState<FormData>({
-    firstName: "",
-    lastName: "",
+    fullName: "",
     email: "",
     phone: "",
   });
@@ -524,9 +573,13 @@ export default function TicketsPage() {
         throw new Error("Quantity must be at least 1");
       }
 
-      // Ensure required fields are present (email is now optional)
-      if (!formData.firstName || !formData.lastName || !formData.phone) {
-        throw new Error("Please fill in all required fields");
+      if (!formData.fullName?.trim() || !formData.phone) {
+        throw new Error("Please enter your full name and phone number");
+      }
+
+      const { firstName, lastName } = splitFullNameForPesapal(formData.fullName);
+      if (!firstName) {
+        throw new Error("Please enter your full name");
       }
 
       // Normalize and validate phone number: must be exactly 10 digits starting with 07
@@ -544,13 +597,17 @@ export default function TicketsPage() {
       // If there's a price, process payment with PesaPal
       const totalPrice = getTotalPrice();
       if (totalPrice > 0) {
+        const email = formData.email?.trim();
+        if (!email) {
+          throw new Error("Email is required for paid tickets (for your receipt and payment)");
+        }
         const response = await fetch("/api/tickets/pesapal", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            email: formData.email,
+            firstName,
+            lastName,
+            email,
             phoneNumber: normalizedPhone,
             amount: totalPrice.toString(),
             eventId: ticketType.event_id,
@@ -567,15 +624,16 @@ export default function TicketsPage() {
         // Redirect to PesaPal payment page
         window.location.href = data.url;
       } else {
+        const displayName = formData.fullName.trim();
         // For free tickets, create tickets directly (one record per ticket)
         const ticketsToInsert = Array(quantity).fill(null).map(() => ({
           event_id: ticketType.event_id,
-          email: formData.email,
+          email: formData.email?.trim() || null,
           quantity: 1, // Each record represents one ticket
           status: 'confirmed',
           price: ticketType.price,
           purchase_channel: 'online',
-          buyer_name: `${formData.firstName} ${formData.lastName}`,
+          buyer_name: displayName,
           buyer_phone: normalizedPhone
         }));
 
@@ -600,7 +658,7 @@ export default function TicketsPage() {
               date: event?.date || "",
               location: event?.location || ""
             },
-            buyer_name: `${formData.firstName} ${formData.lastName}`,
+            buyer_name: displayName,
             buyer_phone: formData.phone,
             purchase_channel: 'online'
           }));
@@ -636,8 +694,7 @@ export default function TicketsPage() {
 
           // Reset form
           setFormData({
-            firstName: "",
-            lastName: "",
+            fullName: "",
             email: "",
             phone: "",
           });
@@ -670,7 +727,7 @@ export default function TicketsPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedTicketType, quantity, formData, getTicketTypeById, getEventById, getTotalPrice, downloadTicket]);
+  }, [selectedTicketType, quantity, formData, getTicketTypeById, getEventById, getTotalPrice, downloadTicket, downloadAllTickets]);
 
   const closeModal = useCallback(() => {
     setIsModalOpen(false);
@@ -695,7 +752,7 @@ export default function TicketsPage() {
   return (
     <main className="min-h-screen flex flex-col">
       <Navbar />
-      <section className="py-8 sm:py-12 bg-gradient-to-br from-red-50 via-purple-50 to-red-100 min-h-screen relative overflow-hidden">
+      <section className="py-6 sm:py-12 bg-gradient-to-br from-red-50 via-purple-50 to-red-100 min-h-screen relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(220,38,38,0.1)_0%,transparent_70%)] pointer-events-none" />
 
         {/* Decorative elements */}
@@ -703,9 +760,13 @@ export default function TicketsPage() {
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-r from-red-400/20 to-purple-500/20 rounded-full blur-3xl pointer-events-none translate-x-1/2 translate-y-1/2" />
         <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-gradient-to-r from-red-300/20 to-purple-400/20 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="container mx-auto px-4 sm:px-6 relative z-10">
+        <div
+          className={`container mx-auto px-4 sm:px-6 relative z-10 ${
+            isMobile && selectedTicketType && !isModalOpen && !success ? "pb-28 sm:pb-28" : ""
+          }`}
+        >
           <motion.div
-            className="text-center mb-8 sm:mb-12"
+            className="text-center mb-6 sm:mb-12"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -716,25 +777,25 @@ export default function TicketsPage() {
                 Get Your Tickets
               </span>
             </div>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 mb-4 bg-clip-text bg-gradient-to-r from-red-600 via-purple-600 to-red-800">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 mb-3 sm:mb-4 bg-clip-text bg-gradient-to-r from-red-600 via-purple-600 to-red-800 px-1">
               Event Tickets
             </h1>
-            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
-              Select an event and ticket type to purchase your tickets for TIPAC performances
+            <p className="text-sm sm:text-base md:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed px-1">
+              Pick an event, then choose a ticket type — each type has its own color. On your phone, tap a type and continue below.
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 max-w-7xl mx-auto">
             {/* Events List with Ticket Types */}
             <motion.div
-              className="lg:col-span-2 backdrop-blur-sm bg-white/80 rounded-3xl shadow-xl border border-white/30 p-5 sm:p-6 relative overflow-hidden"
+              className="lg:col-span-2 backdrop-blur-sm bg-white/80 rounded-2xl sm:rounded-3xl shadow-xl border border-white/30 p-4 sm:p-6 relative overflow-hidden"
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.7 }}
             >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Available Events</h2>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-4 sm:mb-6">
+                <h2 className="text-lg sm:text-2xl font-bold text-gray-900">Available Events</h2>
                 <div className="bg-gradient-to-r from-red-500 to-purple-600 text-white text-xs font-bold px-3.5 py-1.5 rounded-full shadow">
                   {events.length} Events
                 </div>
@@ -788,10 +849,10 @@ export default function TicketsPage() {
                         } : {}}
                       >
                         <div
-                          className={`p-5 sm:p-6 border-b border-gray-100 ${isSelected ? `bg-gradient-to-r ${colorScheme.from} ${colorScheme.to}` : 'bg-gradient-to-r from-red-50/50 to-purple-50/50'}`}
+                          className={`p-4 sm:p-6 border-b border-gray-100 ${isSelected ? `bg-gradient-to-r ${colorScheme.from} ${colorScheme.to}` : 'bg-gradient-to-r from-red-50/50 to-purple-50/50'}`}
                         >
                           {event.image_url ? (
-                            <div className="rounded-lg overflow-hidden mb-4 h-40">
+                            <div className="rounded-xl overflow-hidden mb-3 sm:mb-4 h-32 sm:h-40">
                               <img 
                                 src={event.image_url} 
                                 alt={event.title}
@@ -799,7 +860,7 @@ export default function TicketsPage() {
                               />
                             </div>
                           ) : (
-                            <div className="rounded-lg overflow-hidden mb-4 h-40 bg-gradient-to-r from-red-500 to-purple-600 flex items-center justify-center">
+                            <div className="rounded-xl overflow-hidden mb-3 sm:mb-4 h-32 sm:h-40 bg-gradient-to-r from-red-500 to-purple-600 flex items-center justify-center">
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
@@ -848,76 +909,116 @@ export default function TicketsPage() {
                           </div>
                         </div>
 
-                        <div className="p-5 sm:p-6">
-                          <p className="text-gray-600 text-sm mb-5 line-clamp-2">{event.description}</p>
+                        <div className="p-4 sm:p-6">
+                          <p className="text-gray-600 text-sm mb-4 sm:mb-5 line-clamp-3 sm:line-clamp-2">{event.description}</p>
 
                           {eventTicketTypes.length > 0 ? (
-                            <div className="space-y-4">
-                              <h4 className="font-bold text-gray-900 text-lg sm:text-xl flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                                </svg>
-                                Available Ticket Types
-                              </h4>
-                              <div className="grid grid-cols-1 gap-4 mt-4">
-                                {eventTicketTypes.map((ticketType) => (
-                                  <motion.div
-                                    key={ticketType.id}
-                                    className={`group p-5 rounded-2xl border-3 cursor-pointer transition-all duration-300 relative overflow-hidden ${selectedTicketType === ticketType.id
-                                      ? "border-red-500 bg-gradient-to-br from-red-50/80 via-purple-50/80 to-red-50/80 shadow-lg ring-4 ring-red-500/20"
-                                      : "border-gray-300 bg-white hover:border-red-400 hover:shadow-lg hover:bg-gradient-to-br hover:from-red-50/50 hover:to-purple-50/50"
-                                      }`}
-                                    whileHover={{ y: -5, scale: 1.03 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={() => {
-                                      setSelectedTicketType(ticketType.id);
-                                      if (isMobile) {
-                                        setIsModalOpen(true);
-                                      }
-                                    }}
-                                  >
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                                    <div className="relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                      <div className="flex items-center space-x-4">
-                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold shadow-lg ring-2 ring-white/20 ${ticketType.price > 0
-                                          ? 'bg-gradient-to-r from-red-500 via-purple-500 to-red-600 text-xl'
-                                          : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-xl'
-                                          }`}>
-                                          {ticketType.price > 0 ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor">
-                                              <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
-                                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
-                                            </svg>
-                                          ) : (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor">
-                                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                            </svg>
-                                          )}
-                                        </div>
-                                        <div>
-                                          <h5 className="font-bold text-gray-900 text-lg">{ticketType.name}</h5>
-                                          <p className="text-base text-gray-600 flex items-center mt-1">
-                                            {ticketType.price > 0 ? (
-                                              <>
-                                                <span className="font-bold text-red-600 text-lg">UGX {ticketType.price.toLocaleString()}</span>
-                                              </>
-                                            ) : (
-                                              <span className="font-bold text-emerald-600 text-lg">Free</span>
-                                            )}
-                                          </p>
-                                        </div>
-                                      </div>
-                                      {selectedTicketType === ticketType.id && (
-                                        <div className="bg-gradient-to-r from-red-500 to-purple-600 rounded-full p-2 shadow-lg ring-2 ring-red-500/30">
-                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                          </svg>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </motion.div>
-                                ))}
+                            <div className="space-y-3">
+                              <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
+                                <h4 className="font-bold text-gray-900 text-base sm:text-lg flex items-center gap-2">
+                                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-purple-600 text-white shadow-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                    </svg>
+                                  </span>
+                                  Ticket types
+                                </h4>
+                                <p className="text-xs text-gray-500 pl-10 sm:pl-0">
+                                  Each type uses a different color bar so you can tell them apart quickly.
+                                </p>
                               </div>
+                              <ul className="mt-3 flex list-none flex-col gap-3 p-0" role="list">
+                                {eventTicketTypes.map((ticketType, ttIndex) => {
+                                  const v = TICKET_TYPE_VARIANTS[ttIndex % TICKET_TYPE_VARIANTS.length];
+                                  const selected = selectedTicketType === ticketType.id;
+                                  const isFree = ticketType.price <= 0;
+                                  return (
+                                    <li key={ticketType.id} className="m-0 p-0">
+                                      <motion.div
+                                        role="button"
+                                        tabIndex={0}
+                                        aria-pressed={selected}
+                                        aria-label={`${ticketType.name}, ${isFree ? "free" : `UGX ${ticketType.price.toLocaleString()}`}${selected ? ", selected" : ""}`}
+                                        className={`group touch-manipulation relative cursor-pointer overflow-hidden rounded-2xl border-2 transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 ${v.cardBg} ${
+                                          selected
+                                            ? `${v.selectedBorder} shadow-md ring-2 ${v.selectedRing}`
+                                            : `${v.border} ${v.borderHover} hover:shadow-md`
+                                        }`}
+                                        whileHover={isMobile ? undefined : { y: -2 }}
+                                        whileTap={{ scale: 0.99 }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter" || e.key === " ") {
+                                            e.preventDefault();
+                                            setSelectedTicketType(ticketType.id);
+                                            if (isMobile) setIsModalOpen(true);
+                                          }
+                                        }}
+                                        onClick={() => {
+                                          setSelectedTicketType(ticketType.id);
+                                          if (isMobile) setIsModalOpen(true);
+                                        }}
+                                      >
+                                        <div
+                                          className={`absolute bottom-0 left-0 top-0 w-1.5 rounded-l-[0.65rem] bg-gradient-to-b ${v.stripe}`}
+                                          aria-hidden
+                                        />
+                                        <div className="relative flex flex-col gap-3 py-4 pl-4 pr-3 sm:flex-row sm:items-center sm:justify-between sm:py-4 sm:pl-5 sm:pr-4">
+                                          <div className="flex min-w-0 flex-1 items-start gap-3">
+                                            <div
+                                              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-white shadow-md ${isFree ? "bg-gradient-to-br from-emerald-500 to-teal-600" : v.accent}`}
+                                            >
+                                              {isFree ? (
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                </svg>
+                                              ) : (
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                                                  <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
+                                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
+                                                </svg>
+                                              )}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                              <div className="mb-1 flex flex-wrap items-center gap-2">
+                                                <h5 className="text-base font-bold leading-snug text-gray-900 sm:text-lg">{ticketType.name}</h5>
+                                                <span
+                                                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide sm:text-xs ${
+                                                    isFree ? "bg-emerald-100 text-emerald-800" : v.accentSoft
+                                                  }`}
+                                                >
+                                                  {isFree ? "Free" : "Paid"}
+                                                </span>
+                                              </div>
+                                              <p
+                                                className={`text-lg font-bold tabular-nums sm:text-xl ${isFree ? "text-emerald-700" : v.priceClass}`}
+                                              >
+                                                {isFree ? "UGX 0" : `UGX ${ticketType.price.toLocaleString()}`}
+                                              </p>
+                                            </div>
+                                          </div>
+                                          <div className="flex shrink-0 items-center justify-between gap-2 pl-[3.75rem] sm:justify-end sm:pl-0">
+                                            {!selected && (
+                                              <span className="text-xs text-gray-500 sm:hidden">Tap to select</span>
+                                            )}
+                                            {selected ? (
+                                              <span
+                                                className={`inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r px-3 py-2 text-sm font-semibold text-white shadow ${v.stripe}`}
+                                              >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                </svg>
+                                                Selected
+                                              </span>
+                                            ) : (
+                                              <span className="hidden text-sm font-medium text-gray-400 sm:inline">Select</span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </motion.div>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
                             </div>
                           ) : (
                             <div className="text-center py-4">
@@ -987,6 +1088,33 @@ export default function TicketsPage() {
             </motion.div>
           </div>
 
+          {/* Mobile: fixed bar after selecting a ticket type */}
+          {(() => {
+            if (!isMobile || !selectedTicketType || isModalOpen || success) return null;
+            const sel = getTicketTypeById(selectedTicketType);
+            if (!sel) return null;
+            return (
+              <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200/90 bg-white/95 backdrop-blur-md shadow-[0_-12px_40px_rgba(0,0,0,0.1)] lg:hidden">
+                <div className="mx-auto flex max-w-lg items-center gap-3 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Selected ticket</p>
+                    <p className="truncate text-sm font-bold text-gray-900">{sel.name}</p>
+                    <p className="text-xs text-gray-600">
+                      {sel.price > 0 ? `UGX ${sel.price.toLocaleString()} each` : "Free ticket"}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => setIsModalOpen(true)}
+                    className="h-12 shrink-0 touch-manipulation rounded-xl bg-gradient-to-r from-red-600 to-purple-700 px-5 text-sm font-semibold text-white shadow-md active:scale-[0.98]"
+                  >
+                    Continue
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Mobile Modal */}
           {isMobile && isModalOpen && (
             <motion.div
@@ -996,32 +1124,37 @@ export default function TicketsPage() {
               exit={{ opacity: 0 }}
             >
               <motion.div
-                className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm"
                 onClick={closeModal}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
               />
               <motion.div
-                className="bg-white rounded-t-3xl shadow-2xl w-full max-h-[90vh] overflow-hidden flex flex-col absolute bottom-0"
+                className="absolute bottom-0 left-0 right-0 flex max-h-[min(92dvh,920px)] w-full flex-col overflow-hidden rounded-t-[1.25rem] bg-white shadow-2xl"
                 initial={{ y: "100%" }}
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
-                transition={{ type: "spring", damping: 25, stiffness: 500 }}
+                transition={{ type: "spring", damping: 28, stiffness: 380 }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="p-4 pb-0 flex justify-between items-center border-b border-gray-200">
-                  <h2 className="text-xl font-bold text-gray-900">Ticket Information</h2>
+                <div className="flex shrink-0 justify-center pt-2 pb-1" aria-hidden>
+                  <div className="h-1 w-10 rounded-full bg-gray-300" />
+                </div>
+                <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 pb-3 pt-1">
+                  <h2 className="pr-2 text-lg font-bold text-gray-900">Complete purchase</h2>
                   <button
+                    type="button"
                     onClick={closeModal}
-                    className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-gray-100 active:bg-gray-200"
+                    aria-label="Close"
                   >
-                    <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
                   <TicketForm
                     formData={formData}
                     onInputChange={handleInputChange}

@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { splitFullNameForPesapal } from "@/lib/utils";
 
 interface Event {
   id: string;
@@ -35,8 +36,7 @@ export default function EventTicketsPage() {
   const [ticketTypeId, setTicketTypeId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    fullName: "",
     email: "",
     phone: "",
   });
@@ -121,21 +121,36 @@ export default function EventTicketsPage() {
         throw new Error("Quantity must be at least 1");
       }
 
-      if (!formData.firstName || !formData.lastName || !formData.email) {
-        throw new Error("Please fill in all required fields");
+      if (!formData.fullName?.trim()) {
+        throw new Error("Please enter your full name");
+      }
+
+      const normalizedPhone = formData.phone.replace(/\s+/g, "");
+      const phoneRegex = /^07[0-9]{8}$/;
+      if (!phoneRegex.test(normalizedPhone)) {
+        throw new Error("Phone number must be in the format 07xxxxxxxx (10 digits, starting with 07)");
+      }
+
+      const { firstName, lastName } = splitFullNameForPesapal(formData.fullName);
+      if (!firstName) {
+        throw new Error("Please enter your full name");
       }
 
       // If there's a price, process payment with PesaPal
       const totalPrice = getTotalPrice();
       if (totalPrice > 0) {
+        const email = formData.email?.trim();
+        if (!email) {
+          throw new Error("Email is required for paid tickets");
+        }
         const response = await fetch("/api/tickets/pesapal", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            email: formData.email,
-            phoneNumber: formData.phone,
+            firstName,
+            lastName,
+            email,
+            phoneNumber: normalizedPhone,
             amount: totalPrice.toString(),
             eventId: eventId,
             quantity: quantity,
@@ -152,17 +167,20 @@ export default function EventTicketsPage() {
         // Redirect to PesaPal payment page
         window.location.href = data.url;
       } else {
+        const displayName = formData.fullName.trim();
         // For free tickets, create ticket directly
         const { data, error } = await supabase
           .from('tickets')
           .insert([{
             event_id: eventId,
             ticket_type_id: ticketTypeId,
-            email: formData.email,
+            email: formData.email?.trim() || null,
             quantity: quantity,
             status: 'confirmed',
             price: ticketPrice,
-            purchase_channel: 'online'
+            purchase_channel: 'online',
+            buyer_name: displayName,
+            buyer_phone: normalizedPhone
           }])
           .select();
 
@@ -173,8 +191,7 @@ export default function EventTicketsPage() {
           
           // Reset form
           setFormData({
-            firstName: "",
-            lastName: "",
+            fullName: "",
             email: "",
             phone: "",
           });
@@ -365,40 +382,51 @@ export default function EventTicketsPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName" className="text-gray-200 text-sm">
-                      First Name *
-                    </Label>
-                    <Input
-                      id="firstName"
-                      name="firstName"
-                      value={formData.firstName}
-                      onChange={handleInputChange}
-                      placeholder="John"
-                      className="bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-10 rounded-lg"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName" className="text-gray-200 text-sm">
-                      Last Name *
-                    </Label>
-                    <Input
-                      id="lastName"
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                      placeholder="Doe"
-                      className="bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-10 rounded-lg"
-                      required
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fullName" className="text-gray-200 text-sm">
+                    Full name *
+                  </Label>
+                  <Input
+                    id="fullName"
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleInputChange}
+                    placeholder="John Doe"
+                    className="bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-10 rounded-lg"
+                    required
+                    autoComplete="name"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="text-gray-200 text-sm">
+                    Phone number *
+                  </Label>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    inputMode="numeric"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    placeholder="07xxxxxxxx"
+                    pattern="^07[0-9]{8}$"
+                    maxLength={10}
+                    className="bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-10 rounded-lg"
+                    required
+                    autoComplete="tel"
+                  />
+                  <p className="text-xs text-gray-500">Format: 07xxxxxxxx (10 digits)</p>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-gray-200 text-sm">
-                    Email *
+                    Email
+                    {getTotalPrice() > 0 ? (
+                      <span className="text-red-400"> *</span>
+                    ) : (
+                      <span className="text-gray-500"> (optional for free tickets)</span>
+                    )}
                   </Label>
                   <Input
                     id="email"
@@ -408,21 +436,8 @@ export default function EventTicketsPage() {
                     onChange={handleInputChange}
                     placeholder="john@example.com"
                     className="bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-10 rounded-lg"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-gray-200 text-sm">
-                    Phone Number (Optional)
-                  </Label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    placeholder="+256123456789"
-                    className="bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-10 rounded-lg"
+                    required={getTotalPrice() > 0}
+                    autoComplete="email"
                   />
                 </div>
 
