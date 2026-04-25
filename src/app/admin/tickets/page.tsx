@@ -292,6 +292,18 @@ export default function AdminTicketsDashboard() {
       const wantUsed =
         activeTab === "tickets" ? false : activeTab === "used" ? true : null;
 
+      // Postgres can't ILIKE a UUID column. If the query looks like a UUID,
+      // search `id` by equality; otherwise search only text columns.
+      const uuidLike = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(q);
+      const orParts = [
+        `email.ilike.%${q}%`,
+        `buyer_name.ilike.%${q}%`,
+        `buyer_phone.ilike.%${q}%`,
+        `batch_code.ilike.%${q}%`,
+        `pesapal_transaction_id.ilike.%${q}%`,
+      ];
+      if (uuidLike) orParts.unshift(`id.eq.${q}`);
+
       let query = supabase
         .from("tickets")
         .select(
@@ -299,16 +311,7 @@ export default function AdminTicketsDashboard() {
         )
         .order("created_at", { ascending: false })
         // Basic multi-field search (does not include event title; that’s derived client-side).
-        .or(
-          [
-            `id.ilike.%${q}%`,
-            `email.ilike.%${q}%`,
-            `buyer_name.ilike.%${q}%`,
-            `buyer_phone.ilike.%${q}%`,
-            `batch_code.ilike.%${q}%`,
-            `pesapal_transaction_id.ilike.%${q}%`,
-          ].join(",")
-        )
+        .or(orParts.join(","))
         .range(from, to);
 
       if (wantUsed != null) query = query.eq("used", wantUsed);
