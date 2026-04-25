@@ -199,27 +199,66 @@ export default function AdminTicketsDashboard() {
     setTicketsPageLoading(true);
     try {
       const currentCount = reset ? 0 : tickets.length;
-      const from = currentCount;
-      const to = currentCount + ticketsPageSize - 1;
 
-      const { data, error: ticketsError } = await supabase
-        .from("tickets")
-        .select(
-          "id, created_at, event_id, ticket_type_id, email, quantity, status, pesapal_transaction_id, pesapal_status, price, purchase_channel, batch_code, is_active, buyer_name, buyer_phone, used"
-        )
-        .order("created_at", { ascending: false })
-        .range(from, to);
+      // IMPORTANT: The UI filters tickets client-side by tab (Active vs Used).
+      // If we page through "all tickets", a page can contain 0 rows matching the current tab,
+      // which looks like the "Load more" button isn't working.
+      // To avoid that, we may fetch multiple pages until we actually bring in new visible rows.
+      const wantUsed =
+        activeTab === "tickets" ? false : activeTab === "used" ? true : null;
 
-      if (ticketsError) throw ticketsError;
+      let accumulated: Ticket[] = [];
+      let cursorFrom = currentCount;
+      let hasMore = true;
+      let attempts = 0;
 
-      const next = (data || []) as Ticket[];
-      setTickets((prev) => (reset ? next : [...prev, ...next]));
+      while (hasMore && attempts < 6) {
+        const cursorTo = cursorFrom + ticketsPageSize - 1;
 
-      const got = next.length;
-      if (got < ticketsPageSize) {
+        const { data, error: ticketsError } = await supabase
+          .from("tickets")
+          .select(
+            "id, created_at, event_id, ticket_type_id, email, quantity, status, pesapal_transaction_id, pesapal_status, price, purchase_channel, batch_code, is_active, buyer_name, buyer_phone, used"
+          )
+          .order("created_at", { ascending: false })
+          .range(cursorFrom, cursorTo);
+
+        if (ticketsError) throw ticketsError;
+
+        const page = (data || []) as Ticket[];
+        if (page.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        accumulated = accumulated.concat(page);
+
+        // Stop early once we've added at least one row that will be visible in this tab,
+        // or once we've loaded enough data for a "page" worth of results.
+        const visibleAdded =
+          wantUsed == null ? page.length : page.filter((t) => t.used === wantUsed).length;
+
+        if (visibleAdded > 0 || accumulated.length >= ticketsPageSize) {
+          break;
+        }
+
+        // If the backend returned less than the requested range, we've reached the end.
+        if (page.length < ticketsPageSize) {
+          hasMore = false;
+          break;
+        }
+
+        cursorFrom += ticketsPageSize;
+        attempts += 1;
+      }
+
+      setTickets((prev) => (reset ? accumulated : [...prev, ...accumulated]));
+
+      const got = accumulated.length;
+      if (!hasMore || got < ticketsPageSize) {
         setTicketsHasMore(false);
       } else if (ticketsTotalCount != null) {
-        setTicketsHasMore(from + got < ticketsTotalCount);
+        setTicketsHasMore(currentCount + got < ticketsTotalCount);
       }
     } catch (err) {
       console.error("Error loading tickets:", err);
@@ -789,7 +828,7 @@ export default function AdminTicketsDashboard() {
 
       {/* Tabs */}
       <div className="mb-6">
-        <nav className="flex flex-wrap gap-2 rounded-xl border border-gray-200 bg-white p-2 shadow-sm">
+        <nav className="flex gap-2 overflow-x-auto whitespace-nowrap rounded-xl border border-gray-200 bg-white p-2 shadow-sm [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             onClick={() => setActiveTab('tickets')}
             className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
@@ -1028,7 +1067,80 @@ export default function AdminTicketsDashboard() {
             </div>
           ) : (
             <div>
-              <div className="overflow-x-auto">
+              {/* Mobile cards */}
+              <div className="sm:hidden divide-y divide-gray-200">
+                {visibleTickets.map((ticket) => (
+                  <button
+                    key={ticket.id}
+                    type="button"
+                    onClick={() => openTicketViewer(ticket)}
+                    className="w-full text-left px-4 py-4 hover:bg-gray-50 active:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    aria-label={`View ticket ${ticket.id.substring(0, 8)}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">
+                          {getEventTitle(ticket.event_id)}
+                        </p>
+                        <p className="mt-0.5 text-xs font-mono text-gray-600 break-all">
+                          {ticket.id.substring(0, 8)}…
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <span
+                          className={`px-2 py-0.5 inline-flex text-[11px] leading-5 font-semibold rounded-full ${
+                            ticket.purchase_channel === "online"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-purple-100 text-purple-800"
+                          }`}
+                        >
+                          {ticket.purchase_channel === "online" ? "Online" : "Batch"}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 inline-flex text-[11px] leading-5 font-semibold rounded-full ${
+                            ticket.status === "confirmed"
+                              ? "bg-green-100 text-green-800"
+                              : ticket.status === "pending"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {ticket.status}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                      <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Purchaser</p>
+                        <p className="mt-0.5 text-gray-900 truncate">{ticket.email || ticket.buyer_name || "—"}</p>
+                        <p className="text-gray-500 truncate">{ticket.buyer_phone || ""}</p>
+                      </div>
+                      <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Total</p>
+                        <p className="mt-0.5 text-gray-900 font-semibold tabular-nums">
+                          {ticket.price > 0 ? `UGX ${(ticket.price * ticket.quantity).toLocaleString()}` : "Free"}
+                        </p>
+                        <p className="text-gray-500 tabular-nums">
+                          Qty: {ticket.quantity} · {formatDate(ticket.created_at)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {ticket.purchase_channel === "physical_batch" && (
+                      <div className="mt-2 text-xs text-gray-600">
+                        Batch: <span className="font-mono">{ticket.batch_code || "—"}</span> ·{" "}
+                        <span className={ticket.is_active ? "text-green-700 font-semibold" : "text-red-700 font-semibold"}>
+                          {ticket.is_active ? "Active" : "Inactive"}
+                        </span>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden sm:block overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50 sticky top-0 z-10">
                     <tr>
@@ -1164,49 +1276,74 @@ export default function AdminTicketsDashboard() {
               <p className="mt-1 text-sm text-gray-500">Customers will appear here after purchasing tickets online.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Customer Name
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Phone Number
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tickets Purchased
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {customersList.map((customer, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                            <span className="text-blue-800 font-medium">
-                              {customer.name?.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{customer.name}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {customer.phone}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-3 py-1 inline-flex text-sm font-semibold rounded-full bg-green-100 text-green-800">
-                          {customer.ticketsCount}
+            <>
+              {/* Mobile cards */}
+              <div className="sm:hidden divide-y divide-gray-200">
+                {customersList.map((customer, index) => (
+                  <div key={index} className="px-4 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-blue-800 font-medium">
+                          {customer.name?.charAt(0).toUpperCase()}
                         </span>
-                      </td>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{customer.name}</p>
+                        <p className="text-xs text-gray-600 truncate">{customer.phone}</p>
+                      </div>
+                      <span className="px-3 py-1 inline-flex text-xs font-semibold rounded-full bg-green-100 text-green-800 tabular-nums">
+                        {customer.ticketsCount}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Customer Name
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Phone Number
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Tickets Purchased
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {customersList.map((customer, index) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-blue-800 font-medium">
+                                {customer.name?.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">{customer.name}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {customer.phone}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-3 py-1 inline-flex text-sm font-semibold rounded-full bg-green-100 text-green-800">
+                            {customer.ticketsCount}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       ) : (
@@ -1229,109 +1366,168 @@ export default function AdminTicketsDashboard() {
               <p className="mt-1 text-sm text-gray-500">Batches will appear here after generating ticket batches.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Batch Code
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Event
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tickets Count
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Created
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {batches.map((batch) => (
-                    <tr key={batch.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
-                        {batch.batch_code}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {getEventTitle(batch.event_id)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {batch.num_tickets}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatDate(batch.created_at)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          batch.is_active 
-                            ? "bg-green-100 text-green-800" 
-                            : "bg-red-100 text-red-800"
-                        }`}>
-                          {batch.is_active ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => toggleBatchStatus(batch.id, batch.is_active)}
-                            disabled={deletingBatchId === batch.id}
-                            className={`inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                              batch.is_active
-                                ? "bg-red-600 hover:bg-red-700"
-                                : "bg-green-600 hover:bg-green-700"
-                            }`}
-                          >
-                            {batch.is_active ? "Deactivate" : "Activate"}
-                          </button>
-                          
-                          {!batch.is_active && (
-                            <button
-                              onClick={() => activateAllTicketsInBatch(batch.id, batch.batch_code)}
-                              disabled={deletingBatchId === batch.id}
-                              className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                            >
-                              Activate Tickets
-                            </button>
-                          )}
+            <>
+              {/* Mobile cards */}
+              <div className="sm:hidden divide-y divide-gray-200">
+                {batches.map((batch) => (
+                  <div key={batch.id} className="px-4 py-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-900">
+                          <span className="font-mono">{batch.batch_code}</span>
+                        </p>
+                        <p className="mt-0.5 text-xs text-gray-600 truncate">{getEventTitle(batch.event_id)}</p>
+                        <p className="mt-1 text-xs text-gray-600 tabular-nums">
+                          {batch.num_tickets} tickets · {formatDate(batch.created_at)}
+                        </p>
+                      </div>
+                      <span className={`px-2 py-0.5 inline-flex text-[11px] leading-5 font-semibold rounded-full ${
+                        batch.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                      }`}>
+                        {batch.is_active ? "Active" : "Inactive"}
+                      </span>
+                    </div>
 
-                          <button
-                            onClick={() => handleDeleteBatch(batch)}
-                            disabled={deletingBatchId === batch.id}
-                            className={`inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 ${
-                              deletingBatchId === batch.id
-                                ? "bg-red-400 cursor-not-allowed"
-                                : "bg-red-600 hover:bg-red-700"
-                            }`}
-                          >
-                            {deletingBatchId === batch.id ? "Deleting..." : "Delete"}
-                          </button>
-                        </div>
-                      </td>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => toggleBatchStatus(batch.id, batch.is_active)}
+                        disabled={deletingBatchId === batch.id}
+                        className={`inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                          batch.is_active ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"
+                        }`}
+                      >
+                        {batch.is_active ? "Deactivate" : "Activate"}
+                      </button>
+
+                      {!batch.is_active && (
+                        <button
+                          onClick={() => activateAllTicketsInBatch(batch.id, batch.batch_code)}
+                          disabled={deletingBatchId === batch.id}
+                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                          Activate Tickets
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => handleDeleteBatch(batch)}
+                        disabled={deletingBatchId === batch.id}
+                        className={`inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 ${
+                          deletingBatchId === batch.id ? "bg-red-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"
+                        }`}
+                      >
+                        {deletingBatchId === batch.id ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Batch Code
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Event
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Tickets Count
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Created
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {batches.map((batch) => (
+                      <tr key={batch.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                          {batch.batch_code}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {getEventTitle(batch.event_id)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {batch.num_tickets}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {formatDate(batch.created_at)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            batch.is_active 
+                              ? "bg-green-100 text-green-800" 
+                              : "bg-red-100 text-red-800"
+                          }`}>
+                            {batch.is_active ? "Active" : "Inactive"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => toggleBatchStatus(batch.id, batch.is_active)}
+                              disabled={deletingBatchId === batch.id}
+                              className={`inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                                batch.is_active
+                                  ? "bg-red-600 hover:bg-red-700"
+                                  : "bg-green-600 hover:bg-green-700"
+                              }`}
+                            >
+                              {batch.is_active ? "Deactivate" : "Activate"}
+                            </button>
+                            
+                            {!batch.is_active && (
+                              <button
+                                onClick={() => activateAllTicketsInBatch(batch.id, batch.batch_code)}
+                                disabled={deletingBatchId === batch.id}
+                                className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                              >
+                                Activate Tickets
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => handleDeleteBatch(batch)}
+                              disabled={deletingBatchId === batch.id}
+                              className={`inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 ${
+                                deletingBatchId === batch.id
+                                  ? "bg-red-400 cursor-not-allowed"
+                                  : "bg-red-600 hover:bg-red-700"
+                              }`}
+                            >
+                              {deletingBatchId === batch.id ? "Deleting..." : "Delete"}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}
 
       {/* Ticket Viewer Modal */}
       {viewerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-0 sm:p-4">
           <div
-            className="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl border border-gray-200"
+            className="w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-4xl overflow-hidden sm:rounded-2xl bg-white shadow-2xl border border-gray-200 flex flex-col"
             role="dialog"
             aria-modal="true"
           >
-            <div className="flex items-start justify-between gap-4 border-b border-gray-200 bg-gray-50 px-5 py-4">
+            <div className="flex items-start justify-between gap-4 border-b border-gray-200 bg-gray-50 px-4 sm:px-5 py-4 sticky top-0 z-10">
               <div className="min-w-0">
                 <h3 className="text-lg font-semibold text-gray-900">Ticket Viewer</h3>
                 <p className="mt-1 text-sm text-gray-600 truncate">
@@ -1351,7 +1547,7 @@ export default function AdminTicketsDashboard() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 flex-1 overflow-y-auto">
               {/* Ticket preview */}
               <div className="p-5 lg:p-6 border-b lg:border-b-0 lg:border-r border-gray-200 bg-gradient-to-br from-gray-50 to-white">
                 {viewerLoading ? (
@@ -1424,12 +1620,12 @@ export default function AdminTicketsDashboard() {
 
               {/* Actions + details */}
               <div className="p-5 lg:p-6">
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={handleDownloadTicketPdf}
                     disabled={viewerLoading || viewerActionLoading || !viewerData}
-                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                    className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
                   >
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -1441,7 +1637,7 @@ export default function AdminTicketsDashboard() {
                     type="button"
                     onClick={handleToggleUsed}
                     disabled={viewerLoading || viewerActionLoading || !selectedTicket}
-                    className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 disabled:opacity-50"
+                    className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 disabled:opacity-50"
                   >
                     {selectedTicket?.used ? "Mark unused" : "Mark used"}
                   </button>
@@ -1450,7 +1646,7 @@ export default function AdminTicketsDashboard() {
                     type="button"
                     onClick={handleToggleActive}
                     disabled={viewerLoading || viewerActionLoading || !selectedTicket}
-                    className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 disabled:opacity-50"
+                    className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 disabled:opacity-50"
                   >
                     {selectedTicket?.is_active ? "Deactivate" : "Activate"}
                   </button>
@@ -1459,7 +1655,7 @@ export default function AdminTicketsDashboard() {
                     type="button"
                     onClick={handleDeleteTicket}
                     disabled={viewerLoading || viewerActionLoading || !selectedTicket}
-                    className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                    className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
                   >
                     Delete
                   </button>
