@@ -946,16 +946,6 @@ export default function AdminTicketsDashboard() {
               {!revenueLoading && stats.totalRevenue != null && (
                 <p className="mt-1 text-xs text-gray-500 leading-snug">
                   {onlineRevenueMeta.successfulTickets.toLocaleString()} successful tickets
-                  {onlineRevenueMeta.prices.length > 0 && (
-                    <>
-                      {" "}
-                      · Prices:{" "}
-                      {onlineRevenueMeta.prices
-                        .filter((p) => p > 0)
-                        .map((p) => `UGX ${p.toLocaleString()}`)
-                        .join(", ")}
-                    </>
-                  )}
                 </p>
               )}
             </div>

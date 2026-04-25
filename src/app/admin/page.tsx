@@ -42,6 +42,8 @@ export default function AdminDashboard() {
     applicationsTotal: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     const cookies = document.cookie.split("; ").reduce(
@@ -63,6 +65,7 @@ export default function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
+      setRefreshing(true);
       const [
         { count: eventsTotal },
         { count: eventsPublished },
@@ -77,11 +80,14 @@ export default function AdminDashboard() {
         supabase.from("contact_messages").select("*", { count: "exact", head: true }),
         supabase.from("contact_messages").select("*", { count: "exact", head: true }).eq("is_read", false),
         supabase.from("gallery_images").select("*", { count: "exact", head: true }),
-        supabase.from("tickets").select("purchase_channel"),
+        // Include status so the dashboard can show "successful online" at a glance.
+        supabase.from("tickets").select("purchase_channel, status"),
         supabase.from("school_applications").select("*", { count: "exact", head: true }),
       ]);
 
-      const ticketsOnline = (ticketsData || []).filter((t: any) => t.purchase_channel === "online").length;
+      const ticketsOnline = (ticketsData || []).filter(
+        (t: any) => t.purchase_channel === "online" && t.status === "confirmed"
+      ).length;
       const ticketsBatch = (ticketsData || []).filter((t: any) => t.purchase_channel === "physical_batch").length;
 
       setStats({
@@ -95,10 +101,12 @@ export default function AdminDashboard() {
         ticketsBatch,
         applicationsTotal: applicationsTotal ?? 0,
       });
+      setLastUpdatedAt(new Date());
     } catch (err) {
       console.error("Failed to fetch stats:", err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -209,18 +217,52 @@ export default function AdminDashboard() {
   return (
     <div className="max-w-7xl mx-auto space-y-8">
       {/* Page heading */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
-            Dashboard
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Welcome back — here's what's happening with TIPAC.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-gray-400">
-          <TrendingUp className="h-3.5 w-3.5" />
-          <span>Last updated just now</span>
+      <div className="relative overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(99,102,241,0.10)_0%,transparent_55%),radial-gradient(circle_at_85%_25%,rgba(236,72,153,0.10)_0%,transparent_55%),radial-gradient(circle_at_50%_120%,rgba(34,197,94,0.08)_0%,transparent_60%)]" />
+        <div className="relative p-5 sm:p-7">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0">
+              <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/70 px-3 py-1 text-xs font-semibold text-gray-700">
+                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+                Admin overview
+              </div>
+              <h1 className="mt-3 text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+                Dashboard
+              </h1>
+              <p className="text-sm text-gray-600 mt-1">
+                Quick snapshot of events, tickets, messages, and applications.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:items-end gap-2">
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <TrendingUp className="h-3.5 w-3.5" />
+                <span>
+                  {lastUpdatedAt
+                    ? `Last updated ${lastUpdatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                    : "Loading…"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={fetchStats}
+                disabled={refreshing}
+                className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {refreshing ? (
+                  <svg className="h-4 w-4 animate-spin text-gray-700" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                  </svg>
+                ) : (
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v6h6M20 20v-6h-6M5 19a9 9 0 0114-7.745M19 5a9 9 0 00-14 7.745" />
+                  </svg>
+                )}
+                {refreshing ? "Refreshing…" : "Refresh"}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -230,7 +272,7 @@ export default function AdminDashboard() {
           <Link
             key={card.label}
             href={card.href}
-            className="group relative bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+            className="group relative bg-white rounded-2xl border border-gray-200/70 p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden focus:outline-none focus:ring-2 focus:ring-purple-500"
           >
             {/* Top accent bar */}
             <div className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r ${card.gradient}`} />
@@ -248,7 +290,7 @@ export default function AdminDashboard() {
 
             <div>
               {loading ? (
-                <div className="h-8 w-16 bg-gray-100 animate-pulse rounded-md mb-1" />
+                <div className="h-8 w-24 bg-gray-100 animate-pulse rounded-md mb-1" />
               ) : (
                 <p className="text-3xl font-bold text-gray-900 tabular-nums">{card.value}</p>
               )}
@@ -263,7 +305,10 @@ export default function AdminDashboard() {
 
       {/* Quick actions */}
       <div>
-        <h2 className="text-base font-semibold text-gray-700 mb-3">Quick Actions</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold text-gray-800">Quick Actions</h2>
+          <p className="text-xs text-gray-500">Most common admin tasks</p>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {quickActions.map((action) => (
             <Link
