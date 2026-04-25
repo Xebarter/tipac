@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { supabase } from '@/lib/supabaseClient';
-import { generateTicketPDF } from "@/lib/ticketGenerator";
 
 interface Ticket {
   id: string;
@@ -59,6 +58,11 @@ export default function AdminTicketsDashboard() {
   const [events, setEvents] = useState<Event[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [ticketsTotalCount, setTicketsTotalCount] = useState<number | null>(null);
+  const [ticketsHasMore, setTicketsHasMore] = useState(true);
+  const [ticketsPageSize] = useState(50);
+  const [ticketsPageLoading, setTicketsPageLoading] = useState(false);
+  const [batchesLoading, setBatchesLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'tickets' | 'batches' | 'used' | 'customers' | 'generate'>('tickets');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -72,6 +76,7 @@ export default function AdminTicketsDashboard() {
   const [viewerData, setViewerData] = useState<TicketViewerData | null>(null);
   const [viewerQrDataUrl, setViewerQrDataUrl] = useState<string | null>(null);
   const [viewerActionLoading, setViewerActionLoading] = useState(false);
+  const [deletingBatchId, setDeletingBatchId] = useState<string | null>(null);
   
   // Stats
   const [stats, setStats] = useState({
@@ -79,7 +84,7 @@ export default function AdminTicketsDashboard() {
     onlineTickets: 0,
     batchTickets: 0,
     usedTickets: 0,
-    totalRevenue: 0
+    totalRevenue: null as number | null
   });
 
   // Form state for batch generation
@@ -91,12 +96,14 @@ export default function AdminTicketsDashboard() {
   });
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Load all data
-  const loadData = async () => {
+  const eventTitleById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const ev of events) m.set(ev.id, ev.title);
+    return m;
+  }, [events]);
+
+  const loadEvents = async () => {
     try {
-      setIsLoading(true);
-      
-      // Load events
       const { data: eventsData, error: eventsError } = await supabase
         .from('events')
         .select('id, title, date')
@@ -104,56 +111,119 @@ export default function AdminTicketsDashboard() {
 
       if (eventsError) throw eventsError;
       setEvents(eventsData || []);
-      
-      // Load tickets
-      const { data: ticketsData, error: ticketsError } = await supabase
-        .from('tickets')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (ticketsError) throw ticketsError;
-      
-      setTickets(ticketsData || []);
-      
-      // Calculate stats
-      const totalTickets = ticketsData?.length || 0;
-      const onlineTickets = ticketsData?.filter(t => t.purchase_channel === 'online').length || 0;
-      const batchTickets = ticketsData?.filter(t => t.purchase_channel === 'physical_batch').length || 0;
-      const usedTickets = ticketsData?.filter(t => t.used).length || 0;
-      const totalRevenue = ticketsData?.reduce((sum, ticket) => 
-        ticket.purchase_channel === 'online' && ticket.status === 'confirmed' 
-          ? sum + (ticket.price * ticket.quantity) 
-          : sum, 
-        0
-      ) || 0;
-      
-      setStats({
-        totalTickets,
-        onlineTickets,
-        batchTickets,
-        usedTickets,
-        totalRevenue
-      });
-      
-      // Load batches
-      const { data: batchesData, error: batchesError } = await supabase
-        .from('batches')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (batchesError) throw batchesError;
-      
-      setBatches(batchesData || []);
-      setIsLoading(false);
     } catch (err) {
       console.error("Error loading data:", err);
+    }
+  };
+
+  const loadTicketCounts = async () => {
+    // Counts are cheap compared to downloading all rows.
+    try {
+      const [{ count: total }, { count: online }, { count: batch }, { count: used }] = await Promise.all([
+        supabase.from("tickets").select("id", { count: "exact", head: true }),
+        supabase.from("tickets").select("id", { count: "exact", head: true }).eq("purchase_channel", "online"),
+        supabase.from("tickets").select("id", { count: "exact", head: true }).eq("purchase_channel", "physical_batch"),
+        supabase.from("tickets").select("id", { count: "exact", head: true }).eq("used", true),
+      ]);
+
+      setTicketsTotalCount(total ?? 0);
+      setStats((prev) => ({
+        ...prev,
+        totalTickets: total ?? 0,
+        onlineTickets: online ?? 0,
+        batchTickets: batch ?? 0,
+        usedTickets: used ?? 0,
+        // Revenue requires a server-side aggregate of (price * quantity). Keep it null for now to avoid heavy full-table scans/downloads.
+        totalRevenue: prev.totalRevenue,
+      }));
+    } catch (err) {
+      console.error("Failed to load ticket counts:", err);
+    }
+  };
+
+  const loadTicketsPage = async (opts?: { reset?: boolean }) => {
+    const reset = opts?.reset ?? false;
+    if (ticketsPageLoading) return;
+    if (!reset && !ticketsHasMore) return;
+
+    setTicketsPageLoading(true);
+    try {
+      const currentCount = reset ? 0 : tickets.length;
+      const from = currentCount;
+      const to = currentCount + ticketsPageSize - 1;
+
+      const { data, error: ticketsError } = await supabase
+        .from("tickets")
+        .select(
+          "id, created_at, event_id, ticket_type_id, email, quantity, status, pesapal_transaction_id, pesapal_status, price, purchase_channel, batch_code, is_active, buyer_name, buyer_phone, used"
+        )
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      if (ticketsError) throw ticketsError;
+
+      const next = (data || []) as Ticket[];
+      setTickets((prev) => (reset ? next : [...prev, ...next]));
+
+      const got = next.length;
+      if (got < ticketsPageSize) {
+        setTicketsHasMore(false);
+      } else if (ticketsTotalCount != null) {
+        setTicketsHasMore(from + got < ticketsTotalCount);
+      }
+    } catch (err) {
+      console.error("Error loading tickets:", err);
+      setError(err instanceof Error ? err.message : "Failed to load tickets");
+    } finally {
+      setTicketsPageLoading(false);
+    }
+  };
+
+  const loadBatches = async () => {
+    if (batchesLoading) return;
+    setBatchesLoading(true);
+    try {
+      const { data: batchesData, error: batchesError } = await supabase
+        .from("batches")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (batchesError) throw batchesError;
+      setBatches(batchesData || []);
+    } catch (err) {
+      console.error("Error loading batches:", err);
+      setError(err instanceof Error ? err.message : "Failed to load batches");
+    } finally {
+      setBatchesLoading(false);
+    }
+  };
+
+  const refreshAll = async () => {
+    setError(null);
+    setSuccess(null);
+    setIsLoading(true);
+    setTicketsHasMore(true);
+    try {
+      await Promise.all([loadEvents(), loadTicketCounts()]);
+      await loadTicketsPage({ reset: true });
+      if (activeTab === "batches") await loadBatches();
+    } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    refreshAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "batches") {
+      // Load batches only when tab is opened (and refresh if empty).
+      if (batches.length === 0) loadBatches();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const toggleBatchStatus = async (batchId: string, currentStatus: boolean) => {
     try {
@@ -179,7 +249,7 @@ export default function AdminTicketsDashboard() {
       setSuccess(`Batch ${!currentStatus ? 'activated' : 'deactivated'} successfully!`);
       
       // Reload data
-      await loadData();
+      await refreshAll();
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(null), 3000);
@@ -201,12 +271,48 @@ export default function AdminTicketsDashboard() {
       setSuccess(`All tickets in batch activated successfully!`);
       
       // Reload data
-      await loadData();
+      await refreshAll();
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred");
+    }
+  };
+
+  const handleDeleteBatch = async (batch: Batch) => {
+    const ok = confirm(
+      `Delete batch ${batch.batch_code}?\n\nThis will permanently delete the batch record and all tickets under this batch. This cannot be undone.`
+    );
+    if (!ok) return;
+
+    try {
+      setDeletingBatchId(batch.id);
+      setError(null);
+      setSuccess(null);
+
+      // Delete tickets first to avoid FK constraints (if any).
+      const { error: ticketsDeleteError } = await supabase
+        .from("tickets")
+        .delete()
+        .eq("batch_code", batch.batch_code);
+
+      if (ticketsDeleteError) throw ticketsDeleteError;
+
+      const { error: batchDeleteError } = await supabase
+        .from("batches")
+        .delete()
+        .eq("id", batch.id);
+
+      if (batchDeleteError) throw batchDeleteError;
+
+      await refreshAll();
+      setSuccess(`Batch ${batch.batch_code} deleted.`);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete batch");
+    } finally {
+      setDeletingBatchId(null);
     }
   };
 
@@ -257,7 +363,7 @@ export default function AdminTicketsDashboard() {
       });
       
       // Reload data to show new batch
-      await loadData();
+      await refreshAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred");
     } finally {
@@ -274,8 +380,7 @@ export default function AdminTicketsDashboard() {
   };
 
   const getEventTitle = (eventId: string) => {
-    const event = events.find(e => e.id === eventId);
-    return event ? event.title : 'Unknown Event';
+    return eventTitleById.get(eventId) || 'Unknown Event';
   };
 
   const getBatchStatus = (batchCode: string | null) => {
@@ -335,7 +440,7 @@ export default function AdminTicketsDashboard() {
     try {
       setViewerActionLoading(true);
       await updateTicket(selectedTicket.id, { used: !selectedTicket.used } as any);
-      await loadData();
+      await refreshAll();
       setSelectedTicket((prev) => (prev ? { ...prev, used: !prev.used } : prev));
       setSuccess(`Ticket marked as ${!selectedTicket.used ? "used" : "unused"}.`);
       setTimeout(() => setSuccess(null), 3000);
@@ -351,7 +456,7 @@ export default function AdminTicketsDashboard() {
     try {
       setViewerActionLoading(true);
       await updateTicket(selectedTicket.id, { is_active: !selectedTicket.is_active } as any);
-      await loadData();
+      await refreshAll();
       setSelectedTicket((prev) => (prev ? { ...prev, is_active: !prev.is_active } : prev));
       setSuccess(`Ticket ${!selectedTicket.is_active ? "activated" : "deactivated"}.`);
       setTimeout(() => setSuccess(null), 3000);
@@ -366,6 +471,7 @@ export default function AdminTicketsDashboard() {
     if (!viewerData) return;
     try {
       setViewerActionLoading(true);
+      const { generateTicketPDF } = await import("@/lib/ticketGenerator");
       const blob = await generateTicketPDF(viewerData as any);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -390,7 +496,7 @@ export default function AdminTicketsDashboard() {
       setViewerActionLoading(true);
       const { error } = await supabase.from("tickets").delete().eq("id", selectedTicket.id);
       if (error) throw error;
-      await loadData();
+      await refreshAll();
       setSuccess("Ticket deleted.");
       setTimeout(() => setSuccess(null), 3000);
       closeTicketViewer();
@@ -458,14 +564,14 @@ export default function AdminTicketsDashboard() {
           <button
             type="button"
             onClick={async () => {
-              await loadData();
+              await refreshAll();
             }}
-            disabled={isLoading}
-            aria-busy={isLoading}
-            aria-label={isLoading ? "Refreshing…" : "Refresh data"}
+            disabled={isLoading || ticketsPageLoading || batchesLoading}
+            aria-busy={isLoading || ticketsPageLoading || batchesLoading}
+            aria-label={isLoading || ticketsPageLoading || batchesLoading ? "Refreshing…" : "Refresh data"}
             className="inline-flex w-fit items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-semibold text-gray-800 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isLoading ? (
+            {isLoading || ticketsPageLoading || batchesLoading ? (
               <svg className="h-4 w-4 animate-spin text-gray-700" viewBox="0 0 24 24" aria-hidden="true">
                 <circle
                   className="opacity-25"
@@ -487,7 +593,7 @@ export default function AdminTicketsDashboard() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v6h6M20 20v-6h-6M5 19a9 9 0 0114-7.745M19 5a9 9 0 00-14 7.745" />
               </svg>
             )}
-            {isLoading ? "Refreshing…" : "Refresh"}
+            {isLoading || ticketsPageLoading || batchesLoading ? "Refreshing…" : "Refresh"}
           </button>
         </div>
 
@@ -609,7 +715,7 @@ export default function AdminTicketsDashboard() {
             </div>
             <div className="mt-2">
               <p className="text-2xl font-bold text-gray-900 tabular-nums leading-none break-words">
-                UGX {stats.totalRevenue.toLocaleString()}
+                {stats.totalRevenue == null ? "—" : `UGX ${stats.totalRevenue.toLocaleString()}`}
               </p>
             </div>
           </div>
@@ -804,6 +910,7 @@ export default function AdminTicketsDashboard() {
                 </h2>
                 <p className="text-sm text-gray-500 mt-0.5">
                   Showing {visibleTickets.length} of {filteredTickets.length}
+                  {ticketsTotalCount != null ? ` (loaded ${tickets.length} of ${ticketsTotalCount})` : ` (loaded ${tickets.length})`}
                 </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full lg:max-w-3xl">
@@ -855,108 +962,124 @@ export default function AdminTicketsDashboard() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50 sticky top-0 z-10">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ticket ID
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Event
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Purchaser
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Channel
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Quantity
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Price
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {visibleTickets.map((ticket) => (
-                    <tr
-                      key={ticket.id}
-                      className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => openTicketViewer(ticket)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          openTicketViewer(ticket);
-                        }
-                      }}
-                      aria-label={`View ticket ${ticket.id.substring(0, 8)}`}
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
-                        {ticket.id.substring(0, 8)}...
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {getEventTitle(ticket.event_id)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {ticket.email || ticket.buyer_name || 'N/A'}
-                        {ticket.buyer_phone && (
-                          <div className="text-gray-500 text-xs">{ticket.buyer_phone}</div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          ticket.purchase_channel === 'online' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-purple-100 text-purple-800'
-                        }`}>
-                          {ticket.purchase_channel === 'online' ? 'Online' : 'Batch'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {ticket.quantity}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {ticket.price > 0 ? `UGX ${(ticket.price * ticket.quantity).toLocaleString()}` : 'Free'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatDate(ticket.created_at)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full mb-1 ${
-                            ticket.status === "confirmed" 
-                              ? "bg-green-100 text-green-800" 
-                              : ticket.status === "pending"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
+            <div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50 sticky top-0 z-10">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ticket ID
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Event
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Purchaser
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Channel
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Quantity
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Price
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {visibleTickets.map((ticket) => (
+                      <tr
+                        key={ticket.id}
+                        className="hover:bg-gray-50 cursor-pointer"
+                        onClick={() => openTicketViewer(ticket)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            openTicketViewer(ticket);
+                          }
+                        }}
+                        aria-label={`View ticket ${ticket.id.substring(0, 8)}`}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                          {ticket.id.substring(0, 8)}...
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {getEventTitle(ticket.event_id)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {ticket.email || ticket.buyer_name || 'N/A'}
+                          {ticket.buyer_phone && (
+                            <div className="text-gray-500 text-xs">{ticket.buyer_phone}</div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            ticket.purchase_channel === 'online' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-purple-100 text-purple-800'
                           }`}>
-                            {ticket.status}
+                            {ticket.purchase_channel === 'online' ? 'Online' : 'Batch'}
                           </span>
-                          {ticket.purchase_channel === 'physical_batch' && (
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              ticket.is_active
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {ticket.quantity}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {ticket.price > 0 ? `UGX ${(ticket.price * ticket.quantity).toLocaleString()}` : 'Free'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {formatDate(ticket.created_at)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-col">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full mb-1 ${
+                              ticket.status === "confirmed" 
                                 ? "bg-green-100 text-green-800" 
+                                : ticket.status === "pending"
+                                ? "bg-yellow-100 text-yellow-800"
                                 : "bg-red-100 text-red-800"
                             }`}>
-                              {ticket.is_active ? "Active" : "Inactive"}
+                              {ticket.status}
                             </span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                            {ticket.purchase_channel === 'physical_batch' && (
+                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                ticket.is_active
+                                  ? "bg-green-100 text-green-800" 
+                                  : "bg-red-100 text-red-800"
+                              }`}>
+                                {ticket.is_active ? "Active" : "Inactive"}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-gray-200 bg-white">
+                <p className="text-xs text-gray-500">
+                  {ticketsTotalCount != null ? `${tickets.length} / ${ticketsTotalCount} tickets loaded` : `${tickets.length} tickets loaded`}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => loadTicketsPage()}
+                  disabled={ticketsPageLoading || !ticketsHasMore}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {ticketsPageLoading ? "Loading…" : ticketsHasMore ? "Load more" : "All loaded"}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -1028,7 +1151,11 @@ export default function AdminTicketsDashboard() {
             <h2 className="text-lg font-medium text-gray-900">Ticket Batches</h2>
           </div>
           
-          {batches.length === 0 ? (
+          {batchesLoading ? (
+            <div className="flex justify-center items-center h-48">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+            </div>
+          ) : batches.length === 0 ? (
             <div className="text-center py-12">
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
@@ -1089,6 +1216,7 @@ export default function AdminTicketsDashboard() {
                         <div className="flex space-x-2">
                           <button
                             onClick={() => toggleBatchStatus(batch.id, batch.is_active)}
+                            disabled={deletingBatchId === batch.id}
                             className={`inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
                               batch.is_active
                                 ? "bg-red-600 hover:bg-red-700"
@@ -1101,11 +1229,24 @@ export default function AdminTicketsDashboard() {
                           {!batch.is_active && (
                             <button
                               onClick={() => activateAllTicketsInBatch(batch.id, batch.batch_code)}
+                              disabled={deletingBatchId === batch.id}
                               className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                             >
                               Activate Tickets
                             </button>
                           )}
+
+                          <button
+                            onClick={() => handleDeleteBatch(batch)}
+                            disabled={deletingBatchId === batch.id}
+                            className={`inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 ${
+                              deletingBatchId === batch.id
+                                ? "bg-red-400 cursor-not-allowed"
+                                : "bg-red-600 hover:bg-red-700"
+                            }`}
+                          >
+                            {deletingBatchId === batch.id ? "Deleting..." : "Delete"}
+                          </button>
                         </div>
                       </td>
                     </tr>

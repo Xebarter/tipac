@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 
-export async function GET(request: Request, { params }: { params: { card_id: string } }) {
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ card_id: string }> }
+) {
   try {
-    const cardId = params.card_id;
+    const { card_id: cardId } = await params;
 
     if (!cardId) {
       return NextResponse.json(
@@ -114,9 +117,12 @@ export async function GET(request: Request, { params }: { params: { card_id: str
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { card_id: string } }) {
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ card_id: string }> }
+) {
   try {
-    const cardId = params.card_id;
+    const { card_id: cardId } = await params;
 
     if (!cardId) {
       return NextResponse.json(

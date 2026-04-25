@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 
-export async function GET(request: Request, { params }: { params: { ticket_id: string } }) {
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ ticket_id: string }> }
+) {
   try {
-    const ticketId = params.ticket_id;
+    const { ticket_id: ticketId } = await params;
 
     if (!ticketId) {
       return NextResponse.json(

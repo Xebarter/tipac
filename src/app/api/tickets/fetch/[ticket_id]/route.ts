@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 
-export async function GET(request: Request, { params }: { params: { ticket_id: string } }) {
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ ticket_id: string }> }
+) {
   try {
-    const ticketId = params.ticket_id;
+    const { ticket_id: ticketId } = await params;
 
     if (!ticketId) {
       return NextResponse.json({ error: "Missing ticket ID" }, { status: 400 });
@@ -20,7 +23,8 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
           date,
           location,
           organizer_name,
-          organizer_logo_url
+          organizer_logo_url,
+          sponsor_logos
         ),
         ticket_types (
           name
@@ -41,7 +45,8 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
             date,
             location,
             organizer_name,
-            organizer_logo_url
+            organizer_logo_url,
+            sponsor_logos
           ),
           ticket_types (
             name
@@ -60,7 +65,7 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
       return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
     }
 
-    // Fetch event sponsors
+    // Fetch event sponsors (if the `event_sponsors` table exists); otherwise fall back to `events.sponsor_logos`.
     const { data: sponsors, error: sponsorsError } = await supabase
       .from('event_sponsors')
       .select(`
@@ -73,15 +78,21 @@ export async function GET(request: Request, { params }: { params: { ticket_id: s
       .eq('event_id', ticket.events?.id);
 
     if (sponsorsError) {
-      console.error('Error fetching sponsors:', sponsorsError);
+      // PGRST205 = table not found in schema cache
+      if ((sponsorsError as any)?.code !== "PGRST205") {
+        console.error('Error fetching sponsors:', sponsorsError);
+      }
       // Continue without sponsors rather than failing
     }
 
     // Transform sponsors into the expected format
-    const sponsorLogos = sponsors?.map(sponsor => ({
-      url: sponsor.sponsors?.logo_url || '',
-      name: sponsor.sponsors?.name || ''
-    })) || [];
+    const sponsorLogos =
+      (sponsors?.map((sponsor) => ({
+        url: sponsor.sponsors?.logo_url || "",
+        name: sponsor.sponsors?.name || "",
+      })) as Array<{ url: string; name: string }>) ||
+      (ticket.events?.sponsor_logos as Array<{ url: string; name: string }> | null) ||
+      [];
 
     // Format the response data to match what the PDF generator expects
     const ticketData = {
