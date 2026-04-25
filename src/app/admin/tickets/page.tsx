@@ -223,66 +223,35 @@ export default function AdminTicketsDashboard() {
     try {
       const currentCount = reset ? 0 : tickets.length;
 
-      // IMPORTANT: The UI filters tickets client-side by tab (Active vs Used).
-      // If we page through "all tickets", a page can contain 0 rows matching the current tab,
-      // which looks like the "Load more" button isn't working.
-      // To avoid that, we may fetch multiple pages until we actually bring in new visible rows.
-      const wantUsed =
-        activeTab === "tickets" ? false : activeTab === "used" ? true : null;
+      // Page the *current tab's dataset* from the DB, so Used/Active tabs show all results reliably.
+      // Active Tickets = confirmed + not used
+      // Used Tickets   = used
+      const from = currentCount;
+      const to = currentCount + ticketsPageSize - 1;
 
-      let accumulated: Ticket[] = [];
-      let cursorFrom = currentCount;
-      let hasMore = true;
-      let attempts = 0;
+      let query = supabase
+        .from("tickets")
+        .select(
+          "id, created_at, event_id, ticket_type_id, email, quantity, status, pesapal_transaction_id, pesapal_status, price, purchase_channel, batch_code, is_active, buyer_name, buyer_phone, used"
+        )
+        .order("created_at", { ascending: false })
+        .range(from, to);
 
-      while (hasMore && attempts < 6) {
-        const cursorTo = cursorFrom + ticketsPageSize - 1;
-
-        const { data, error: ticketsError } = await supabase
-          .from("tickets")
-          .select(
-            "id, created_at, event_id, ticket_type_id, email, quantity, status, pesapal_transaction_id, pesapal_status, price, purchase_channel, batch_code, is_active, buyer_name, buyer_phone, used"
-          )
-          .order("created_at", { ascending: false })
-          .range(cursorFrom, cursorTo);
-
-        if (ticketsError) throw ticketsError;
-
-        const page = (data || []) as Ticket[];
-        if (page.length === 0) {
-          hasMore = false;
-          break;
-        }
-
-        accumulated = accumulated.concat(page);
-
-        // Stop early once we've added at least one row that will be visible in this tab,
-        // or once we've loaded enough data for a "page" worth of results.
-        const visibleAdded =
-          wantUsed == null ? page.length : page.filter((t) => t.used === wantUsed).length;
-
-        if (visibleAdded > 0 || accumulated.length >= ticketsPageSize) {
-          break;
-        }
-
-        // If the backend returned less than the requested range, we've reached the end.
-        if (page.length < ticketsPageSize) {
-          hasMore = false;
-          break;
-        }
-
-        cursorFrom += ticketsPageSize;
-        attempts += 1;
+      if (activeTab === "tickets") {
+        query = query.eq("status", "confirmed").eq("used", false);
+      } else if (activeTab === "used") {
+        query = query.eq("used", true);
       }
 
-      setTickets((prev) => (reset ? accumulated : [...prev, ...accumulated]));
+      const { data, error: ticketsError } = await query;
+      if (ticketsError) throw ticketsError;
 
-      const got = accumulated.length;
-      if (!hasMore || got < ticketsPageSize) {
-        setTicketsHasMore(false);
-      } else if (ticketsTotalCount != null) {
-        setTicketsHasMore(currentCount + got < ticketsTotalCount);
-      }
+      const next = (data || []) as Ticket[];
+      setTickets((prev) => (reset ? next : [...prev, ...next]));
+
+      // When using range pagination without a filtered total count, "has more" is best-effort:
+      // if we received a full page, there might be more.
+      setTicketsHasMore(next.length === ticketsPageSize);
     } catch (err) {
       console.error("Error loading tickets:", err);
       setError(err instanceof Error ? err.message : "Failed to load tickets");
@@ -394,6 +363,22 @@ export default function AdminTicketsDashboard() {
       // Load batches only when tab is opened (and refresh if empty).
       if (batches.length === 0) loadBatches();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  // When switching between Active/Used ticket tabs, reset pagination so we don't "skip"
+  // rows by continuing from the previous tab's loaded length.
+  useEffect(() => {
+    if (!(activeTab === "tickets" || activeTab === "used")) return;
+
+    setTickets([]);
+    setTicketsHasMore(true);
+    // Also reset search paging; a tab change changes the dataset.
+    setSearchTickets([]);
+    setSearchHasMore(false);
+
+    // Load first page for the new tab.
+    loadTicketsPage({ reset: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
