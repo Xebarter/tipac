@@ -677,9 +677,9 @@ export default function AdminTicketsDashboard() {
   const baseTickets = isSearchMode ? searchTickets : tickets;
 
   const filteredTickets = activeTab === 'tickets' 
-    ? baseTickets.filter(t => !t.used)
+    ? baseTickets.filter(t => t.used !== true)
     : activeTab === 'used'
-    ? baseTickets.filter(t => t.used)
+    ? baseTickets.filter(t => t.used === true)
     : baseTickets;
 
   const visibleTickets = filteredTickets.filter((t) => {
