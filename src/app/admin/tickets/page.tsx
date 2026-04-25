@@ -91,6 +91,10 @@ export default function AdminTicketsDashboard() {
     totalRevenue: null as number | null
   });
   const [revenueLoading, setRevenueLoading] = useState(false);
+  const [onlineRevenueMeta, setOnlineRevenueMeta] = useState<{
+    successfulTickets: number;
+    prices: number[];
+  }>({ successfulTickets: 0, prices: [] });
 
   // Form state for batch generation
   const [batchForm, setBatchForm] = useState({
@@ -126,7 +130,12 @@ export default function AdminTicketsDashboard() {
     try {
       const [{ count: total }, { count: online }, { count: batch }, { count: used }] = await Promise.all([
         supabase.from("tickets").select("id", { count: "exact", head: true }),
-        supabase.from("tickets").select("id", { count: "exact", head: true }).eq("purchase_channel", "online"),
+        // "Online tickets" in the dashboard should reflect successful purchases only.
+        supabase
+          .from("tickets")
+          .select("id", { count: "exact", head: true })
+          .eq("purchase_channel", "online")
+          .eq("status", "confirmed"),
         supabase.from("tickets").select("id", { count: "exact", head: true }).eq("purchase_channel", "physical_batch"),
         supabase.from("tickets").select("id", { count: "exact", head: true }).eq("used", true),
       ]);
@@ -163,11 +172,14 @@ export default function AdminTicketsDashboard() {
       const total = count ?? 0;
       if (total === 0) {
         setStats((prev) => ({ ...prev, totalRevenue: 0 }));
+        setOnlineRevenueMeta({ successfulTickets: 0, prices: [] });
         return;
       }
 
       const pageSize = 1000;
       let sum = 0;
+      let successfulTickets = 0;
+      const pricesSet = new Set<number>();
       for (let from = 0; from < total; from += pageSize) {
         const to = Math.min(from + pageSize - 1, total - 1);
         const { data, error } = await supabase
@@ -182,14 +194,21 @@ export default function AdminTicketsDashboard() {
           const price = Number((row as any).price) || 0;
           const qty = Number((row as any).quantity) || 0;
           sum += price * qty;
+          successfulTickets += qty;
+          pricesSet.add(price);
         }
       }
 
       setStats((prev) => ({ ...prev, totalRevenue: sum }));
+      setOnlineRevenueMeta({
+        successfulTickets,
+        prices: Array.from(pricesSet).filter((p) => Number.isFinite(p)).sort((a, b) => a - b),
+      });
     } catch (err) {
       console.error("Failed to load online revenue:", err);
       // Keep dash if revenue fails, but don't break the page.
       setStats((prev) => ({ ...prev, totalRevenue: null }));
+      setOnlineRevenueMeta({ successfulTickets: 0, prices: [] });
     } finally {
       setRevenueLoading(false);
     }
@@ -939,6 +958,21 @@ export default function AdminTicketsDashboard() {
               <p className="text-2xl font-bold text-gray-900 tabular-nums leading-none break-words">
                 {revenueLoading ? "Loading…" : stats.totalRevenue == null ? "—" : `UGX ${stats.totalRevenue.toLocaleString()}`}
               </p>
+              {!revenueLoading && stats.totalRevenue != null && (
+                <p className="mt-1 text-xs text-gray-500 leading-snug">
+                  {onlineRevenueMeta.successfulTickets.toLocaleString()} successful tickets
+                  {onlineRevenueMeta.prices.length > 0 && (
+                    <>
+                      {" "}
+                      · Prices:{" "}
+                      {onlineRevenueMeta.prices
+                        .filter((p) => p > 0)
+                        .map((p) => `UGX ${p.toLocaleString()}`)
+                        .join(", ")}
+                    </>
+                  )}
+                </p>
+              )}
             </div>
           </div>
         </div>
