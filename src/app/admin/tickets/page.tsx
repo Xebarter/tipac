@@ -62,6 +62,10 @@ export default function AdminTicketsDashboard() {
   const [ticketsHasMore, setTicketsHasMore] = useState(true);
   const [ticketsPageSize] = useState(50);
   const [ticketsPageLoading, setTicketsPageLoading] = useState(false);
+  const [searchTickets, setSearchTickets] = useState<Ticket[]>([]);
+  const [searchHasMore, setSearchHasMore] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchPageSize] = useState(50);
   const [batchesLoading, setBatchesLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'tickets' | 'batches' | 'used' | 'customers' | 'generate'>('tickets');
   const [error, setError] = useState<string | null>(null);
@@ -265,6 +269,63 @@ export default function AdminTicketsDashboard() {
       setError(err instanceof Error ? err.message : "Failed to load tickets");
     } finally {
       setTicketsPageLoading(false);
+    }
+  };
+
+  const loadSearchPage = async (opts?: { reset?: boolean }) => {
+    const reset = opts?.reset ?? false;
+    const q = searchQuery.trim();
+    if (!q) {
+      setSearchTickets([]);
+      setSearchHasMore(false);
+      return;
+    }
+    if (searchLoading) return;
+    if (!reset && !searchHasMore) return;
+
+    setSearchLoading(true);
+    try {
+      const currentCount = reset ? 0 : searchTickets.length;
+      const from = currentCount;
+      const to = currentCount + searchPageSize - 1;
+
+      const wantUsed =
+        activeTab === "tickets" ? false : activeTab === "used" ? true : null;
+
+      let query = supabase
+        .from("tickets")
+        .select(
+          "id, created_at, event_id, ticket_type_id, email, quantity, status, pesapal_transaction_id, pesapal_status, price, purchase_channel, batch_code, is_active, buyer_name, buyer_phone, used"
+        )
+        .order("created_at", { ascending: false })
+        // Basic multi-field search (does not include event title; that’s derived client-side).
+        .or(
+          [
+            `id.ilike.%${q}%`,
+            `email.ilike.%${q}%`,
+            `buyer_name.ilike.%${q}%`,
+            `buyer_phone.ilike.%${q}%`,
+            `batch_code.ilike.%${q}%`,
+            `pesapal_transaction_id.ilike.%${q}%`,
+          ].join(",")
+        )
+        .range(from, to);
+
+      if (wantUsed != null) query = query.eq("used", wantUsed);
+      if (eventFilter !== "all") query = query.eq("event_id", eventFilter);
+      if (channelFilter !== "all") query = query.eq("purchase_channel", channelFilter);
+
+      const { data, error: searchErr } = await query;
+      if (searchErr) throw searchErr;
+
+      const next = (data || []) as Ticket[];
+      setSearchTickets((prev) => (reset ? next : [...prev, ...next]));
+      setSearchHasMore(next.length === searchPageSize);
+    } catch (err) {
+      console.error("Error searching tickets:", err);
+      setError(err instanceof Error ? err.message : "Failed to search tickets");
+    } finally {
+      setSearchLoading(false);
     }
   };
 
@@ -612,11 +673,14 @@ export default function AdminTicketsDashboard() {
   };
 
   // Filter tickets based on active tab
+  const isSearchMode = searchQuery.trim().length > 0;
+  const baseTickets = isSearchMode ? searchTickets : tickets;
+
   const filteredTickets = activeTab === 'tickets' 
-    ? tickets.filter(t => !t.used)
+    ? baseTickets.filter(t => !t.used)
     : activeTab === 'used'
-    ? tickets.filter(t => t.used)
-    : tickets;
+    ? baseTickets.filter(t => t.used)
+    : baseTickets;
 
   const visibleTickets = filteredTickets.filter((t) => {
     if (eventFilter !== "all" && t.event_id !== eventFilter) return false;
@@ -638,6 +702,27 @@ export default function AdminTicketsDashboard() {
       .toLowerCase();
     return haystack.includes(q);
   });
+
+  // When searching, hit the DB so results aren’t limited to loaded pages.
+  useEffect(() => {
+    if (!(activeTab === "tickets" || activeTab === "used")) return;
+
+    const q = searchQuery.trim();
+    // Clear search results quickly when query is cleared.
+    if (!q) {
+      setSearchTickets([]);
+      setSearchHasMore(false);
+      setSearchLoading(false);
+      return;
+    }
+
+    const handle = setTimeout(() => {
+      loadSearchPage({ reset: true });
+    }, 300);
+
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, eventFilter, channelFilter, activeTab]);
 
   // Group tickets by customer for the customers tab
   const customers = tickets
@@ -1246,15 +1331,33 @@ export default function AdminTicketsDashboard() {
 
               <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-gray-200 bg-white">
                 <p className="text-xs text-gray-500">
-                  {ticketsTotalCount != null ? `${tickets.length} / ${ticketsTotalCount} tickets loaded` : `${tickets.length} tickets loaded`}
+                  {isSearchMode
+                    ? `${searchTickets.length} matching tickets loaded`
+                    : ticketsTotalCount != null
+                    ? `${tickets.length} / ${ticketsTotalCount} tickets loaded`
+                    : `${tickets.length} tickets loaded`}
                 </p>
                 <button
                   type="button"
-                  onClick={() => loadTicketsPage()}
-                  disabled={ticketsPageLoading || !ticketsHasMore}
+                  onClick={() => (isSearchMode ? loadSearchPage() : loadTicketsPage())}
+                  disabled={
+                    isSearchMode
+                      ? searchLoading || !searchHasMore
+                      : ticketsPageLoading || !ticketsHasMore
+                  }
                   className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {ticketsPageLoading ? "Loading…" : ticketsHasMore ? "Load more" : "All loaded"}
+                  {isSearchMode
+                    ? searchLoading
+                      ? "Searching…"
+                      : searchHasMore
+                      ? "Load more"
+                      : "All loaded"
+                    : ticketsPageLoading
+                    ? "Loading…"
+                    : ticketsHasMore
+                    ? "Load more"
+                    : "All loaded"}
                 </button>
               </div>
             </div>
