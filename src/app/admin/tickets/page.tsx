@@ -448,9 +448,24 @@ export default function AdminTicketsDashboard() {
       setViewerData(null);
       setViewerQrDataUrl(null);
 
-      const response = await fetch(`/api/tickets/fetch/${ticket.id}`);
-      const data = await response.json().catch(() => null);
-      if (!response.ok || !data) {
+      const [latestStatus, viewerResponse] = await Promise.all([
+        supabase
+          .from("tickets")
+          .select("used, is_active, purchase_channel, created_at, event_id")
+          .eq("id", ticket.id)
+          .maybeSingle(),
+        fetch(`/api/tickets/fetch/${ticket.id}`),
+      ]);
+
+      if (latestStatus.error) {
+        // Non-fatal; we'll still show the modal with whatever we have.
+        console.warn("Failed to refresh latest ticket status:", latestStatus.error);
+      } else if (latestStatus.data) {
+        setSelectedTicket((prev) => (prev ? { ...prev, ...(latestStatus.data as Partial<Ticket>) } : prev));
+      }
+
+      const data = await viewerResponse.json().catch(() => null);
+      if (!viewerResponse.ok || !data) {
         throw new Error(data?.error || "Failed to load ticket details");
       }
 
