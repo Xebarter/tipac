@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from '@/lib/supabaseClient';
+import { generateTicketPDF } from "@/lib/ticketGenerator";
 
 interface Ticket {
   id: string;
@@ -37,6 +38,22 @@ interface Batch {
   is_active: boolean;
 }
 
+type TicketViewerData = {
+  id: string;
+  event: {
+    title: string;
+    date: string;
+    location: string;
+    organizer_name?: string | null;
+    organizer_logo_url?: string | null;
+    sponsor_logos?: Array<{ url: string; name: string }>;
+  };
+  buyer_name: string;
+  buyer_phone: string;
+  purchase_channel: string;
+  confirmation_code?: string | null;
+};
+
 export default function AdminTicketsDashboard() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
@@ -45,6 +62,16 @@ export default function AdminTicketsDashboard() {
   const [activeTab, setActiveTab] = useState<'tickets' | 'batches' | 'used' | 'customers' | 'generate'>('tickets');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [eventFilter, setEventFilter] = useState<string>("all");
+  const [channelFilter, setChannelFilter] = useState<"all" | "online" | "physical_batch">("all");
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerLoading, setViewerLoading] = useState(false);
+  const [viewerError, setViewerError] = useState<string | null>(null);
+  const [viewerData, setViewerData] = useState<TicketViewerData | null>(null);
+  const [viewerQrDataUrl, setViewerQrDataUrl] = useState<string | null>(null);
+  const [viewerActionLoading, setViewerActionLoading] = useState(false);
   
   // Stats
   const [stats, setStats] = useState({
@@ -257,12 +284,150 @@ export default function AdminTicketsDashboard() {
     return batch ? (batch.is_active ? 'Active' : 'Inactive') : 'Not Found';
   };
 
+  const openTicketViewer = async (ticket: Ticket) => {
+    try {
+      setSelectedTicket(ticket);
+      setViewerOpen(true);
+      setViewerLoading(true);
+      setViewerError(null);
+      setViewerData(null);
+      setViewerQrDataUrl(null);
+
+      const response = await fetch(`/api/tickets/fetch/${ticket.id}`);
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data) {
+        throw new Error(data?.error || "Failed to load ticket details");
+      }
+
+      setViewerData(data as TicketViewerData);
+
+      // Generate QR code (client-side) for the ticket id.
+      const QRCode = (await import("qrcode")).default;
+      const qr = await QRCode.toDataURL(ticket.id, {
+        width: 420,
+        margin: 2,
+        color: { dark: "#111827", light: "#ffffff" },
+      });
+      setViewerQrDataUrl(qr);
+    } catch (err: any) {
+      setViewerError(err?.message || "Failed to load ticket");
+    } finally {
+      setViewerLoading(false);
+    }
+  };
+
+  const closeTicketViewer = () => {
+    if (viewerActionLoading) return;
+    setViewerOpen(false);
+    setViewerError(null);
+    setViewerData(null);
+    setViewerQrDataUrl(null);
+    setSelectedTicket(null);
+  };
+
+  const updateTicket = async (ticketId: string, patch: Partial<Ticket>) => {
+    const { error } = await supabase.from("tickets").update(patch).eq("id", ticketId);
+    if (error) throw error;
+  };
+
+  const handleToggleUsed = async () => {
+    if (!selectedTicket) return;
+    try {
+      setViewerActionLoading(true);
+      await updateTicket(selectedTicket.id, { used: !selectedTicket.used } as any);
+      await loadData();
+      setSelectedTicket((prev) => (prev ? { ...prev, used: !prev.used } : prev));
+      setSuccess(`Ticket marked as ${!selectedTicket.used ? "used" : "unused"}.`);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      setViewerError(err?.message || "Failed to update ticket");
+    } finally {
+      setViewerActionLoading(false);
+    }
+  };
+
+  const handleToggleActive = async () => {
+    if (!selectedTicket) return;
+    try {
+      setViewerActionLoading(true);
+      await updateTicket(selectedTicket.id, { is_active: !selectedTicket.is_active } as any);
+      await loadData();
+      setSelectedTicket((prev) => (prev ? { ...prev, is_active: !prev.is_active } : prev));
+      setSuccess(`Ticket ${!selectedTicket.is_active ? "activated" : "deactivated"}.`);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      setViewerError(err?.message || "Failed to update ticket");
+    } finally {
+      setViewerActionLoading(false);
+    }
+  };
+
+  const handleDownloadTicketPdf = async () => {
+    if (!viewerData) return;
+    try {
+      setViewerActionLoading(true);
+      const blob = await generateTicketPDF(viewerData as any);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `tipac-ticket-${viewerData.id.substring(0, 8)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } catch (err: any) {
+      setViewerError(err?.message || "Failed to generate PDF");
+    } finally {
+      setViewerActionLoading(false);
+    }
+  };
+
+  const handleDeleteTicket = async () => {
+    if (!selectedTicket) return;
+    const ok = confirm("Delete this ticket? This cannot be undone.");
+    if (!ok) return;
+    try {
+      setViewerActionLoading(true);
+      const { error } = await supabase.from("tickets").delete().eq("id", selectedTicket.id);
+      if (error) throw error;
+      await loadData();
+      setSuccess("Ticket deleted.");
+      setTimeout(() => setSuccess(null), 3000);
+      closeTicketViewer();
+    } catch (err: any) {
+      setViewerError(err?.message || "Failed to delete ticket");
+    } finally {
+      setViewerActionLoading(false);
+    }
+  };
+
   // Filter tickets based on active tab
   const filteredTickets = activeTab === 'tickets' 
     ? tickets.filter(t => !t.used)
     : activeTab === 'used'
     ? tickets.filter(t => t.used)
     : tickets;
+
+  const visibleTickets = filteredTickets.filter((t) => {
+    if (eventFilter !== "all" && t.event_id !== eventFilter) return false;
+    if (channelFilter !== "all" && t.purchase_channel !== channelFilter) return false;
+
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    const haystack = [
+      t.id,
+      t.email,
+      t.buyer_name,
+      t.buyer_phone,
+      t.batch_code,
+      t.pesapal_transaction_id,
+      getEventTitle(t.event_id),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(q);
+  });
 
   // Group tickets by customer for the customers tab
   const customers = tickets
@@ -283,11 +448,48 @@ export default function AdminTicketsDashboard() {
   const customersList = Object.values(customers);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Tickets Dashboard</h1>
-        <p className="text-gray-600 mt-1">Comprehensive overview of all tickets and batches</p>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+        <div className="mb-6 sm:mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Tickets Dashboard</h1>
+            <p className="text-gray-600 mt-1">Overview of all tickets, batches, and customers</p>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              await loadData();
+            }}
+            disabled={isLoading}
+            aria-busy={isLoading}
+            aria-label={isLoading ? "Refreshing…" : "Refresh data"}
+            className="inline-flex w-fit items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-semibold text-gray-800 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isLoading ? (
+              <svg className="h-4 w-4 animate-spin text-gray-700" viewBox="0 0 24 24" aria-hidden="true">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="none"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                />
+              </svg>
+            ) : (
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v6h6M20 20v-6h-6M5 19a9 9 0 0114-7.745M19 5a9 9 0 00-14 7.745" />
+              </svg>
+            )}
+            {isLoading ? "Refreshing…" : "Refresh"}
+          </button>
+        </div>
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
@@ -302,127 +504,167 @@ export default function AdminTicketsDashboard() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="rounded-full bg-blue-100 p-3">
-              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-              </svg>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
+        {/* Total Tickets */}
+        <div className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md">
+          <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-blue-100/60 blur-2xl" />
+          <div className="relative flex min-h-[96px] flex-col justify-between">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 leading-tight">
+                Total tickets
+              </p>
+              <div className="rounded-xl bg-blue-50 p-2 text-blue-700">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                </svg>
+              </div>
             </div>
-            <div className="ml-4">
-              <h3 className="text-sm font-medium text-gray-500">Total Tickets</h3>
-              <p className="text-2xl font-semibold text-gray-900">{stats.totalTickets}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="rounded-full bg-green-100 p-3">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
-            </div>
-            <div className="ml-4">
-              <h3 className="text-sm font-medium text-gray-500">Online Tickets</h3>
-              <p className="text-2xl font-semibold text-gray-900">{stats.onlineTickets}</p>
+            <div className="mt-2">
+              <p className="text-2xl font-bold text-gray-900 tabular-nums leading-none">
+                {stats.totalTickets.toLocaleString()}
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="rounded-full bg-purple-100 p-3">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-              </svg>
+        {/* Online Tickets */}
+        <div className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md">
+          <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-emerald-100/60 blur-2xl" />
+          <div className="relative flex min-h-[96px] flex-col justify-between">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 leading-tight">
+                Online tickets
+              </p>
+              <div className="rounded-xl bg-emerald-50 p-2 text-emerald-700">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+              </div>
             </div>
-            <div className="ml-4">
-              <h3 className="text-sm font-medium text-gray-500">Batch Tickets</h3>
-              <p className="text-2xl font-semibold text-gray-900">{stats.batchTickets}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="rounded-full bg-yellow-100 p-3">
-              <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div className="ml-4">
-              <h3 className="text-sm font-medium text-gray-500">Used Tickets</h3>
-              <p className="text-2xl font-semibold text-gray-900">{stats.usedTickets}</p>
+            <div className="mt-2">
+              <p className="text-2xl font-bold text-gray-900 tabular-nums leading-none">
+                {stats.onlineTickets.toLocaleString()}
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="rounded-full bg-green-100 p-3">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+        {/* Batch Tickets */}
+        <div className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md">
+          <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-purple-100/60 blur-2xl" />
+          <div className="relative flex min-h-[96px] flex-col justify-between">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 leading-tight">
+                Batch tickets
+              </p>
+              <div className="rounded-xl bg-purple-50 p-2 text-purple-700">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+              </div>
             </div>
-            <div className="ml-4">
-              <h3 className="text-sm font-medium text-gray-500">Online Revenue</h3>
-              <p className="text-2xl font-semibold text-gray-900">UGX {stats.totalRevenue.toLocaleString()}</p>
+            <div className="mt-2">
+              <p className="text-2xl font-bold text-gray-900 tabular-nums leading-none">
+                {stats.batchTickets.toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Used Tickets */}
+        <div className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md">
+          <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-amber-100/60 blur-2xl" />
+          <div className="relative flex min-h-[96px] flex-col justify-between">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 leading-tight">
+                Used tickets
+              </p>
+              <div className="rounded-xl bg-amber-50 p-2 text-amber-700">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl font-bold text-gray-900 tabular-nums leading-none">
+                {stats.usedTickets.toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Online Revenue */}
+        <div className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md">
+          <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-green-100/60 blur-2xl" />
+          <div className="relative flex min-h-[96px] flex-col justify-between">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 leading-tight">
+                Online revenue
+              </p>
+              <div className="rounded-xl bg-green-50 p-2 text-green-700">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl font-bold text-gray-900 tabular-nums leading-none break-words">
+                UGX {stats.totalRevenue.toLocaleString()}
+              </p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="mb-6 border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
+      <div className="mb-6">
+        <nav className="flex flex-wrap gap-2 rounded-xl border border-gray-200 bg-white p-2 shadow-sm">
           <button
             onClick={() => setActiveTab('tickets')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
               activeTab === 'tickets'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-700 hover:bg-gray-50'
             }`}
           >
             Active Tickets
           </button>
           <button
             onClick={() => setActiveTab('batches')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
               activeTab === 'batches'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-700 hover:bg-gray-50'
             }`}
           >
             Ticket Batches
           </button>
           <button
             onClick={() => setActiveTab('generate')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
               activeTab === 'generate'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-700 hover:bg-gray-50'
             }`}
           >
             Generate Batch
           </button>
           <button
             onClick={() => setActiveTab('used')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
               activeTab === 'used'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-700 hover:bg-gray-50'
             }`}
           >
             Used Tickets
           </button>
           <button
             onClick={() => setActiveTab('customers')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
               activeTab === 'customers'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-700 hover:bg-gray-50'
             }`}
           >
             Customers
@@ -436,7 +678,7 @@ export default function AdminTicketsDashboard() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
         </div>
       ) : activeTab === 'generate' ? (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-lg font-medium text-gray-900">Generate Ticket Batch</h2>
             <p className="text-sm text-gray-500 mt-1">Create a batch of physical tickets for an event</p>
@@ -553,14 +795,50 @@ export default function AdminTicketsDashboard() {
           </div>
         </div>
       ) : activeTab === 'tickets' || activeTab === 'used' ? (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">
-              {activeTab === 'tickets' ? 'Active Tickets' : 'Used Tickets'}
-            </h2>
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {activeTab === 'tickets' ? 'Active Tickets' : 'Used Tickets'}
+                </h2>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Showing {visibleTickets.length} of {filteredTickets.length}
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full lg:max-w-3xl">
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search ticket id, name, phone, email, batch code…"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <select
+                  value={eventFilter}
+                  onChange={(e) => setEventFilter(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">All events</option>
+                  {events.map((ev) => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.title}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={channelFilter}
+                  onChange={(e) => setChannelFilter(e.target.value as any)}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">All channels</option>
+                  <option value="online">Online</option>
+                  <option value="physical_batch">Batch</option>
+                </select>
+              </div>
+            </div>
           </div>
           
-          {filteredTickets.length === 0 ? (
+          {visibleTickets.length === 0 ? (
             <div className="text-center py-12">
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
@@ -569,15 +847,17 @@ export default function AdminTicketsDashboard() {
                 {activeTab === 'tickets' ? 'No active tickets' : 'No used tickets'}
               </h3>
               <p className="mt-1 text-sm text-gray-500">
-                {activeTab === 'tickets' 
-                  ? 'Tickets will appear here once they are purchased.' 
-                  : 'Used tickets will appear here after verification at the event.'}
+                {searchQuery || eventFilter !== "all" || channelFilter !== "all"
+                  ? "No tickets match your filters."
+                  : activeTab === 'tickets'
+                    ? 'Tickets will appear here once they are purchased.'
+                    : 'Used tickets will appear here after verification at the event.'}
               </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Ticket ID
@@ -606,8 +886,21 @@ export default function AdminTicketsDashboard() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredTickets.map((ticket) => (
-                    <tr key={ticket.id}>
+                  {visibleTickets.map((ticket) => (
+                    <tr
+                      key={ticket.id}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => openTicketViewer(ticket)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          openTicketViewer(ticket);
+                        }
+                      }}
+                      aria-label={`View ticket ${ticket.id.substring(0, 8)}`}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
                         {ticket.id.substring(0, 8)}...
                       </td>
@@ -668,7 +961,7 @@ export default function AdminTicketsDashboard() {
           )}
         </div>
       ) : activeTab === 'customers' ? (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-lg font-medium text-gray-900">Customers</h2>
             <p className="text-sm text-gray-500 mt-1">Customers who purchased tickets online</p>
@@ -730,7 +1023,7 @@ export default function AdminTicketsDashboard() {
         </div>
       ) : (
         // Batches tab content
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-lg font-medium text-gray-900">Ticket Batches</h2>
           </div>
@@ -823,6 +1116,184 @@ export default function AdminTicketsDashboard() {
           )}
         </div>
       )}
+
+      {/* Ticket Viewer Modal */}
+      {viewerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div
+            className="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl border border-gray-200"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-gray-200 bg-gray-50 px-5 py-4">
+              <div className="min-w-0">
+                <h3 className="text-lg font-semibold text-gray-900">Ticket Viewer</h3>
+                <p className="mt-1 text-sm text-gray-600 truncate">
+                  {viewerData?.event?.title || getEventTitle(selectedTicket?.event_id || "")}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeTicketViewer}
+                disabled={viewerActionLoading}
+                className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                aria-label="Close"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
+              {/* Ticket preview */}
+              <div className="p-5 lg:p-6 border-b lg:border-b-0 lg:border-r border-gray-200 bg-gradient-to-br from-gray-50 to-white">
+                {viewerLoading ? (
+                  <div className="flex items-center justify-center h-72">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : viewerError ? (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                    {viewerError}
+                  </div>
+                ) : viewerData ? (
+                  <div className="mx-auto max-w-md">
+                    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                      <div className="px-5 py-4 bg-gradient-to-r from-red-600 to-purple-700 text-white">
+                        <p className="text-xs font-semibold uppercase tracking-wide opacity-90">
+                          {viewerData.event.organizer_name || "TIPAC"}
+                        </p>
+                        <h4 className="mt-1 text-lg font-bold leading-tight">
+                          {viewerData.event.title}
+                        </h4>
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-white/90">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1">
+                            <span>📅</span>
+                            <span>{viewerData.event.date ? new Date(viewerData.event.date).toLocaleDateString() : ""}</span>
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1">
+                            <span>📍</span>
+                            <span className="truncate max-w-[220px]">{viewerData.event.location}</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="px-5 py-5">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Ticket ID</p>
+                            <p className="mt-1 font-mono text-sm text-gray-900 break-all">{viewerData.id}</p>
+                          </div>
+                          {viewerQrDataUrl && (
+                            <img
+                              src={viewerQrDataUrl}
+                              alt="Ticket QR code"
+                              className="h-28 w-28 rounded-lg border border-gray-200 bg-white p-1"
+                            />
+                          )}
+                        </div>
+
+                        <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
+                          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Buyer</p>
+                            <p className="mt-1 font-medium text-gray-900 truncate">{viewerData.buyer_name || "—"}</p>
+                            <p className="text-xs text-gray-600 truncate">{viewerData.buyer_phone || "—"}</p>
+                          </div>
+                          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Channel</p>
+                            <p className="mt-1 font-medium text-gray-900">{viewerData.purchase_channel || "online"}</p>
+                            <p className="text-xs text-gray-600 truncate">
+                              {viewerData.confirmation_code ? `Ref: ${viewerData.confirmation_code}` : ""}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="mt-3 text-xs text-gray-500">
+                      Tip: click “Download PDF” to get the exact printable ticket.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Actions + details */}
+              <div className="p-5 lg:p-6">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDownloadTicketPdf}
+                    disabled={viewerLoading || viewerActionLoading || !viewerData}
+                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download PDF
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleToggleUsed}
+                    disabled={viewerLoading || viewerActionLoading || !selectedTicket}
+                    className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    {selectedTicket?.used ? "Mark unused" : "Mark used"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleToggleActive}
+                    disabled={viewerLoading || viewerActionLoading || !selectedTicket}
+                    className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    {selectedTicket?.is_active ? "Deactivate" : "Activate"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDeleteTicket}
+                    disabled={viewerLoading || viewerActionLoading || !selectedTicket}
+                    className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                  >
+                    Delete
+                  </button>
+                </div>
+
+                <div className="mt-5 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                  <h4 className="text-sm font-semibold text-gray-900">Admin status</h4>
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-lg bg-white border border-gray-200 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Used</p>
+                      <p className="mt-1 font-medium text-gray-900">{selectedTicket?.used ? "Yes" : "No"}</p>
+                    </div>
+                    <div className="rounded-lg bg-white border border-gray-200 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Active</p>
+                      <p className="mt-1 font-medium text-gray-900">{selectedTicket?.is_active ? "Yes" : "No"}</p>
+                    </div>
+                    <div className="rounded-lg bg-white border border-gray-200 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Channel</p>
+                      <p className="mt-1 font-medium text-gray-900">{selectedTicket?.purchase_channel || "—"}</p>
+                    </div>
+                    <div className="rounded-lg bg-white border border-gray-200 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Created</p>
+                      <p className="mt-1 font-medium text-gray-900">
+                        {selectedTicket?.created_at ? new Date(selectedTicket.created_at).toLocaleString() : "—"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {viewerError && (
+                  <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                    {viewerError}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      </div>
     </div>
   );
 }
