@@ -86,6 +86,7 @@ export default function AdminTicketsDashboard() {
     usedTickets: 0,
     totalRevenue: null as number | null
   });
+  const [revenueLoading, setRevenueLoading] = useState(false);
 
   // Form state for batch generation
   const [batchForm, setBatchForm] = useState({
@@ -138,6 +139,55 @@ export default function AdminTicketsDashboard() {
       }));
     } catch (err) {
       console.error("Failed to load ticket counts:", err);
+    }
+  };
+
+  const loadOnlineRevenue = async () => {
+    // Supabase/PostgREST doesn't support SUM(price*quantity) directly without a DB function/view.
+    // We compute it client-side but only for successful online sales and only selecting needed columns,
+    // paging to avoid a single huge response.
+    setRevenueLoading(true);
+    try {
+      const { count, error: countErr } = await supabase
+        .from("tickets")
+        .select("id", { count: "exact", head: true })
+        .eq("purchase_channel", "online")
+        .eq("status", "confirmed");
+
+      if (countErr) throw countErr;
+
+      const total = count ?? 0;
+      if (total === 0) {
+        setStats((prev) => ({ ...prev, totalRevenue: 0 }));
+        return;
+      }
+
+      const pageSize = 1000;
+      let sum = 0;
+      for (let from = 0; from < total; from += pageSize) {
+        const to = Math.min(from + pageSize - 1, total - 1);
+        const { data, error } = await supabase
+          .from("tickets")
+          .select("price, quantity")
+          .eq("purchase_channel", "online")
+          .eq("status", "confirmed")
+          .range(from, to);
+
+        if (error) throw error;
+        for (const row of data || []) {
+          const price = Number((row as any).price) || 0;
+          const qty = Number((row as any).quantity) || 0;
+          sum += price * qty;
+        }
+      }
+
+      setStats((prev) => ({ ...prev, totalRevenue: sum }));
+    } catch (err) {
+      console.error("Failed to load online revenue:", err);
+      // Keep dash if revenue fails, but don't break the page.
+      setStats((prev) => ({ ...prev, totalRevenue: null }));
+    } finally {
+      setRevenueLoading(false);
     }
   };
 
@@ -204,7 +254,7 @@ export default function AdminTicketsDashboard() {
     setIsLoading(true);
     setTicketsHasMore(true);
     try {
-      await Promise.all([loadEvents(), loadTicketCounts()]);
+      await Promise.all([loadEvents(), loadTicketCounts(), loadOnlineRevenue()]);
       await loadTicketsPage({ reset: true });
       if (activeTab === "batches") await loadBatches();
     } finally {
@@ -715,7 +765,7 @@ export default function AdminTicketsDashboard() {
             </div>
             <div className="mt-2">
               <p className="text-2xl font-bold text-gray-900 tabular-nums leading-none break-words">
-                {stats.totalRevenue == null ? "—" : `UGX ${stats.totalRevenue.toLocaleString()}`}
+                {revenueLoading ? "Loading…" : stats.totalRevenue == null ? "—" : `UGX ${stats.totalRevenue.toLocaleString()}`}
               </p>
             </div>
           </div>
