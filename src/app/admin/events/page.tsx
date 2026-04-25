@@ -45,6 +45,7 @@ export default function AdminEventsManagement() {
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -53,6 +54,8 @@ export default function AdminEventsManagement() {
   const [showTicketForm, setShowTicketForm] = useState<{ eventId: string, show: boolean } | null>(null);
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
   const [existingTicketTypes, setExistingTicketTypes] = useState<ExistingTicketType[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<Event | null>(null);
+  const [hardDeleteAck, setHardDeleteAck] = useState(false);
   const [newTicketType, setNewTicketType] = useState({
     name: '',
     price: 0,
@@ -357,25 +360,88 @@ export default function AdminEventsManagement() {
     }
   };
 
-  const handleDeleteEvent = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this event? This action cannot be undone.")) {
-      return;
+  const runBestEffortDelete = async (table: string, match: Record<string, any>) => {
+    const { error } = await supabase.from(table).delete().match(match);
+    // Some deployments may not have all optional tables; treat "missing table" as non-fatal.
+    if (error && (error as any).code?.toString?.() !== "42P01") {
+      throw error;
     }
+  };
 
+  const archiveEvent = async (id: string) => {
+    // Delete non-essential, event-scoped data
+    await runBestEffortDelete('event_participants', { event_id: id });
+    await runBestEffortDelete('batches', { event_id: id });
+    await runBestEffortDelete('invitation_cards', { event_id: id });
+    await runBestEffortDelete('invitation_card_batches', { event_id: id });
+    await runBestEffortDelete('event_sponsors', { event_id: id });
+
+    // Scrub non-essential event fields but keep the record for ticket history
+    const { error: updateError } = await supabase
+      .from('events')
+      .update({
+        is_published: false,
+        description: null,
+        image_url: null,
+        sponsor_logos: null,
+      })
+      .eq('id', id);
+
+    if (updateError) throw updateError;
+  };
+
+  const hardDeleteEvent = async (id: string) => {
+    // First delete tickets to avoid FK blocks
+    const { error: ticketsError } = await supabase.from('tickets').delete().eq('event_id', id);
+    if (ticketsError) throw ticketsError;
+
+    // Best-effort cleanup for related tables
+    await runBestEffortDelete('ticket_types', { event_id: id });
+    await runBestEffortDelete('event_participants', { event_id: id });
+    await runBestEffortDelete('batches', { event_id: id });
+    await runBestEffortDelete('invitation_cards', { event_id: id });
+    await runBestEffortDelete('invitation_card_batches', { event_id: id });
+    await runBestEffortDelete('event_sponsors', { event_id: id });
+
+    // Finally delete the event itself
+    const { error: eventError } = await supabase.from('events').delete().eq('id', id);
+    if (eventError) throw eventError;
+  };
+
+  const openDeleteModal = (event: Event) => {
+    setDeleteTarget(event);
+    setHardDeleteAck(false);
+  };
+
+  const closeDeleteModal = () => {
+    if (isDeleting) return;
+    setDeleteTarget(null);
+    setHardDeleteAck(false);
+  };
+
+  const performDelete = async (mode: 'archive' | 'hard') => {
+    if (!deleteTarget) return;
     try {
-      const { error } = await supabase
-        .from('events')
-        .delete()
-        .eq('id', id);
+      setIsDeleting(true);
+      setError(null);
+      setSuccess(null);
 
-      if (error) throw error;
+      if (mode === 'archive') {
+        await archiveEvent(deleteTarget.id);
+        setSuccess("Event deleted (archived) successfully. Tickets were preserved.");
+      } else {
+        await hardDeleteEvent(deleteTarget.id);
+        setSuccess("Event permanently deleted (including tickets).");
+      }
 
-      setSuccess("Event deleted successfully!");
-
-      // Reload events
+      closeDeleteModal();
       await loadEvents();
+      await loadTicketTypes();
     } catch (err) {
+      console.error("Delete event failed:", err);
       setError(err instanceof Error ? err.message : "An unknown error occurred");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -1274,7 +1340,7 @@ export default function AdminEventsManagement() {
                             <span className="hidden sm:inline">Edit</span>
                           </Link>
                           <button
-                            onClick={() => handleDeleteEvent(event.id)}
+                            onClick={() => openDeleteModal(event)}
                             className="inline-flex items-center gap-1 text-red-600 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-red-500 rounded-md p-1.5 transition-colors duration-200"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1574,6 +1640,86 @@ export default function AdminEventsManagement() {
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Event Modal */}
+        {deleteTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-lg rounded-xl bg-white shadow-xl border border-gray-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Delete event</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {deleteTarget.title}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeDeleteModal}
+                  disabled={isDeleting}
+                  className="rounded-md p-2 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                  aria-label="Close"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="px-6 py-5 space-y-4">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                  <p className="text-sm text-blue-900 font-semibold">Recommended: Archive (keep tickets)</p>
+                  <p className="text-sm text-blue-800 mt-1">
+                    Removes non-essential data (participants, batches, invitation cards, sponsor links, images/description) but keeps the event record and purchased tickets.
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                  <p className="text-sm text-red-900 font-semibold">Danger: Hard delete (also deletes tickets)</p>
+                  <p className="text-sm text-red-800 mt-1">
+                    Permanently deletes the event and all purchased tickets for it. This cannot be undone.
+                  </p>
+                  <label className="mt-3 flex items-start gap-2 text-sm text-red-900">
+                    <input
+                      type="checkbox"
+                      checked={hardDeleteAck}
+                      onChange={(e) => setHardDeleteAck(e.target.checked)}
+                      disabled={isDeleting}
+                      className="mt-1 h-4 w-4 rounded border-red-300 text-red-600 focus:ring-red-500"
+                    />
+                    <span>I understand this will delete purchased tickets permanently.</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="px-6 py-4 border-t border-gray-200 bg-white flex flex-col sm:flex-row gap-3 sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeDeleteModal}
+                  disabled={isDeleting}
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => performDelete('archive')}
+                  disabled={isDeleting}
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {isDeleting ? "Deleting..." : "Archive (keep tickets)"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => performDelete('hard')}
+                  disabled={isDeleting || !hardDeleteAck}
+                  className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {isDeleting ? "Deleting..." : "Hard delete (delete tickets)"}
+                </button>
               </div>
             </div>
           </div>
