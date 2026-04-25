@@ -677,7 +677,7 @@ export default function AdminTicketsDashboard() {
   const baseTickets = isSearchMode ? searchTickets : tickets;
 
   const filteredTickets = activeTab === 'tickets' 
-    ? baseTickets.filter(t => t.used !== true)
+    ? baseTickets.filter(t => t.used !== true && t.status === "confirmed")
     : activeTab === 'used'
     ? baseTickets.filter(t => t.used === true)
     : baseTickets;
@@ -726,6 +726,7 @@ export default function AdminTicketsDashboard() {
 
   // Group tickets by customer for the customers tab
   const customers = tickets
+    // Include customers even if payment is pending/failed; we summarize status per customer.
     .filter(ticket => ticket.purchase_channel === 'online' && ticket.buyer_name && ticket.buyer_phone)
     .reduce((acc, ticket) => {
       const key = `${ticket.buyer_name}-${ticket.buyer_phone}`;
@@ -734,13 +735,42 @@ export default function AdminTicketsDashboard() {
           name: ticket.buyer_name,
           phone: ticket.buyer_phone,
           ticketsCount: 0,
+          confirmedCount: 0,
+          pendingCount: 0,
+          failedCount: 0,
         };
       }
       acc[key].ticketsCount += ticket.quantity;
+      if (ticket.status === "confirmed") acc[key].confirmedCount += ticket.quantity;
+      else if (ticket.status === "pending") acc[key].pendingCount += ticket.quantity;
+      else if (ticket.status === "failed") acc[key].failedCount += ticket.quantity;
       return acc;
-    }, {} as Record<string, { name: string | null; phone: string | null; ticketsCount: number }>);
+    }, {} as Record<
+      string,
+      {
+        name: string | null;
+        phone: string | null;
+        ticketsCount: number;
+        confirmedCount: number;
+        pendingCount: number;
+        failedCount: number;
+      }
+    >);
 
   const customersList = Object.values(customers);
+
+  const getCustomerPaymentStatus = (c: {
+    confirmedCount: number;
+    pendingCount: number;
+    failedCount: number;
+  }) => {
+    if (c.failedCount > 0 && c.confirmedCount === 0 && c.pendingCount === 0) return "Failed";
+    if (c.pendingCount > 0 && c.confirmedCount === 0 && c.failedCount === 0) return "Pending";
+    if (c.confirmedCount > 0 && c.pendingCount === 0 && c.failedCount === 0) return "Confirmed";
+    if (c.confirmedCount > 0 && (c.pendingCount > 0 || c.failedCount > 0)) return "Mixed";
+    if (c.pendingCount > 0 && c.failedCount > 0 && c.confirmedCount === 0) return "Mixed";
+    return "—";
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -1394,9 +1424,26 @@ export default function AdminTicketsDashboard() {
                         <p className="text-sm font-semibold text-gray-900 truncate">{customer.name}</p>
                         <p className="text-xs text-gray-600 truncate">{customer.phone}</p>
                       </div>
-                      <span className="px-3 py-1 inline-flex text-xs font-semibold rounded-full bg-green-100 text-green-800 tabular-nums">
-                        {customer.ticketsCount}
-                      </span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="px-3 py-1 inline-flex text-xs font-semibold rounded-full bg-gray-100 text-gray-800 tabular-nums">
+                          {customer.ticketsCount}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 inline-flex text-[11px] leading-5 font-semibold rounded-full ${
+                            getCustomerPaymentStatus(customer) === "Confirmed"
+                              ? "bg-green-100 text-green-800"
+                              : getCustomerPaymentStatus(customer) === "Pending"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : getCustomerPaymentStatus(customer) === "Failed"
+                              ? "bg-red-100 text-red-800"
+                              : getCustomerPaymentStatus(customer) === "Mixed"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {getCustomerPaymentStatus(customer)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1415,6 +1462,9 @@ export default function AdminTicketsDashboard() {
                       </th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Tickets Purchased
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Payment Status
                       </th>
                     </tr>
                   </thead>
@@ -1437,8 +1487,25 @@ export default function AdminTicketsDashboard() {
                           {customer.phone}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-3 py-1 inline-flex text-sm font-semibold rounded-full bg-green-100 text-green-800">
+                          <span className="px-3 py-1 inline-flex text-sm font-semibold rounded-full bg-gray-100 text-gray-800">
                             {customer.ticketsCount}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`px-2 py-1 inline-flex text-xs font-semibold rounded-full ${
+                              getCustomerPaymentStatus(customer) === "Confirmed"
+                                ? "bg-green-100 text-green-800"
+                                : getCustomerPaymentStatus(customer) === "Pending"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : getCustomerPaymentStatus(customer) === "Failed"
+                                ? "bg-red-100 text-red-800"
+                                : getCustomerPaymentStatus(customer) === "Mixed"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {getCustomerPaymentStatus(customer)}
                           </span>
                         </td>
                       </tr>
