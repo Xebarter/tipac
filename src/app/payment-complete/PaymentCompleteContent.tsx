@@ -15,18 +15,35 @@ export default function PaymentCompleteContent() {
   const [ticketData, setTicketData] = useState<any>(null);
   const [downloading, setDownloading] = useState(false);
 
+  const isIOSDevice = () => {
+    if (typeof navigator === "undefined") return false;
+    const ua = navigator.userAgent || "";
+    const platform = (navigator as any).platform || "";
+    const maxTouchPoints = (navigator as any).maxTouchPoints || 0;
+    const iOSByUA = /iPad|iPhone|iPod/i.test(ua);
+    const iPadOSDesktopMode = platform === "MacIntel" && maxTouchPoints > 1;
+    return iOSByUA || iPadOSDesktopMode;
+  };
+
   const downloadTicket = async (ticket: any) => {
     try {
       setDownloading(true);
       const blob = await generateTicketPDF(ticket);
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `tipac-ticket-${ticket.id.substring(0, 8)}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      if (isIOSDevice()) {
+        // On iOS, navigation to the blob URL is more reliable than programmatic download.
+        window.location.href = url;
+        // Don't revoke immediately; Safari needs time to load the blob.
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+      } else {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `tipac-ticket-${ticket.id.substring(0, 8)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
       setDownloading(false);
       return true; // Successfully downloaded
     } catch (error) {

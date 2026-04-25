@@ -114,6 +114,18 @@ interface TicketFormProps {
   quantity: number;
 }
 
+function isIOSDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  const platform = (navigator as any).platform || "";
+  const maxTouchPoints = (navigator as any).maxTouchPoints || 0;
+
+  // iPadOS 13+ can report "MacIntel" but has touch points.
+  const iOSByUA = /iPad|iPhone|iPod/i.test(ua);
+  const iPadOSDesktopMode = platform === "MacIntel" && maxTouchPoints > 1;
+  return iOSByUA || iPadOSDesktopMode;
+}
+
 const TicketForm: React.FC<TicketFormProps> = ({
   formData,
   onInputChange,
@@ -245,7 +257,7 @@ const TicketForm: React.FC<TicketFormProps> = ({
             inputMode="numeric"
             id="quantity"
             min="1"
-            max="10"
+            step="1"
             value={quantity}
             onChange={onQuantityChange}
             className="h-12 min-h-[48px] rounded-xl border-gray-300 bg-white text-base text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-red-500 focus:ring-2 focus:ring-red-500"
@@ -431,7 +443,8 @@ export default function TicketsPage() {
   }, []);
 
   const handleQuantityChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuantity(Math.max(1, Math.min(10, Number.parseInt(e.target.value) || 1)));
+    const next = Number.parseInt(e.target.value, 10);
+    setQuantity(Number.isFinite(next) ? Math.max(1, next) : 1);
   }, []);
 
   const getTicketTypeById = useCallback((ticketTypeId: string) => {
@@ -451,7 +464,7 @@ export default function TicketsPage() {
     return ticketType ? ticketType.price * quantity : 0;
   }, [selectedTicketType, quantity, getTicketTypeById]);
 
-  const downloadTicket = useCallback(async (ticket: any, ticketNumber?: number, totalTickets?: number) => {
+  const downloadTicket = useCallback(async (ticket: any, ticketNumber?: number, totalTickets?: number, preOpenedWindow?: Window | null) => {
     try {
       // Add ticket number information to ticket data if provided
       const ticketData = ticketNumber !== undefined && totalTickets !== undefined
@@ -473,7 +486,12 @@ export default function TicketsPage() {
 
       const supportsDownload = typeof a.download !== "undefined";
 
-      if (supportsDownload) {
+      if (preOpenedWindow && !preOpenedWindow.closed) {
+        preOpenedWindow.location.href = url;
+      } else if (isIOSDevice()) {
+        // iOS browsers often block programmatic "downloads"; navigating works reliably.
+        window.location.href = url;
+      } else if (supportsDownload) {
         // Append to body and click
         document.body.appendChild(a);
         // Try to trigger click in a microtask to stay within user-initiated gesture context where possible
@@ -500,7 +518,7 @@ export default function TicketsPage() {
   }, []);
 
   // New function to download all tickets in a single PDF
-  const downloadAllTickets = useCallback(async (tickets: any[]) => {
+  const downloadAllTickets = useCallback(async (tickets: any[], preOpenedWindow?: Window | null) => {
     try {
       // Generate a single PDF with all tickets
       const blob = await generateMultiTicketPDF(tickets);
@@ -516,7 +534,11 @@ export default function TicketsPage() {
 
       const supportsDownload = typeof a.download !== "undefined";
 
-      if (supportsDownload) {
+      if (preOpenedWindow && !preOpenedWindow.closed) {
+        preOpenedWindow.location.href = url;
+      } else if (isIOSDevice()) {
+        window.location.href = url;
+      } else if (supportsDownload) {
         // Append to body and click
         document.body.appendChild(a);
         // Try to trigger click in a microtask to stay within user-initiated gesture context where possible
@@ -562,6 +584,11 @@ export default function TicketsPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    // iOS Safari blocks popups opened after async work.
+    // Pre-open a tab during the user gesture, then navigate it once the PDF blob is ready.
+    const preOpenedDownloadWindow =
+      isIOSDevice() ? window.open("about:blank", "_blank", "noopener,noreferrer") : null;
 
     try {
       // Validation
@@ -667,18 +694,27 @@ export default function TicketsPage() {
           let allDownloadsSucceeded = true;
           try {
             // Try to download all tickets in a single PDF
-            await downloadAllTickets(ticketsToDownload);
+            await downloadAllTickets(ticketsToDownload, preOpenedDownloadWindow);
           } catch (downloadError) {
             console.error('Multi-ticket download failed, falling back to individual downloads', downloadError);
-            // Fallback to individual downloads
-            for (let i = 0; i < ticketsToDownload.length; i++) {
-              try {
-                // Small delay between downloads to reduce chance of browser blocking
-                if (i > 0) await new Promise((res) => setTimeout(res, 500));
-                await downloadTicket(ticketsToDownload[i], i + 1, ticketsToDownload.length);
-              } catch (downloadError) {
-                console.error('Download failed for ticket', ticketsToDownload[i].id, downloadError);
-                allDownloadsSucceeded = false;
+            // Fallback to individual downloads (note: iOS browsers won't reliably auto-download multiple files)
+            if (isIOSDevice() && ticketsToDownload.length > 1) {
+              allDownloadsSucceeded = false;
+            } else {
+              for (let i = 0; i < ticketsToDownload.length; i++) {
+                try {
+                  // Small delay between downloads to reduce chance of browser blocking
+                  if (i > 0) await new Promise((res) => setTimeout(res, 500));
+                  await downloadTicket(
+                    ticketsToDownload[i],
+                    i + 1,
+                    ticketsToDownload.length,
+                    i === 0 ? preOpenedDownloadWindow : null
+                  );
+                } catch (downloadError) {
+                  console.error('Download failed for ticket', ticketsToDownload[i].id, downloadError);
+                  allDownloadsSucceeded = false;
+                }
               }
             }
           }

@@ -375,9 +375,12 @@ export default function EventTicketsPage() {
                     id="quantity"
                     type="number"
                     min="1"
-                    max="10"
+                    step="1"
                     value={quantity}
-                    onChange={(e) => setQuantity(Math.max(1, Math.min(10, Number.parseInt(e.target.value) || 1)))}
+                    onChange={(e) => {
+                      const next = Number.parseInt(e.target.value, 10);
+                      setQuantity(Number.isFinite(next) ? Math.max(1, next) : 1);
+                    }}
                     className="bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-10 rounded-lg"
                   />
                 </div>
