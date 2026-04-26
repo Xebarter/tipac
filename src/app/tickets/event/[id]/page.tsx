@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,7 +34,22 @@ export default function EventTicketsPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [ticketPrice, setTicketPrice] = useState<number>(0);
   const [ticketTypeId, setTicketTypeId] = useState<string | null>(null);
-  const [quantity, setQuantity] = useState<number>(1);
+  const [quantityInput, setQuantityInput] = useState("1");
+  const quantity = useMemo(() => {
+    const n = Number.parseInt(quantityInput, 10);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }, [quantityInput]);
+
+  const handleQuantityChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuantityInput(e.target.value.replace(/\D/g, ""));
+  }, []);
+
+  const handleQuantityBlur = useCallback(() => {
+    setQuantityInput((prev) => {
+      const n = Number.parseInt(prev, 10);
+      return Number.isFinite(n) && n > 0 ? String(n) : "1";
+    });
+  }, []);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -195,7 +210,7 @@ export default function EventTicketsPage() {
             email: "",
             phone: "",
           });
-          setQuantity(1);
+          setQuantityInput("1");
         }
       }
     } catch (err: any) {
@@ -376,11 +391,9 @@ export default function EventTicketsPage() {
                     type="number"
                     min="1"
                     step="1"
-                    value={quantity}
-                    onChange={(e) => {
-                      const next = Number.parseInt(e.target.value, 10);
-                      setQuantity(Number.isFinite(next) ? Math.max(1, next) : 1);
-                    }}
+                    value={quantityInput}
+                    onChange={handleQuantityChange}
+                    onBlur={handleQuantityBlur}
                     className="bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-10 rounded-lg"
                   />
                 </div>
@@ -458,7 +471,7 @@ export default function EventTicketsPage() {
                       <p className="text-gray-200">Quantity:</p>
                     </div>
                     <p className="font-medium text-white">
-                      {quantity}
+                      {quantity > 0 ? quantity : quantityInput === "" ? "—" : quantityInput}
                     </p>
                   </div>
                   <div className="flex justify-between items-center pt-3 border-t border-gray-700">

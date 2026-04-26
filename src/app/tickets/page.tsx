@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +35,11 @@ interface FormData {
   fullName: string;
   email: string;
   phone: string;
+}
+
+function parsedTicketQuantity(digits: string): number {
+  const n = Number.parseInt(digits, 10);
+  return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
 /** Distinct card styles so multiple ticket types per event are easy to tell apart */
@@ -100,6 +105,7 @@ interface TicketFormProps {
   formData: FormData;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onQuantityChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onQuantityBlur: () => void;
   error: string | null;
   success: string | null;
   onSubmit: (e: React.FormEvent) => void;
@@ -111,6 +117,7 @@ interface TicketFormProps {
   onDownloadTicket: (ticket: any, ticketNumber?: number, totalTickets?: number) => Promise<void>;
   onDownloadAll: () => Promise<void>;
   onClose: () => void;
+  quantityInput: string;
   quantity: number;
 }
 
@@ -130,6 +137,7 @@ const TicketForm: React.FC<TicketFormProps> = ({
   formData,
   onInputChange,
   onQuantityChange,
+  onQuantityBlur,
   error,
   success,
   onSubmit,
@@ -141,6 +149,7 @@ const TicketForm: React.FC<TicketFormProps> = ({
   onDownloadTicket,
   onDownloadAll,
   onClose,
+  quantityInput,
   quantity,
 }) => (
   <>
@@ -258,8 +267,9 @@ const TicketForm: React.FC<TicketFormProps> = ({
             id="quantity"
             min="1"
             step="1"
-            value={quantity}
+            value={quantityInput}
             onChange={onQuantityChange}
+            onBlur={onQuantityBlur}
             className="h-12 min-h-[48px] rounded-xl border-gray-300 bg-white text-base text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-red-500 focus:ring-2 focus:ring-red-500"
             required
           />
@@ -294,7 +304,7 @@ const TicketForm: React.FC<TicketFormProps> = ({
           <div className="flex justify-between items-center mb-3 text-sm">
             <p className="text-gray-600">Quantity:</p>
             <p className="font-medium text-gray-900">
-              {quantity}
+              {quantity > 0 ? quantity : quantityInput === "" ? "—" : quantityInput}
             </p>
           </div>
 
@@ -347,7 +357,8 @@ export default function TicketsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
   const [selectedTicketType, setSelectedTicketType] = useState<string>("");
-  const [quantity, setQuantity] = useState<number>(1);
+  const [quantityInput, setQuantityInput] = useState("1");
+  const quantity = useMemo(() => parsedTicketQuantity(quantityInput), [quantityInput]);
   const [formData, setFormData] = useState<FormData>({
     fullName: "",
     email: "",
@@ -443,8 +454,14 @@ export default function TicketsPage() {
   }, []);
 
   const handleQuantityChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const next = Number.parseInt(e.target.value, 10);
-    setQuantity(Number.isFinite(next) ? Math.max(1, next) : 1);
+    setQuantityInput(e.target.value.replace(/\D/g, ""));
+  }, []);
+
+  const handleQuantityBlur = useCallback(() => {
+    setQuantityInput((prev) => {
+      const n = parsedTicketQuantity(prev);
+      return n > 0 ? String(n) : "1";
+    });
   }, []);
 
   const getTicketTypeById = useCallback((ticketTypeId: string) => {
@@ -734,7 +751,7 @@ export default function TicketsPage() {
             email: "",
             phone: "",
           });
-          setQuantity(1);
+          setQuantityInput("1");
         }
       }
     } catch (err: any) {
@@ -1183,6 +1200,7 @@ export default function TicketsPage() {
                 formData={formData}
                 onInputChange={handleInputChange}
                 onQuantityChange={handleQuantityChange}
+                onQuantityBlur={handleQuantityBlur}
                 error={error}
                 success={success}
                 onSubmit={handleSubmit}
@@ -1194,6 +1212,7 @@ export default function TicketsPage() {
                 onDownloadTicket={downloadTicket}
                 onDownloadAll={onDownloadAll}
                 onClose={closeModal}
+                quantityInput={quantityInput}
                 quantity={quantity}
               />
             </div>
