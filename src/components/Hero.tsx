@@ -1,9 +1,9 @@
 'use client';
+
 import { useState, useEffect, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
 import Image from 'next/image';
-// import Head from 'next/head'; // REMOVED: Next/Image handles preloading better.
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
 interface GalleryImage {
@@ -14,20 +14,13 @@ interface GalleryImage {
   original_name?: string;
 }
 
-// OPTIMIZATION: Define placeholder to prevent layout shift before images load
-const IMAGE_ASPECT_RATIO = 16 / 9; // Common wide ratio for hero images
+const SLIDE_DURATION_MS = 6000;
 
-// OPTIMIZATION: Configure the Supabase URL loader for automatic optimization (if Next.js is configured for it)
-// If not using Next.js image domains config, these images won't be optimized, and you must pre-optimize the files.
-const NEXT_IMAGE_SUPABASE_LOADER = ({ src, width, quality }: { src: string; width: number; quality?: number }) => {
-  // Assuming Supabase URL is your configured domain.
-  // This loader ensures Next.js requests the optimal size if the Supabase domain is configured in next.config.js
-  const url = new URL(src);
-  // Add common image optimization query parameters if your host supports them (e.g., Cloudflare R2, Vercel Blob)
-  // For standard Supabase storage, this may not automatically resize, but it helps Next.js understand the source.
-  return `${url.origin}${url.pathname}?width=${width}&quality=${quality || 75}`;
-};
-
+const PILLARS = [
+  { label: 'Theatre Education', value: '5+ Programs' },
+  { label: 'Youth Development', value: 'Ages 6–18' },
+  { label: 'Cultural Heritage', value: 'Uganda' },
+];
 
 export function Hero() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -35,34 +28,30 @@ export function Hero() {
   const [error, setError] = useState<string | null>(null);
   const [isUserInteracting, setIsUserInteracting] = useState(false);
   const [isLoadingInitial, setIsLoadingInitial] = useState(true);
+  const [slideProgress, setSlideProgress] = useState(0);
 
-  // OPTIMIZATION: Only load the first 5 images for speed. A carousel rarely needs more on initial load.
-  const IMAGE_LOAD_LIMIT = 5;
-
-  // Fetch gallery images
   useEffect(() => {
     let isMounted = true;
+
     async function fetchGalleryImages() {
       try {
         const { data, error: supabaseError } = await supabase
           .from('gallery_images')
           .select('*')
-          .order('created_at', { ascending: false })
-          // OPTIMIZATION: Limit the number of images fetched to speed up API response
-          .limit(IMAGE_LOAD_LIMIT);
+          .order('created_at', { ascending: false });
 
         if (supabaseError) throw supabaseError;
 
         if (isMounted) {
           if (data && data.length > 0) {
-            const formattedImages = data.map(img => ({
+            const formattedImages = data.map((img) => ({
               id: img.id,
               url: img.url,
               alt: img.original_name
                 ? `Performance at TIPAC theatre program, showcasing ${img.original_name}`
                 : 'TIPAC performance image',
               filename: img.filename,
-              original_name: img.original_name
+              original_name: img.original_name,
             }));
             setGalleryImages(formattedImages);
           } else {
@@ -89,137 +78,261 @@ export function Hero() {
 
   useEffect(() => {
     setCurrentImageIndex(0);
+    setSlideProgress(0);
   }, [galleryImages.length]);
 
-  // Auto-rotation (rest of the logic remains the same)
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-    const startRotation = () => {
-      if (displayImages.length > 1 && !isUserInteracting) {
-        interval = setInterval(() => {
-          setCurrentImageIndex(prevIndex => (prevIndex + 1) % displayImages.length);
-        }, 5000);
-      }
-    };
-    startRotation();
+
+    if (displayImages.length > 1 && !isUserInteracting) {
+      interval = setInterval(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % displayImages.length);
+        setSlideProgress(0);
+      }, SLIDE_DURATION_MS);
+    }
+
     return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
+      if (interval) clearInterval(interval);
     };
-  }, [displayImages.length, isUserInteracting]);
+  }, [displayImages.length, isUserInteracting, currentImageIndex]);
+
+  useEffect(() => {
+    if (displayImages.length <= 1 || isUserInteracting) return;
+
+    const start = Date.now();
+    const tick = setInterval(() => {
+      const elapsed = Date.now() - start;
+      setSlideProgress(Math.min(elapsed / SLIDE_DURATION_MS, 1));
+    }, 50);
+
+    return () => clearInterval(tick);
+  }, [currentImageIndex, displayImages.length, isUserInteracting]);
 
   const handleUserInteraction = useCallback(() => {
     setIsUserInteracting(true);
+    setSlideProgress(0);
     setTimeout(() => setIsUserInteracting(false), 10000);
   }, []);
 
   const goToPrevious = () => {
     handleUserInteraction();
-    setCurrentImageIndex(prevIndex =>
-      prevIndex === 0 ? displayImages.length - 1 : prevIndex - 1
+    setCurrentImageIndex((prev) =>
+      prev === 0 ? displayImages.length - 1 : prev - 1
     );
   };
 
   const goToNext = () => {
     handleUserInteraction();
-    setCurrentImageIndex(prevIndex => (prevIndex + 1) % displayImages.length);
+    setCurrentImageIndex((prev) => (prev + 1) % displayImages.length);
   };
 
-  const nextImageIndex = (currentImageIndex + 1) % displayImages.length;
+  const goToSlide = (index: number) => {
+    handleUserInteraction();
+    setCurrentImageIndex(index);
+  };
 
+  const scrollToEvents = () => {
+    document.getElementById('upcoming-events')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const currentImage = displayImages[currentImageIndex];
+  const imageCaption = currentImage?.original_name || currentImage?.alt;
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-purple-900 via-purple-700 to-rose-700">
-      {/* Glassmorphic overlay - always present, more opaque while loading */}
-      <div
-        className={`absolute inset-0 z-0 pointer-events-none transition-all duration-700
-             bg-black/20 backdrop-blur-md
-             ${isLoadingInitial ? 'opacity-70' : 'opacity-35'}`}
-      />
-      {/* REMOVED: Head tag preloading. Next/Image's 'priority' handles this effectively */}
-      {/* Decorative elements (rest of your decorative elements remain the same) */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(239,68,68,0.12)_0%,transparent_70%)] pointer-events-none z-0" />
-      <div className="absolute top-0 left-0 w-48 h-48 sm:w-72 sm:h-72 bg-gradient-to-r from-purple-500/20 to-rose-500/20 rounded-full blur-3xl pointer-events-none -translate-x-1/2 -translate-y-1/2 z-0" />
-      <div className="absolute bottom-0 right-0 w-64 h-64 sm:w-96 sm:h-96 bg-gradient-to-r from-rose-500/20 to-purple-500/20 rounded-full blur-3xl pointer-events-none translate-x-1/2 translate-y-1/2 z-0" />
-      <div className="absolute top-1/3 right-1/4 w-48 h-48 sm:w-64 sm:h-64 bg-gradient-to-r from-red-400/20 to-purple-400/20 rounded-full blur-3xl pointer-events-none z-0" />
-
+    <section className="relative min-h-screen flex items-end overflow-hidden bg-slate-950">
+      {/* Background images */}
       <div className="absolute inset-0 z-0">
-        <div className="relative w-full h-full">
-          {/* Primary Image: Current visible image */}
-          {displayImages.length > 0 ? (
-            <Image
-              src={displayImages[currentImageIndex].url}
-              alt={displayImages[currentImageIndex].alt || "TIPAC Performance"}
-              fill
-              // OPTIMIZATION: loader property uses the custom loader defined above
-              // loader={NEXT_IMAGE_SUPABASE_LOADER} // Uncomment if you set up the loader
-              // OPTIMIZATION: 'eager' loading for the LCP element (initial image)
-              loading={currentImageIndex === 0 ? 'eager' : 'lazy'}
-              // OPTIMIZATION: Set priority={true} only for the *very first* image loaded.
-              priority={currentImageIndex === 0}
-              className="object-cover transition-opacity duration-1000"
-              sizes="100vw"
-              quality={80}
-            />
-          ) : null}
+        {isLoadingInitial && (
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-950 via-slate-900 to-rose-950 animate-pulse" />
+        )}
 
-          {/* OPTIMIZATION: Preload the NEXT image in the sequence (if not currently loading the first) */}
-          {displayImages.length > 1 && currentImageIndex !== 0 && (
-            <Image
-              key={displayImages[nextImageIndex].id} // Ensure re-render on index change
-              src={displayImages[nextImageIndex].url}
-              alt={displayImages[nextImageIndex].alt || "Next TIPAC Performance"}
-              // OPTIMIZATION: Use a tiny opacity to force the image to load but remain invisible
-              className="absolute inset-0 object-cover opacity-0 pointer-events-none"
-              // OPTIMIZATION: Use 'lazy' load (or default) as it's not immediately visible, but prioritize
-              // pre-fetching it in the background.
-              loading="lazy"
-              sizes="1px" // Give it the smallest possible size to calculate for preloading
-              width={1} // Explicit width/height to bypass fill-mode check for this hidden element
-              height={1}
-              quality={1} // Minimal quality needed since it's only for preloading
-            />
+        <AnimatePresence mode="wait">
+          {currentImage && (
+            <motion.div
+              key={currentImage.id}
+              className="absolute inset-0"
+              initial={{ opacity: 0, scale: 1.06 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <motion.div
+                className="absolute inset-0"
+                animate={{ scale: [1, 1.08] }}
+                transition={{ duration: SLIDE_DURATION_MS / 1000, ease: 'linear' }}
+              >
+                <Image
+                  src={currentImage.url}
+                  alt={currentImage.alt || 'TIPAC Performance'}
+                  fill
+                  priority={currentImageIndex === 0}
+                  className="object-cover"
+                  sizes="100vw"
+                  quality={85}
+                />
+              </motion.div>
+            </motion.div>
           )}
+        </AnimatePresence>
 
-          <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/10 to-black/55"></div>
+        {/* Subtle edge vignette — keeps images visible behind text */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/15 pointer-events-none" />
+      </div>
+
+      {/* Main content */}
+      <div className="container mx-auto px-4 sm:px-6 relative z-10 w-full pb-28 sm:pb-32 pt-32 sm:pt-40">
+        <div className="max-w-3xl">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div className="flex items-center gap-3 mb-6 sm:mb-8">
+              <span className="h-px w-10 sm:w-14 bg-gradient-to-r from-rose-400 to-purple-400" />
+              <span className="text-white/90 text-xs sm:text-sm font-medium tracking-[0.2em] uppercase hero-letter-shadow">
+                Theatre for Children
+              </span>
+            </div>
+
+            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold text-white mb-4 sm:mb-6 tracking-tight leading-[0.9] hero-letter-shadow">
+              TIPAC
+            </h1>
+
+            <p className="text-xl sm:text-2xl md:text-3xl font-light text-white mb-6 sm:mb-8 tracking-wide hero-letter-shadow">
+              Learn.{' '}
+              <span className="text-rose-200 font-normal">
+                Perform.
+              </span>{' '}
+              Shine.
+            </p>
+
+            <div className="h-px w-full max-w-md bg-gradient-to-r from-white/30 via-white/10 to-transparent mb-6 sm:mb-8" />
+
+            <p className="text-base sm:text-lg text-white/90 max-w-xl leading-relaxed font-light hero-letter-shadow">
+              Empowering young performers across Uganda through theatre education,
+              cultural storytelling, and the transformative power of the arts.
+            </p>
+          </motion.div>
+
+          {/* Executive pillars */}
+          <motion.div
+            className="mt-10 sm:mt-14 grid grid-cols-3 gap-4 sm:gap-8 max-w-xl"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {PILLARS.map((pillar) => (
+              <div key={pillar.label} className="border-l border-white/20 pl-3 sm:pl-4">
+                <p className="text-white text-sm sm:text-base font-semibold tracking-tight hero-letter-shadow">
+                  {pillar.value}
+                </p>
+                <p className="text-white/70 text-[10px] sm:text-xs mt-0.5 tracking-wide uppercase hero-letter-shadow">
+                  {pillar.label}
+                </p>
+              </div>
+            ))}
+          </motion.div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 relative z-10 py-8 sm:py-16 lg:py-20">
-        {/* ... (Hero content, buttons, text remain the same) ... */}
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-block mb-4 sm:mb-6">
-            <span className="bg-white/10 text-white text-xs sm:text-sm font-medium px-3 sm:px-4 py-1 sm:py-1.5 rounded-full border border-white/20 backdrop-blur-md shadow-sm">
-              Theatre for children
-            </span>
+      {/* Carousel controls */}
+      {displayImages.length > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={goToPrevious}
+            className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 z-20 p-2 sm:p-3 rounded-full bg-white/5 backdrop-blur-md border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-300"
+            aria-label="Previous image"
+          >
+            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
+          <button
+            type="button"
+            onClick={goToNext}
+            className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-20 p-2 sm:p-3 rounded-full bg-white/5 backdrop-blur-md border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-300"
+            aria-label="Next image"
+          >
+            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
+        </>
+      )}
+
+      {/* Bottom bar: caption, progress, dots */}
+      <div className="absolute bottom-0 left-0 right-0 z-20">
+        <div className="container mx-auto px-4 sm:px-6 pb-6 sm:pb-8">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            {/* Image caption from database */}
+            <AnimatePresence mode="wait">
+              {imageCaption && !isLoadingInitial && (
+                <motion.p
+                  key={currentImage?.id}
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="text-white/50 text-xs sm:text-sm font-light tracking-wide max-w-md truncate"
+                >
+                  {imageCaption}
+                </motion.p>
+              )}
+            </AnimatePresence>
+
+            {/* Slide indicators */}
+            {displayImages.length > 1 && (
+              <div className="flex items-center gap-2 sm:gap-3">
+                {displayImages.map((img, index) => (
+                  <button
+                    key={img.id}
+                    type="button"
+                    onClick={() => goToSlide(index)}
+                    className="group relative"
+                    aria-label={`Go to slide ${index + 1}`}
+                  >
+                    <span
+                      className={`block h-1 rounded-full transition-all duration-500 ${index === currentImageIndex
+                          ? 'w-8 sm:w-10 bg-white'
+                          : 'w-4 sm:w-5 bg-white/30 group-hover:bg-white/50'
+                        }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white mb-3 sm:mb-5 tracking-tight drop-shadow-lg leading-[0.95]">
-            TIPAC
-          </h1>
-          <p className="text-base sm:text-lg md:text-xl text-white/90 mb-7 sm:mb-10 max-w-xl mx-auto drop-shadow-md">
-            Learn. Perform. Shine.
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
-            <Link href="/tickets">
-              <Button className="bg-gradient-to-r from-purple-600 via-purple-500 to-rose-500 hover:from-purple-700 hover:via-purple-600 hover:to-rose-600 text-white shadow-xl hover:shadow-2xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-xl transition-all duration-300 transform hover:scale-[1.02] min-h-[44px] border border-white/20">
-                Buy Ticket
-              </Button>
-            </Link>
-            <Link href="/events">
-              <Button className="bg-white/10 backdrop-blur-md border border-white/25 text-white hover:bg-white/15 shadow-lg hover:shadow-xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-xl transition-all duration-300 min-h-[44px]">
-                Upcoming Events
-              </Button>
-            </Link>
-          </div>
+
+          {/* Progress bar */}
+          {displayImages.length > 1 && !isUserInteracting && (
+            <div className="mt-4 h-px w-full bg-white/10 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-rose-400/80 to-purple-400/80 transition-none"
+                style={{ width: `${slideProgress * 100}%` }}
+              />
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Navigation arrows (omitted for brevity) */}
-      {/* Dots indicator (omitted for brevity) */}
-      {/* Loading state (omitted for brevity) */}
-      {/* Error message (omitted for brevity) */}
+      {/* Scroll indicator */}
+      <button
+        type="button"
+        onClick={scrollToEvents}
+        className="absolute bottom-20 sm:bottom-24 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1 text-white/40 hover:text-white/70 transition-colors duration-300"
+        aria-label="Scroll to upcoming events"
+      >
+        <motion.div
+          animate={{ y: [0, 6, 0] }}
+          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: 'easeInOut' }}
+        >
+          <ChevronDown className="w-5 h-5" />
+        </motion.div>
+      </button>
+
+      {/* Error state */}
+      {error && (
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-white/70 text-sm">
+          {error}
+        </div>
+      )}
     </section>
   );
 }
-
