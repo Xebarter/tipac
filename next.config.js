@@ -14,7 +14,9 @@ const nextConfig = {
     serverComponentsExternalPackages: ['pdfmake', 'fontkit', 'pdfkit'],
   },
   images: {
-    // Re-enable Next.js image optimization for better LCP/CLS.
+    // Custom loader serves Supabase/remote images directly (avoids /_next/image 402 errors).
+    loader: "custom",
+    loaderFile: "./src/lib/imageLoader.ts",
     formats: ["image/avif", "image/webp"],
     domains: [
       "source.unsplash.com",
