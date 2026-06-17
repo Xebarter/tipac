@@ -1,15 +1,29 @@
 /** @type {import('next').NextConfig} */
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseHostname = (() => {
+  try {
+    if (!supabaseUrl) return null;
+    return new URL(supabaseUrl).hostname;
+  } catch {
+    return null;
+  }
+})();
+
 const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['pdfmake', 'fontkit', 'pdfkit'],
   },
   images: {
-    unoptimized: true,
+    // Re-enable Next.js image optimization for better LCP/CLS.
+    formats: ["image/avif", "image/webp"],
     domains: [
       "source.unsplash.com",
       "images.unsplash.com",
       "ext.same-assets.com",
       "ugc.same-assets.com",
+      "i.ytimg.com",
+      "via.placeholder.com",
+      ...(supabaseHostname ? [supabaseHostname] : []),
     ],
     remotePatterns: [
       {
@@ -32,6 +46,25 @@ const nextConfig = {
         hostname: "ugc.same-assets.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "i.ytimg.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "via.placeholder.com",
+        pathname: "/**",
+      },
+      ...(supabaseHostname
+        ? [
+            {
+              protocol: "https",
+              hostname: supabaseHostname,
+              pathname: "/**",
+            },
+          ]
+        : []),
     ],
   },
   typescript: {

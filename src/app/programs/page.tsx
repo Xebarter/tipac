@@ -3,38 +3,36 @@ import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
-import fs from "fs";
-import path from "path";
 
-// Define the props interface for the ProgramsPage component
-interface ProgramsPageProps {
-  galleryImages: string[];
+type GalleryImage = { id: string; url: string };
+
+function getRandomImageUrl(images: GalleryImage[]): string | null {
+  if (!images || images.length === 0) return null;
+  const randomIndex = Math.floor(Math.random() * images.length);
+  return images[randomIndex]?.url ?? null;
 }
 
-// Function to get a random image from the list of images
-const getRandomImage = (images: string[]): string => {
-  if (!images || images.length === 0) return "/placeholder.jpg"; // Fallback if no images
-  const randomIndex = Math.floor(Math.random() * images.length);
-  return `/gallery/${images[randomIndex]}`;
-};
+async function getGalleryImages(): Promise<GalleryImage[]> {
+  // Use our API route so server rendering doesn't depend on a local /public/gallery folder.
+  // This also keeps image delivery consistent across the site (Supabase-backed).
+  const response = await fetch("/api/gallery-images", {
+    // Cache on the server to avoid refetching on every request.
+    next: { revalidate: 60 * 60 },
+  }).catch(() => null);
 
-// Fetch images server-side (runs at build time or on-demand)
-async function getGalleryImages(): Promise<string[]> {
-  const galleryPath = path.join(process.cwd(), "public/gallery");
-  try {
-    const images = fs.readdirSync(galleryPath).filter((file) =>
-      /\.(jpg|jpeg|png|gif|webp)$/i.test(file)
-    );
-    return images;
-  } catch (error) {
-    console.error("Error reading gallery folder:", error);
-    return [];
-  }
+  if (!response || !response.ok) return [];
+
+  const body = (await response.json().catch(() => null)) as
+    | { images?: GalleryImage[] }
+    | null;
+
+  return body?.images ?? [];
 }
 
 // Server Component
 export default async function ProgramsPage() {
   const galleryImages = await getGalleryImages();
+  const heroImage = getRandomImageUrl(galleryImages);
 
   return (
     <main className="min-h-screen flex flex-col">
@@ -95,12 +93,17 @@ export default async function ProgramsPage() {
           <div id="theatre-workshops" className="mb-24">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
               <div className="relative aspect-video overflow-hidden rounded-lg">
-                <Image
-                  src={getRandomImage(galleryImages)}
-                  alt="Theatre Workshops"
-                  fill
-                  className="object-cover"
-                />
+                {heroImage ? (
+                  <Image
+                    src={heroImage}
+                    alt="Theatre Workshops"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-purple-200/40 via-white to-red-200/30" />
+                )}
               </div>
               <div>
                 <div className="inline-block tipac-gradient px-3 py-1 rounded-full text-white text-sm font-medium mb-4">
@@ -149,12 +152,17 @@ export default async function ProgramsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
               <div className="order-1 lg:order-2">
                 <div className="relative aspect-video overflow-hidden rounded-lg">
-                  <Image
-                    src={getRandomImage(galleryImages)}
-                    alt="Musical Theatre Program"
-                    fill
-                    className="object-cover"
-                  />
+                  {heroImage ? (
+                    <Image
+                      src={heroImage}
+                      alt="Musical Theatre Program"
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-purple-200/40 via-white to-red-200/30" />
+                  )}
                 </div>
               </div>
               <div className="order-2 lg:order-1">
@@ -203,13 +211,17 @@ export default async function ProgramsPage() {
           <div id="storytelling" className="mb-24">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
               <div className="relative aspect-video overflow-hidden rounded-lg">
-                <Image
-                  src={getRandomImage(galleryImages)}
-                  alt="Storytelling Program"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                />
+                {heroImage ? (
+                  <Image
+                    src={heroImage}
+                    alt="Storytelling Program"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-purple-200/40 via-white to-red-200/30" />
+                )}
               </div>
               <div>
                 <div className="inline-block tipac-gradient px-3 py-1 rounded-full text-white text-sm font-medium mb-4">
@@ -258,12 +270,17 @@ export default async function ProgramsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
               <div className="order-1 lg:order-2">
                 <div className="relative aspect-video overflow-hidden rounded-lg">
-                  <Image
-                    src={getRandomImage(galleryImages)}
-                    alt="Technical Theatre Program"
-                    fill
-                    className="object-cover"
-                  />
+                  {heroImage ? (
+                    <Image
+                      src={heroImage}
+                      alt="Technical Theatre Program"
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-purple-200/40 via-white to-red-200/30" />
+                  )}
                 </div>
               </div>
               <div className="order-2 lg:order-1">
@@ -312,12 +329,17 @@ export default async function ProgramsPage() {
           <div id="social-change" className="mb-24">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
               <div className="relative aspect-video overflow-hidden rounded-lg">
-                <Image
-                  src={getRandomImage(galleryImages)}
-                  alt="Theatre for Social Change"
-                  fill
-                  className="object-cover"
-                />
+                {heroImage ? (
+                  <Image
+                    src={heroImage}
+                    alt="Theatre for Social Change"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-purple-200/40 via-white to-red-200/30" />
+                )}
               </div>
               <div>
                 <div className="inline-block tipac-gradient px-3 py-1 rounded-full text-white text-sm font-medium mb-4">

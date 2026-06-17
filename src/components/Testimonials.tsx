@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 
 export function Testimonials() {
@@ -43,13 +42,15 @@ export function Testimonials() {
               key={member.name}
               className="bg-background rounded-lg border border-border p-6 shadow-sm flex flex-col items-center text-center transition-all duration-300 hover:shadow-lg"
             >
-              <div className="relative w-48 h-48 rounded-full overflow-hidden mb-6 border-4 border-accent">
-                <Image
-                  src={member.image}
-                  alt={member.name}
-                  fill
-                  className="object-cover"
-                />
+              <div className="w-48 h-48 rounded-full overflow-hidden mb-6 border-4 border-accent bg-gradient-to-br from-purple-200 via-white to-red-200 flex items-center justify-center">
+                <span className="text-4xl font-extrabold text-gray-700">
+                  {member.name
+                    .split(" ")
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map((part) => part[0]?.toUpperCase())
+                    .join("")}
+                </span>
               </div>
               <h3 className="text-xl font-bold mb-1">{member.name}</h3>
               <p className="text-accent font-medium mb-4">{member.role}</p>

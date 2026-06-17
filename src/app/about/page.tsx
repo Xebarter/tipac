@@ -7,8 +7,11 @@ import { motion } from "framer-motion";
 import Head from "next/head";
 import { FaLightbulb, FaEye, FaHistory, FaHeart } from "react-icons/fa";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 export default function AboutPage() {
+  const [featuredImageUrl, setFeaturedImageUrl] = useState<string | null>(null);
+
   const sectionVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
@@ -17,6 +20,28 @@ export default function AboutPage() {
       transition: { duration: 0.6, ease: "easeInOut" }
     },
   };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadFeatured() {
+      try {
+        const response = await fetch("/api/gallery-images");
+        if (!response.ok) return;
+        const body = (await response.json()) as { images?: Array<{ url?: string }> };
+        const url = body.images?.[0]?.url ?? null;
+        if (isMounted) setFeaturedImageUrl(url);
+      } catch {
+        // Ignore — we'll fall back to a decorative placeholder.
+      }
+    }
+
+    loadFeatured();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <>
@@ -69,14 +94,18 @@ export default function AboutPage() {
             >
               <div className="flex flex-col lg:flex-row">
                 <div className="lg:w-1/2 h-64 md:h-96 lg:h-auto relative">
-                  <Image
-                    src="/gallery/20250426_181314(0).jpg"
-                    alt="TIPAC Children's Festival"
-                    fill
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                    className="object-cover transition-transform duration-700 hover:scale-105"
-                    priority
-                  />
+                  {featuredImageUrl ? (
+                    <Image
+                      src={featuredImageUrl}
+                      alt="TIPAC Children's Festival"
+                      fill
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                      className="object-cover transition-transform duration-700 hover:scale-105"
+                      priority
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-200/40 via-white to-red-200/30" />
+                  )}
                 </div>
                 <div className="lg:w-1/2 p-8 md:p-12 bg-gradient-to-br from-purple-700 to-red-600 text-white flex flex-col justify-center">
                   <h2 className="text-sm font-bold tracking-[0.2em] uppercase mb-4 opacity-90">

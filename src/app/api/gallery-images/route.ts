@@ -6,17 +6,14 @@ export async function GET() {
     // Fetch images from Supabase
     const { data, error } = await supabase
       .from('gallery_images')
-      .select('filename')
+      .select('id, url')
       .order('created_at', { ascending: false });
 
     if (error) {
       throw error;
     }
 
-    // Extract filenames from the data
-    const filenames = data?.map(img => img.filename) || [];
-
-    return NextResponse.json({ images: filenames });
+    return NextResponse.json({ images: data ?? [] });
   } catch (error) {
     console.error('Error fetching gallery images from Supabase:', error);
     return NextResponse.json(

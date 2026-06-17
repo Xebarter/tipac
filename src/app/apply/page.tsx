@@ -590,7 +590,14 @@ export default function SchoolApplicationPage() {
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
                         <div className="flex items-center gap-4">
                           <div className="relative h-14 w-14 rounded-xl overflow-hidden border border-gray-200 bg-white flex-shrink-0">
-                            <Image src="/logo.jpg" alt="TIPAC" fill className="object-contain p-1.5" sizes="56px" priority />
+                            <Image
+                              src="/logo.svg"
+                              alt="TIPAC"
+                              fill
+                              className="object-contain p-1.5"
+                              sizes="56px"
+                              priority
+                            />
                           </div>
                           <div>
                             <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Theatre Initiative for the Pearl of Africa Children</p>
