@@ -11,6 +11,9 @@ interface GalleryImage {
   created_at: string;
 }
 
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
 interface UploadStatus {
   message: string;
   isError?: boolean;
@@ -21,7 +24,6 @@ export default function AdminGalleryManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragRef = useRef<HTMLDivElement>(null);
 
@@ -45,89 +47,131 @@ export default function AdminGalleryManagement() {
     }
   }, []);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent<HTMLDivElement>) => {
-    let file: File | null = null;
-    
-    if ('target' in e && e.target instanceof HTMLInputElement) {
-      file = e.target.files?.[0] || null;
-    } else if ('dataTransfer' in e) {
-      file = e.dataTransfer?.files[0] || null;
-    }
+  const uploadSingleFile = async (file: File) => {
+    const storagePath = `images/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
 
-    if (!file) return;
-
-    // Reset preview and status
-    setPreviewUrl(null);
-    setUploadStatus(null);
-
-    // Validate file
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      setUploadStatus({
-        message: "Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.",
-        isError: true
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from("gallery")
+      .upload(storagePath, file, {
+        cacheControl: "3600",
+        upsert: false,
       });
-      return;
-    }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadStatus({
-        message: "File too large. Maximum file size is 5MB.",
-        isError: true
-      });
-      return;
-    }
+    if (uploadError) throw uploadError;
 
-    // Generate preview
-    const preview = URL.createObjectURL(file);
-    setPreviewUrl(preview);
+    const { error: insertError } = await supabase.from("gallery_images").insert({
+      filename: uploadData.path,
+      original_name: file.name,
+      url: supabase.storage.from("gallery").getPublicUrl(uploadData.path).data
+        .publicUrl,
+    });
 
-    // Upload file (direct to Supabase for better integration, assuming RLS allows)
-    try {
-      setIsUploading(true);
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('gallery')
-        .upload(`images/${Date.now()}-${file.name}`, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (uploadError) throw uploadError;
-
-      // Insert metadata into DB
-      const { data: insertData, error: insertError } = await supabase
-        .from('gallery_images')
-        .insert({
-          filename: uploadData.path,
-          original_name: file.name,
-          url: supabase.storage.from('gallery').getPublicUrl(uploadData.path).data.publicUrl
-        })
-        .select()
-        .single();
-
-      if (insertError) throw insertError;
-
-      setUploadStatus({ message: `Image "${file.name}" uploaded successfully!` });
-      setPreviewUrl(null);
-      
-      // Clear file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-      
-      // Reload images
-      await loadImages();
-    } catch (error) {
-      console.error("Upload error:", error);
-      setUploadStatus({ 
-        message: error instanceof Error ? error.message : "Upload failed. Please try again.", 
-        isError: true 
-      });
-    } finally {
-      setIsUploading(false);
-    }
+    if (insertError) throw insertError;
   };
+
+  const handleFiles = useCallback(
+    async (fileList: FileList | File[]) => {
+      const files = Array.from(fileList);
+      if (files.length === 0) return;
+
+      setUploadStatus(null);
+
+      const validFiles: File[] = [];
+      const validationErrors: string[] = [];
+
+      for (const file of files) {
+        if (!ALLOWED_TYPES.includes(file.type)) {
+          validationErrors.push(`"${file.name}": invalid file type`);
+          continue;
+        }
+        if (file.size > MAX_FILE_SIZE) {
+          validationErrors.push(`"${file.name}": exceeds 5MB limit`);
+          continue;
+        }
+        validFiles.push(file);
+      }
+
+      if (validFiles.length === 0) {
+        setUploadStatus({
+          message:
+            validationErrors.join("; ") ||
+            "No valid images selected. Only JPEG, PNG, GIF, and WebP up to 5MB are allowed.",
+          isError: true,
+        });
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
+
+      try {
+        setIsUploading(true);
+        let successCount = 0;
+        const uploadErrors = [...validationErrors];
+
+        for (let i = 0; i < validFiles.length; i++) {
+          const file = validFiles[i];
+          setUploadStatus({
+            message: `Uploading ${i + 1} of ${validFiles.length}: ${file.name}`,
+          });
+
+          try {
+            await uploadSingleFile(file);
+            successCount++;
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : "Upload failed";
+            uploadErrors.push(`"${file.name}": ${message}`);
+          }
+        }
+
+        if (successCount === validFiles.length && uploadErrors.length === 0) {
+          setUploadStatus({
+            message: `${successCount} image${successCount === 1 ? "" : "s"} uploaded successfully!`,
+          });
+        } else if (successCount > 0) {
+          setUploadStatus({
+            message: `${successCount} of ${validFiles.length} uploaded. ${uploadErrors.join("; ")}`,
+            isError: uploadErrors.length > 0,
+          });
+        } else {
+          setUploadStatus({
+            message: uploadErrors.join("; "),
+            isError: true,
+          });
+        }
+
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        await loadImages();
+      } catch (error) {
+        console.error("Upload error:", error);
+        setUploadStatus({
+          message:
+            error instanceof Error
+              ? error.message
+              : "Upload failed. Please try again.",
+          isError: true,
+        });
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    [loadImages],
+  );
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent<HTMLDivElement>) => {
+      let files: FileList | File[] | null = null;
+
+      if ("target" in e && e.target instanceof HTMLInputElement) {
+        files = e.target.files;
+      } else if ("dataTransfer" in e) {
+        files = e.dataTransfer?.files ?? null;
+      }
+
+      if (!files || files.length === 0) return;
+      void handleFiles(files);
+    },
+    [handleFiles],
+  );
 
   // Drag and drop handlers
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -235,16 +279,48 @@ export default function AdminGalleryManagement() {
           <svg className="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
           </svg>
-          Upload Image
+          Upload Images
         </button>
         <input
           ref={fileInputRef}
           type="file"
           accept="image/*"
+          multiple
           className="hidden"
           onChange={handleFileChange}
           disabled={isUploading}
         />
+      </div>
+
+      {/* Upload drop zone */}
+      <div
+        ref={dragRef}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={triggerFileInput}
+        className="mb-8 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-gray-50 transition-colors"
+      >
+        <svg
+          className="mx-auto h-12 w-12 text-gray-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.5}
+            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
+        </svg>
+        <p className="mt-2 text-sm font-medium text-gray-900">
+          {isUploading ? "Uploading..." : "Drag and drop images here"}
+        </p>
+        <p className="mt-1 text-xs text-gray-500">
+          or click to browse — select multiple JPEG, PNG, GIF, or WebP files (max 5MB each)
+        </p>
       </div>
 
       {/* Stats Cards */}
@@ -320,7 +396,7 @@ export default function AdminGalleryManagement() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <h3 className="mt-4 text-lg font-medium text-gray-900">No images yet</h3>
-            <p className="mt-1 text-sm text-gray-500">Get started by uploading your first image.</p>
+            <p className="mt-1 text-sm text-gray-500">Get started by uploading your first images.</p>
             <div className="mt-6">
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -329,7 +405,7 @@ export default function AdminGalleryManagement() {
                 <svg className="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
                 </svg>
-                Upload Image
+                Upload Images
               </button>
             </div>
           </div>
