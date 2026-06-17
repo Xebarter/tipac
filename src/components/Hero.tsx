@@ -136,10 +136,9 @@ export function Hero() {
   };
 
   const currentImage = displayImages[currentImageIndex];
-  const imageCaption = currentImage?.original_name || currentImage?.alt;
 
   return (
-    <section className="relative min-h-screen flex items-end overflow-hidden bg-slate-950">
+    <section className="relative h-[calc(100dvh-4.5rem)] flex flex-col justify-end overflow-hidden bg-slate-950">
       {/* Background images */}
       <div className="absolute inset-0 z-0">
         {isLoadingInitial && (
@@ -180,25 +179,25 @@ export function Hero() {
       </div>
 
       {/* Main content */}
-      <div className="container mx-auto px-4 sm:px-6 relative z-10 w-full pb-28 sm:pb-32 pt-32 sm:pt-40">
+      <div className="container mx-auto px-4 sm:px-6 relative z-10 w-full pb-20 pt-6 sm:pt-8">
         <div className="max-w-3xl">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="flex items-center gap-3 mb-6 sm:mb-8">
+            <div className="flex items-center gap-3 mb-3 sm:mb-4">
               <span className="h-px w-10 sm:w-14 bg-gradient-to-r from-rose-400 to-purple-400" />
               <span className="text-white/90 text-xs sm:text-sm font-medium tracking-[0.2em] uppercase hero-letter-shadow">
                 Theatre for Children
               </span>
             </div>
 
-            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold text-white mb-4 sm:mb-6 tracking-tight leading-[0.9] hero-letter-shadow">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white mb-2 sm:mb-3 tracking-tight leading-[0.9] hero-letter-shadow">
               TIPAC
             </h1>
 
-            <p className="text-xl sm:text-2xl md:text-3xl font-light text-white mb-6 sm:mb-8 tracking-wide hero-letter-shadow">
+            <p className="text-lg sm:text-xl md:text-2xl font-light text-white mb-3 sm:mb-4 tracking-wide hero-letter-shadow">
               Learn.{' '}
               <span className="text-rose-200 font-normal">
                 Perform.
@@ -206,9 +205,9 @@ export function Hero() {
               Shine.
             </p>
 
-            <div className="h-px w-full max-w-md bg-gradient-to-r from-white/30 via-white/10 to-transparent mb-6 sm:mb-8" />
+            <div className="h-px w-full max-w-md bg-gradient-to-r from-white/30 via-white/10 to-transparent mb-3 sm:mb-4" />
 
-            <p className="text-base sm:text-lg text-white/90 max-w-xl leading-relaxed font-light hero-letter-shadow">
+            <p className="text-sm sm:text-base text-white/90 max-w-xl leading-snug sm:leading-relaxed font-light hero-letter-shadow">
               Empowering young performers across Uganda through theatre education,
               cultural storytelling, and the transformative power of the arts.
             </p>
@@ -216,7 +215,7 @@ export function Hero() {
 
           {/* Executive pillars */}
           <motion.div
-            className="mt-10 sm:mt-14 grid grid-cols-3 gap-4 sm:gap-8 max-w-xl"
+            className="mt-5 sm:mt-6 grid grid-cols-3 gap-3 sm:gap-6 max-w-xl"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
@@ -257,52 +256,32 @@ export function Hero() {
         </>
       )}
 
-      {/* Bottom bar: caption, progress, dots */}
+      {/* Bottom bar: progress, dots */}
       <div className="absolute bottom-0 left-0 right-0 z-20">
-        <div className="container mx-auto px-4 sm:px-6 pb-6 sm:pb-8">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-            {/* Image caption from database */}
-            <AnimatePresence mode="wait">
-              {imageCaption && !isLoadingInitial && (
-                <motion.p
-                  key={currentImage?.id}
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="text-white/50 text-xs sm:text-sm font-light tracking-wide max-w-md truncate"
+        <div className="container mx-auto px-4 sm:px-6 pb-4 sm:pb-5">
+          {displayImages.length > 1 && (
+            <div className="flex items-center justify-end gap-2 sm:gap-3 mb-3">
+              {displayImages.map((img, index) => (
+                <button
+                  key={img.id}
+                  type="button"
+                  onClick={() => goToSlide(index)}
+                  className="group relative"
+                  aria-label={`Go to slide ${index + 1}`}
                 >
-                  {imageCaption}
-                </motion.p>
-              )}
-            </AnimatePresence>
+                  <span
+                    className={`block h-1 rounded-full transition-all duration-500 ${index === currentImageIndex
+                        ? 'w-8 sm:w-10 bg-white'
+                        : 'w-4 sm:w-5 bg-white/30 group-hover:bg-white/50'
+                      }`}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
 
-            {/* Slide indicators */}
-            {displayImages.length > 1 && (
-              <div className="flex items-center gap-2 sm:gap-3">
-                {displayImages.map((img, index) => (
-                  <button
-                    key={img.id}
-                    type="button"
-                    onClick={() => goToSlide(index)}
-                    className="group relative"
-                    aria-label={`Go to slide ${index + 1}`}
-                  >
-                    <span
-                      className={`block h-1 rounded-full transition-all duration-500 ${index === currentImageIndex
-                          ? 'w-8 sm:w-10 bg-white'
-                          : 'w-4 sm:w-5 bg-white/30 group-hover:bg-white/50'
-                        }`}
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Progress bar */}
           {displayImages.length > 1 && !isUserInteracting && (
-            <div className="mt-4 h-px w-full bg-white/10 overflow-hidden">
+            <div className="h-px w-full bg-white/10 overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-rose-400/80 to-purple-400/80 transition-none"
                 style={{ width: `${slideProgress * 100}%` }}
@@ -316,7 +295,7 @@ export function Hero() {
       <button
         type="button"
         onClick={scrollToEvents}
-        className="absolute bottom-20 sm:bottom-24 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1 text-white/40 hover:text-white/70 transition-colors duration-300"
+        className="absolute bottom-14 sm:bottom-16 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1 text-white/40 hover:text-white/70 transition-colors duration-300"
         aria-label="Scroll to upcoming events"
       >
         <motion.div
