@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import useSWR from "swr"; // Fixed: Correct import for SWR
 import Link from "next/link";
-import Image from "next/image"; // New: For optimized thumbnails
+import { AppImage as Image } from "@/components/AppImage";
 import { Button } from "@/components/ui/button";
 import { supabase } from '@/lib/supabaseClient';
 

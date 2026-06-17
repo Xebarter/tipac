@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { AppImage as Image } from "@/components/AppImage";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { motion } from "framer-motion";

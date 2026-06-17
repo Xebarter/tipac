@@ -1,7 +1,7 @@
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
-import Image from "next/image";
+import { AppImage as Image } from "@/components/AppImage";
 import Link from "next/link";
 
 type GalleryImage = { id: string; url: string };
