@@ -274,7 +274,7 @@ export default function SchoolApplicationPage() {
               <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
                 Apply for&nbsp;
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-700 to-red-600">
-                  TIPAC Festival 2026
+                  TIPAC Festival 2027
                 </span>
               </h1>
               <p className="mt-2 text-gray-500 text-base max-w-xl">
@@ -324,7 +324,7 @@ export default function SchoolApplicationPage() {
                 { n: "1", title: "Complete the form", desc: "Fill in your institution and contact details." },
                 { n: "2", title: "We review", desc: "Our team reviews your application within 5 business days." },
                 { n: "3", title: "Confirmation", desc: "You receive an email confirmation with next steps." },
-                { n: "4", title: "Participate!", desc: "Join TIPAC Festival 2026, 24–26 April at UNCC, Kampala." },
+                { n: "4", title: "Participate!", desc: "Join TIPAC Festival 2027, 23–25th April at UNCC, Kampala." },
               ].map((step) => (
                 <div key={step.n} className="flex gap-3.5 mb-4 last:mb-0">
                   <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-purple-600 to-red-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
@@ -342,7 +342,7 @@ export default function SchoolApplicationPage() {
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-3">
               <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Festival Details</p>
               {[
-                { label: "Dates", value: "24–26 April 2026" },
+                { label: "Dates", value: "23–25th April 2027" },
                 { label: "Venue", value: "Uganda National Cultural Centre, Kampala" },
                 { label: "Theme", value: "Environmental Sustainability" },
                 { label: "Open to", value: "Pre-Primary, Primary & Secondary Schools" },
@@ -488,7 +488,7 @@ export default function SchoolApplicationPage() {
                     value={formData.interestReason}
                     onChange={handleChange}
                     required
-                    placeholder="Tell us about your goals, your students, and what you hope to gain from participating in TIPAC Festival 2026…"
+                    placeholder="Tell us about your goals, your students, and what you hope to gain from participating in TIPAC Festival 2027…"
                     className="w-full rounded-lg border border-gray-200 bg-white px-3.5 py-3 text-sm text-gray-900 shadow-sm outline-none transition-all placeholder:text-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 resize-none"
                   />
                 </Field>
@@ -556,11 +556,11 @@ export default function SchoolApplicationPage() {
               className="bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden"
               role="dialog"
               aria-modal="true"
-              aria-label="TIPAC Festival 2026 Syllabus"
+              aria-label="TIPAC Festival 2027 Syllabus"
             >
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white">
                 <div>
-                  <h3 className="text-base font-bold text-gray-900">TIPAC Festival 2026 — Syllabus</h3>
+                  <h3 className="text-base font-bold text-gray-900">TIPAC Festival 2027 — Syllabus</h3>
                   <p className="text-xs text-gray-500">Headed paper format</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -601,7 +601,7 @@ export default function SchoolApplicationPage() {
                           </div>
                           <div>
                             <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Theatre Initiative for the Pearl of Africa Children</p>
-                            <p className="text-xl font-black text-gray-900 tracking-tight">TIPAC Festival 2026</p>
+                            <p className="text-xl font-black text-gray-900 tracking-tight">TIPAC Festival 2027</p>
                             <p className="text-sm text-gray-600">Syllabus for Pre-Primary, Primary & Secondary Schools</p>
                           </div>
                         </div>
@@ -613,7 +613,7 @@ export default function SchoolApplicationPage() {
 
                       <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
                         {[
-                          { label: "Festival dates", value: "24th–26th April 2026" },
+                          { label: "Festival dates", value: "23–25th April 2027" },
                           { label: "Venue", value: "Uganda National Cultural Centre\nKampala" },
                           { label: "Document", value: "Official Syllabus" },
                         ].map(({ label, value }) => (
