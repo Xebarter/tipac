@@ -5,8 +5,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-/** PesaPal expects separate first/last names; split on the first space. */
-export function splitFullNameForPesapal(fullName: string): { firstName: string; lastName: string } {
+/** Split a full name on the first space (card checkout billing fields). */
+export function splitFullName(fullName: string): { firstName: string; lastName: string } {
   const trimmed = fullName.trim().replace(/\s+/g, " ");
   if (!trimmed) return { firstName: "", lastName: "" };
   const i = trimmed.indexOf(" ");
@@ -17,3 +17,6 @@ export function splitFullNameForPesapal(fullName: string): { firstName: string; 
   const lastName = trimmed.slice(i + 1).trim() || "-";
   return { firstName, lastName };
 }
+
+/** @deprecated Use splitFullName */
+export const splitFullNameForPesapal = splitFullName;

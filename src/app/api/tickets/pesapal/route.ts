@@ -101,24 +101,36 @@ export async function POST(req: NextRequest) {
     console.log("[PESAPAL REQUEST BODY]", body);
 
     // First, create a ticket record with pending status
-    const { data: ticketData, error: ticketError } = await supabase
-      .from('tickets')
-      .insert([{
-        event_id: eventId,
-        email: email,
-        quantity: quantity,
-        status: 'pending',
-        price: Math.round(Number.parseFloat(amount) / quantity), // Calculate price per ticket
-        purchase_channel: 'online',
-        buyer_name: `${firstName} ${lastName}`,
-        buyer_phone: phoneNumber
-      }])
+    const ticketInsert: Record<string, unknown> = {
+      event_id: eventId,
+      email: email,
+      quantity: quantity,
+      status: "pending",
+      price: Math.round(Number.parseFloat(amount) / quantity),
+      purchase_channel: "online",
+      buyer_name: `${firstName} ${lastName}`,
+      buyer_phone: phoneNumber,
+      payment_method: "card",
+    };
+
+    let { data: ticketData, error: ticketError } = await supabase
+      .from("tickets")
+      .insert([ticketInsert])
       .select()
       .single();
 
-    if (ticketError) {
+    if (ticketError && (ticketError.message?.includes("payment_method") || ticketError.code === "PGRST204")) {
+      delete ticketInsert.payment_method;
+      ({ data: ticketData, error: ticketError } = await supabase
+        .from("tickets")
+        .insert([ticketInsert])
+        .select()
+        .single());
+    }
+
+    if (ticketError || !ticketData) {
       console.error("[TICKET CREATION ERROR]", ticketError);
-      throw new Error(`Failed to create ticket record: ${ticketError.message}`);
+      throw new Error(`Failed to create ticket record: ${ticketError?.message || "unknown error"}`);
     }
 
     const accessToken = await getAccessToken();
@@ -210,25 +222,39 @@ export async function POST(req: NextRequest) {
       throw new Error("Redirect URL not found in response");
     }
 
-    // Update ticket with PesaPal transaction ID
-    await supabase
-      .from('tickets')
-      .update({ 
-        pesapal_transaction_id: data.order_tracking_id 
-      })
-      .eq('id', ticketData.id);
+    // Update ticket with card payment transaction ID
+    const cardUpdate: Record<string, unknown> = {
+      pesapal_transaction_id: data.order_tracking_id,
+      payment_reference: data.order_tracking_id,
+      payment_method: "card",
+    };
+    const { error: cardUpdateError } = await supabase
+      .from("tickets")
+      .update(cardUpdate)
+      .eq("id", ticketData.id);
+
+    if (cardUpdateError) {
+      await supabase
+        .from("tickets")
+        .update({ pesapal_transaction_id: data.order_tracking_id })
+        .eq("id", ticketData.id);
+    }
 
     return NextResponse.json({ url: data.redirect_url });
   } catch (error: any) {
     console.error("[PESAPAL TICKET PAYMENT ERROR]", error);
     let errorMessage = "Failed to process payment";
-    
-    if (error && typeof error === 'object' && Object.keys(error).length > 0) {
+
+    if (error && typeof error === "object" && Object.keys(error).length > 0) {
       errorMessage = error.message || JSON.stringify(error);
-    } else if (typeof error === 'string') {
+    } else if (typeof error === "string") {
       errorMessage = error;
     }
-    
+
+    errorMessage = errorMessage
+      .replace(/paytota/gi, "payment provider")
+      .replace(/pesapal/gi, "payment provider");
+
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

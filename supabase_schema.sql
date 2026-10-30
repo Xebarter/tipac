@@ -39,7 +39,10 @@ CREATE TABLE IF NOT EXISTS tickets (
   qr_code TEXT,
   buyer_name TEXT,
   buyer_phone TEXT,
-  used BOOLEAN DEFAULT false
+  used BOOLEAN DEFAULT false,
+  -- Online payment rail (internal): mobile_money | card
+  payment_method TEXT,
+  payment_reference TEXT
 );
 
 -- Create batches table for tracking physical ticket batches

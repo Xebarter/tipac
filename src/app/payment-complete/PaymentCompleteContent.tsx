@@ -55,7 +55,81 @@ export default function PaymentCompleteContent() {
 
   useEffect(() => {
     const fetchPaymentStatus = async () => {
-      // Support multiple casing variants returned by PesaPal / redirects
+      const ticketIdParam = searchParams.get("ticketId");
+      const method = searchParams.get("method");
+      const failedFlag = searchParams.get("failed");
+
+      // Mobile Money return URL: /payment-complete?ticketId=...&method=mm
+      if (ticketIdParam && method === "mm") {
+        setOrderId(ticketIdParam);
+
+        if (failedFlag === "1") {
+          setPaymentStatus("Payment was not completed");
+          setLoading(false);
+          return;
+        }
+
+        try {
+          const maxAttempts = 8;
+          const delayMs = 2500;
+          let confirmed = false;
+
+          for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            const response = await fetch(
+              `/api/tickets/mobile-money/status?ticketId=${encodeURIComponent(ticketIdParam)}`
+            );
+            const statusData = await response.json().catch(() => null);
+
+            if (response.ok && statusData) {
+              const desc = (
+                statusData.payment_status_description ||
+                statusData.status ||
+                ""
+              )
+                .toString()
+                .toLowerCase();
+              setPaymentStatus(statusData.payment_status_description || statusData.status || "");
+
+              if (statusData.status === "confirmed" || desc.includes("successful")) {
+                confirmed = true;
+                break;
+              }
+              if (statusData.status === "failed") {
+                setPaymentStatus("Payment was not completed");
+                setLoading(false);
+                return;
+              }
+            }
+            await new Promise((res) => setTimeout(res, delayMs));
+          }
+
+          if (confirmed) {
+            setPaymentStatus("successful");
+            const ticketResponse = await fetch(`/api/tickets/fetch/${ticketIdParam}`);
+            const ticketPayload = await ticketResponse.json().catch(() => null);
+            if (ticketResponse.ok && ticketPayload) {
+              const ticket = ticketPayload.ticket || ticketPayload;
+              setTicketData(ticket);
+              const downloadSuccess = await downloadTicket(ticket);
+              if (!downloadSuccess) {
+                console.warn("Automatic ticket download failed");
+              }
+            } else {
+              setPaymentStatus("Ticket retrieval failed");
+            }
+          } else {
+            setPaymentStatus("Unable to verify payment status");
+          }
+        } catch (error) {
+          console.error("Error verifying mobile money payment:", error);
+          setPaymentStatus("Error verifying payment status");
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
+
+      // Card checkout return — support multiple casing variants
       const possibleKeys = [
         "OrderTrackingId",
         "orderTrackingId",
@@ -82,25 +156,37 @@ export default function PaymentCompleteContent() {
       }
 
       try {
-        // Poll payment status a few times in case PesaPal is delayed
         const maxAttempts = 6;
         const delayMs = 3000;
         let statusData: any = null;
 
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          const response = await fetch(`/api/tickets/pesapal-status?orderTrackingId=${orderTrackingId}`);
+          const response = await fetch(
+            `/api/tickets/card/status?orderTrackingId=${orderTrackingId}`
+          );
           statusData = await response.json().catch(() => null);
 
-          if (response.ok && statusData && (statusData.payment_status_description || statusData.status)) {
-            const desc = (statusData.payment_status_description || statusData.status || "").toString().toLowerCase();
-            setPaymentStatus(statusData.payment_status_description || statusData.status || "");
+          if (
+            response.ok &&
+            statusData &&
+            (statusData.payment_status_description || statusData.status)
+          ) {
+            const desc = (
+              statusData.payment_status_description ||
+              statusData.status ||
+              ""
+            )
+              .toString()
+              .toLowerCase();
+            setPaymentStatus(
+              statusData.payment_status_description || statusData.status || ""
+            );
 
             if (desc.includes("completed") || desc.includes("successful")) {
-              break; // confirmed
+              break;
             }
           }
 
-          // wait before next attempt
           await new Promise((res) => setTimeout(res, delayMs));
         }
 
@@ -110,42 +196,40 @@ export default function PaymentCompleteContent() {
           return;
         }
 
-        const finalDesc = (statusData.payment_status_description || statusData.status || "").toString().toLowerCase();
+        const finalDesc = (
+          statusData.payment_status_description ||
+          statusData.status ||
+          ""
+        )
+          .toString()
+          .toLowerCase();
 
         if (finalDesc.includes("completed") || finalDesc.includes("successful")) {
-          // Try to fetch ticket data without marking it used (use new fetch endpoint)
-          // First try to get ticket by pesapal_transaction_id
           let ticketResponse = await fetch(`/api/tickets/fetch/${orderTrackingId}`);
-          
-          // Fallback to the existing verify endpoint if fetch isn't available
+
           if (!ticketResponse.ok) {
             ticketResponse = await fetch(`/api/tickets/verify/${orderTrackingId}`);
           }
 
-          const ticketData = await ticketResponse.json().catch(() => null);
+          const ticketPayload = await ticketResponse.json().catch(() => null);
 
-          if (ticketResponse.ok && ticketData) {
-            // Prefer ticketData.ticket if present (verify), otherwise ticketData as returned by fetch
-            const ticket = ticketData.ticket || ticketData;
+          if (ticketResponse.ok && ticketPayload) {
+            const ticket = ticketPayload.ticket || ticketPayload;
             setTicketData(ticket);
 
-            // Attempt immediate download
             const downloadSuccess = await downloadTicket(ticket);
             if (!downloadSuccess) {
               console.warn("Automatic ticket download failed - user can use manual download button");
             }
           } else {
-            // Try alternative approach - find ticket by pesapal_transaction_id
-            const ticketByPesapalIdResponse = await fetch('/api/tickets');
-            if (ticketByPesapalIdResponse.ok) {
-              // This would need a new endpoint to search by pesapal_transaction_id
-              console.log("Need to implement search by pesapal_transaction_id");
-            }
-            
             setPaymentStatus("Ticket retrieval failed");
           }
         } else {
-          setPaymentStatus(statusData.payment_status_description || statusData.status || "Payment not completed");
+          setPaymentStatus(
+            statusData.payment_status_description ||
+              statusData.status ||
+              "Payment not completed"
+          );
         }
       } catch (error) {
         console.error("Error verifying payment status:", error);
@@ -155,7 +239,6 @@ export default function PaymentCompleteContent() {
       }
     };
 
-    // Execute immediately when component mounts and search params are available
     fetchPaymentStatus();
   }, [searchParams]);
 

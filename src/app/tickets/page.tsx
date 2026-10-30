@@ -11,7 +11,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { generateTicketPDF, generateMultiTicketPDF } from "@/lib/ticketGenerator";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { splitFullNameForPesapal } from "@/lib/utils";
+import { splitFullName } from "@/lib/utils";
 
 interface Event {
   id: string;
@@ -101,6 +101,8 @@ const TICKET_TYPE_VARIANTS = [
   },
 ] as const;
 
+type PayRail = "mobile_money" | "card";
+
 interface TicketFormProps {
   formData: FormData;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -119,6 +121,10 @@ interface TicketFormProps {
   onClose: () => void;
   quantityInput: string;
   quantity: number;
+  payRail: PayRail;
+  onPayRailChange: (rail: PayRail) => void;
+  mmPhase: "idle" | "awaiting_pin" | "confirmed";
+  onCancelMm: () => void;
 }
 
 function isIOSDevice(): boolean {
@@ -151,9 +157,17 @@ const TicketForm: React.FC<TicketFormProps> = ({
   onClose,
   quantityInput,
   quantity,
-}) => (
+  payRail,
+  onPayRailChange,
+  mmPhase,
+  onCancelMm,
+}) => {
+  const total = getTotalPrice();
+  const isPaid = total > 0;
+
+  return (
   <>
-    {success ? (
+    {success || mmPhase === "confirmed" ? (
       <div className="text-center py-6">
         <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
           <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -197,66 +211,25 @@ const TicketForm: React.FC<TicketFormProps> = ({
           Get More Tickets
         </Button>
       </div>
+    ) : mmPhase === "awaiting_pin" ? (
+      <div className="text-center py-8 px-2">
+        <div className="w-12 h-12 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-5" />
+        <p className="text-gray-900 font-semibold mb-2">Approve on your phone</p>
+        <p className="text-sm text-gray-600 mb-6">
+          A Mobile Money prompt was sent to <span className="font-medium text-gray-900">{formData.phone}</span>.
+          Enter your PIN — this screen updates automatically.
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancelMm}
+          className="border-gray-300"
+        >
+          Cancel
+        </Button>
+      </div>
     ) : (
       <form onSubmit={onSubmit} className="space-y-4 sm:space-y-5">
-        <div>
-          <Label htmlFor="fullName" className="text-gray-700 mb-2 block text-sm font-medium">
-            Full name <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            id="fullName"
-            name="fullName"
-            value={formData.fullName}
-            onChange={onInputChange}
-            placeholder="John Doe"
-            className="h-12 min-h-[48px] rounded-xl border-gray-300 bg-white text-base text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-red-500 focus:ring-2 focus:ring-red-500"
-            required
-            autoComplete="name"
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="email" className="text-gray-700 mb-2 block text-sm font-medium">
-            Email Address
-            {getTotalPrice() > 0 ? (
-              <span className="text-red-500"> *</span>
-            ) : (
-              <span className="text-gray-500 font-normal"> (optional for free tickets)</span>
-            )}
-          </Label>
-          <Input
-            type="email"
-            id="email"
-            name="email"
-            value={formData.email}
-            onChange={onInputChange}
-            placeholder="john.doe@example.com"
-            className="h-12 min-h-[48px] rounded-xl border-gray-300 bg-white text-base text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-red-500 focus:ring-2 focus:ring-red-500"
-            required={getTotalPrice() > 0}
-            autoComplete="email"
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="phone" className="text-gray-700 mb-2 block text-sm font-medium">
-            Phone Number <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            type="tel"
-            inputMode="numeric"
-            id="phone"
-            name="phone"
-            value={formData.phone}
-            onChange={onInputChange}
-            placeholder="07xxxxxxxx"
-            pattern="^07[0-9]{8}$"
-            maxLength={10}
-            className="h-12 min-h-[48px] rounded-xl border-gray-300 bg-white text-base text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-red-500 focus:ring-2 focus:ring-red-500"
-            required
-          />
-          <p className="mt-1 text-xs text-gray-500">Format: 07xxxxxxxx (10 digits)</p>
-        </div>
-
         <div>
           <Label htmlFor="quantity" className="text-gray-700 mb-2 block text-sm font-medium">
             Quantity <span className="text-red-500">*</span>
@@ -274,6 +247,116 @@ const TicketForm: React.FC<TicketFormProps> = ({
             required
           />
         </div>
+
+        {isPaid && (
+          <div>
+            <Label className="text-gray-700 mb-2 block text-sm font-medium">Pay with</Label>
+            <div className="grid grid-cols-2 gap-2 rounded-xl border border-gray-200 bg-gray-50 p-1">
+              <button
+                type="button"
+                onClick={() => onPayRailChange("mobile_money")}
+                className={`h-11 rounded-lg text-sm font-semibold transition-colors ${
+                  payRail === "mobile_money"
+                    ? "bg-gradient-to-r from-red-600 to-purple-700 text-white shadow"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                Mobile Money
+              </button>
+              <button
+                type="button"
+                onClick={() => onPayRailChange("card")}
+                className={`h-11 rounded-lg text-sm font-semibold transition-colors ${
+                  payRail === "card"
+                    ? "bg-gradient-to-r from-red-600 to-purple-700 text-white shadow"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                Card
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div>
+          <Label htmlFor="phone" className="text-gray-700 mb-2 block text-sm font-medium">
+            Phone Number <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            type="tel"
+            inputMode="numeric"
+            id="phone"
+            name="phone"
+            value={formData.phone}
+            onChange={onInputChange}
+            placeholder="07xxxxxxxx"
+            pattern="^07[0-9]{8}$"
+            maxLength={10}
+            className="h-12 min-h-[48px] rounded-xl border-gray-300 bg-white text-base text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-red-500 focus:ring-2 focus:ring-red-500"
+            required
+            autoComplete="tel"
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            {isPaid && payRail === "mobile_money"
+              ? "We’ll send a payment prompt to this number (MTN or Airtel)."
+              : "Format: 07xxxxxxxx (10 digits)"}
+          </p>
+        </div>
+
+        {(!isPaid || payRail === "card") && (
+          <div>
+            <Label htmlFor="fullName" className="text-gray-700 mb-2 block text-sm font-medium">
+              Full name <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="fullName"
+              name="fullName"
+              value={formData.fullName}
+              onChange={onInputChange}
+              placeholder="John Doe"
+              className="h-12 min-h-[48px] rounded-xl border-gray-300 bg-white text-base text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-red-500 focus:ring-2 focus:ring-red-500"
+              required
+              autoComplete="name"
+            />
+          </div>
+        )}
+
+        {isPaid && payRail === "card" && (
+          <div>
+            <Label htmlFor="email" className="text-gray-700 mb-2 block text-sm font-medium">
+              Email Address <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={onInputChange}
+              placeholder="john.doe@example.com"
+              className="h-12 min-h-[48px] rounded-xl border-gray-300 bg-white text-base text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-red-500 focus:ring-2 focus:ring-red-500"
+              required
+              autoComplete="email"
+            />
+          </div>
+        )}
+
+        {!isPaid && (
+          <div>
+            <Label htmlFor="email" className="text-gray-700 mb-2 block text-sm font-medium">
+              Email Address <span className="text-gray-500 font-normal">(optional)</span>
+            </Label>
+            <Input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={onInputChange}
+              placeholder="john.doe@example.com"
+              className="h-12 min-h-[48px] rounded-xl border-gray-300 bg-white text-base text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-red-500 focus:ring-2 focus:ring-red-500"
+              autoComplete="email"
+            />
+          </div>
+        )}
 
         {error && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
@@ -311,7 +394,7 @@ const TicketForm: React.FC<TicketFormProps> = ({
           <div className="flex justify-between items-center pt-4 border-t border-red-200 text-base">
             <p className="text-gray-800 font-bold">Total:</p>
             <p className="text-2xl font-bold bg-gradient-to-r from-red-600 to-purple-700 bg-clip-text text-transparent">
-              UGX {getTotalPrice().toLocaleString()}
+              UGX {total.toLocaleString()}
             </p>
           </div>
         </div>
@@ -335,10 +418,12 @@ const TicketForm: React.FC<TicketFormProps> = ({
                 </svg>
                 Processing...
               </span>
-            ) : getTotalPrice() > 0 ? (
-              "Proceed to Payment"
-            ) : (
+            ) : !isPaid ? (
               "Get Free Tickets"
+            ) : payRail === "mobile_money" ? (
+              `Pay UGX ${total.toLocaleString()}`
+            ) : (
+              `Pay with Card · UGX ${total.toLocaleString()}`
             )}
           </Button>
         </motion.div>
@@ -349,7 +434,8 @@ const TicketForm: React.FC<TicketFormProps> = ({
       </form>
     )}
   </>
-);
+  );
+};
 
 export default function TicketsPage() {
   const router = useRouter();
@@ -371,6 +457,9 @@ export default function TicketsPage() {
   const [isClient, setIsClient] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [payRail, setPayRail] = useState<PayRail>("mobile_money");
+  const [mmPhase, setMmPhase] = useState<"idle" | "awaiting_pin" | "confirmed">("idle");
+  const [pendingTicketId, setPendingTicketId] = useState<string | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -597,18 +686,107 @@ export default function TicketsPage() {
     }
   }, [downloadableTickets, downloadTicket, downloadAllTickets]);
 
+  // Poll mobile money until paid / failed
+  useEffect(() => {
+    if (mmPhase !== "awaiting_pin" || !pendingTicketId) return;
+
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 40;
+
+    const poll = async () => {
+      while (!cancelled && attempts < maxAttempts) {
+        attempts += 1;
+        try {
+          const res = await fetch(
+            `/api/tickets/mobile-money/status?ticketId=${encodeURIComponent(pendingTicketId)}`
+          );
+          const data = await res.json().catch(() => null);
+          if (res.ok && data) {
+            if (data.status === "confirmed") {
+              const ticketType = getTicketTypeById(selectedTicketType);
+              const event = ticketType ? getEventById(ticketType.event_id) : null;
+              const ticketRes = await fetch(`/api/tickets/fetch/${pendingTicketId}`);
+              const ticketPayload = await ticketRes.json().catch(() => null);
+              const ticket = ticketPayload?.ticket || ticketPayload;
+              if (!cancelled) {
+                if (ticket) {
+                  const downloadable = {
+                    id: ticket.id,
+                    event: {
+                      title: ticket.event?.title || event?.title || "",
+                      date: ticket.event?.date || event?.date || "",
+                      location: ticket.event?.location || event?.location || "",
+                      organizer_name: ticket.event?.organizer_name,
+                      organizer_logo_url: ticket.event?.organizer_logo_url,
+                      sponsor_logos: ticket.event?.sponsor_logos,
+                    },
+                    buyer_name: ticket.buyer_name || "",
+                    buyer_phone: ticket.buyer_phone || formData.phone,
+                    purchase_channel: "online",
+                  };
+                  setDownloadableTickets([downloadable]);
+                  try {
+                    await downloadTicket(downloadable);
+                  } catch (err) {
+                    console.warn("Auto download failed", err);
+                  }
+                }
+                setMmPhase("confirmed");
+                setSuccess(
+                  `Payment successful! Your ticket for ${event?.title || "the event"} is ready.`
+                );
+                setLoading(false);
+              }
+              return;
+            }
+            if (data.status === "failed") {
+              if (!cancelled) {
+                setMmPhase("idle");
+                setPendingTicketId(null);
+                setLoading(false);
+                setError("Payment was not completed. Please try again.");
+              }
+              return;
+            }
+          }
+        } catch (err) {
+          console.error("MM poll error", err);
+        }
+        await new Promise((r) => setTimeout(r, 3000));
+      }
+      if (!cancelled) {
+        setLoading(false);
+        setError(
+          "Still waiting for payment confirmation. If you approved on your phone, keep this page open or try again shortly."
+        );
+      }
+    };
+
+    void poll();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    mmPhase,
+    pendingTicketId,
+    selectedTicketType,
+    getTicketTypeById,
+    getEventById,
+    formData.phone,
+    downloadTicket,
+  ]);
+
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     // iOS Safari blocks popups opened after async work.
-    // Pre-open a tab during the user gesture, then navigate it once the PDF blob is ready.
     const preOpenedDownloadWindow =
       isIOSDevice() ? window.open("about:blank", "_blank", "noopener,noreferrer") : null;
 
     try {
-      // Validation
       if (!selectedTicketType) {
         throw new Error("Please select a ticket type");
       }
@@ -617,19 +795,8 @@ export default function TicketsPage() {
         throw new Error("Quantity must be at least 1");
       }
 
-      if (!formData.fullName?.trim() || !formData.phone) {
-        throw new Error("Please enter your full name and phone number");
-      }
-
-      const { firstName, lastName } = splitFullNameForPesapal(formData.fullName);
-      if (!firstName) {
-        throw new Error("Please enter your full name");
-      }
-
-      // Normalize and validate phone number: must be exactly 10 digits starting with 07
       const normalizedPhone = formData.phone.replace(/\s+/g, "");
-      const phoneRegex = /^07[0-9]{8}$/;
-      if (!phoneRegex.test(normalizedPhone)) {
+      if (!/^07[0-9]{8}$/.test(normalizedPhone)) {
         throw new Error("Phone number must be in the format 07xxxxxxxx (10 digits, starting with 07)");
       }
 
@@ -638,14 +805,45 @@ export default function TicketsPage() {
         throw new Error("Selected ticket type not found");
       }
 
-      // If there's a price, process payment with PesaPal
       const totalPrice = getTotalPrice();
-      if (totalPrice > 0) {
+
+      if (totalPrice > 0 && payRail === "mobile_money") {
+        const response = await fetch("/api/tickets/mobile-money", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            phoneNumber: normalizedPhone,
+            amount: totalPrice,
+            eventId: ticketType.event_id,
+            quantity,
+            ticketTypeId: ticketType.id,
+            fullName: formData.fullName?.trim() || undefined,
+            email: formData.email?.trim() || undefined,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to start Mobile Money payment");
+        }
+        setPendingTicketId(data.ticketId);
+        setMmPhase("awaiting_pin");
+        return;
+      }
+
+      if (totalPrice > 0 && payRail === "card") {
+        if (!formData.fullName?.trim()) {
+          throw new Error("Please enter your full name");
+        }
         const email = formData.email?.trim();
         if (!email) {
-          throw new Error("Email is required for paid tickets (for your receipt and payment)");
+          throw new Error("Email is required for card payments");
         }
-        const response = await fetch("/api/tickets/pesapal", {
+        const { firstName, lastName } = splitFullName(formData.fullName);
+        if (!firstName) {
+          throw new Error("Please enter your full name");
+        }
+
+        const response = await fetch("/api/tickets/card", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -655,135 +853,140 @@ export default function TicketsPage() {
             phoneNumber: normalizedPhone,
             amount: totalPrice.toString(),
             eventId: ticketType.event_id,
-            quantity: quantity
+            quantity,
+            ticketTypeId: ticketType.id,
           }),
         });
 
         const data = await response.json();
-
         if (!response.ok) {
           throw new Error(data.error || "Failed to process payment");
         }
 
-        // Redirect to PesaPal payment page
         window.location.href = data.url;
-      } else {
-        const displayName = formData.fullName.trim();
-        // For free tickets, create tickets directly (one record per ticket)
-        const ticketsToInsert = Array(quantity).fill(null).map(() => ({
-          event_id: ticketType.event_id,
-          email: formData.email?.trim() || null,
-          quantity: 1, // Each record represents one ticket
-          status: 'confirmed',
-          price: ticketType.price,
-          purchase_channel: 'online',
+        return;
+      }
+
+      // Free tickets
+      if (!formData.fullName?.trim()) {
+        throw new Error("Please enter your full name");
+      }
+      const displayName = formData.fullName.trim();
+      const ticketsToInsert = Array(quantity).fill(null).map(() => ({
+        event_id: ticketType.event_id,
+        ticket_type_id: ticketType.id,
+        email: formData.email?.trim() || null,
+        quantity: 1,
+        status: "confirmed",
+        price: ticketType.price,
+        purchase_channel: "online",
+        buyer_name: displayName,
+        buyer_phone: normalizedPhone,
+      }));
+
+      const { data, error } = await supabase
+        .from("tickets")
+        .insert(ticketsToInsert)
+        .select();
+
+      if (error) throw error;
+
+      if (data && data[0]) {
+        const event = getEventById(ticketType.event_id);
+        const createdRows = Array.isArray(data) ? data : [data[0]];
+        const ticketsToDownload = createdRows.map((row: any) => ({
+          id: row.id,
+          event: {
+            title: event?.title || "",
+            date: event?.date || "",
+            location: event?.location || "",
+          },
           buyer_name: displayName,
-          buyer_phone: normalizedPhone
+          buyer_phone: formData.phone,
+          purchase_channel: "online",
         }));
 
-        const { data, error } = await supabase
-          .from('tickets')
-          .insert(ticketsToInsert)
-          .select();
-
-        if (error) throw error;
-
-        if (data && data[0]) {
-          const event = getEventById(ticketType.event_id);
-
-          // supabase may return an array of created rows (when multiple inserted) or a single row inside data[0]
-          const createdRows = Array.isArray(data) ? data : [data[0]];
-
-          // Build ticket objects to download
-          const ticketsToDownload = createdRows.map((row: any, index: number) => ({
-            id: row.id,
-            event: {
-              title: event?.title || "",
-              date: event?.date || "",
-              location: event?.location || ""
-            },
-            buyer_name: displayName,
-            buyer_phone: formData.phone,
-            purchase_channel: 'online'
-          }));
-
-          // Attempt to download each ticket sequentially with a small delay to avoid browser throttling
-          let allDownloadsSucceeded = true;
-          try {
-            // Try to download all tickets in a single PDF
-            await downloadAllTickets(ticketsToDownload, preOpenedDownloadWindow);
-          } catch (downloadError) {
-            console.error('Multi-ticket download failed, falling back to individual downloads', downloadError);
-            // Fallback to individual downloads (note: iOS browsers won't reliably auto-download multiple files)
-            if (isIOSDevice() && ticketsToDownload.length > 1) {
-              allDownloadsSucceeded = false;
-            } else {
-              for (let i = 0; i < ticketsToDownload.length; i++) {
-                try {
-                  // Small delay between downloads to reduce chance of browser blocking
-                  if (i > 0) await new Promise((res) => setTimeout(res, 500));
-                  await downloadTicket(
-                    ticketsToDownload[i],
-                    i + 1,
-                    ticketsToDownload.length,
-                    i === 0 ? preOpenedDownloadWindow : null
-                  );
-                } catch (downloadError) {
-                  console.error('Download failed for ticket', ticketsToDownload[i].id, downloadError);
-                  allDownloadsSucceeded = false;
-                }
+        let allDownloadsSucceeded = true;
+        try {
+          await downloadAllTickets(ticketsToDownload, preOpenedDownloadWindow);
+        } catch (downloadError) {
+          console.error("Multi-ticket download failed, falling back", downloadError);
+          if (isIOSDevice() && ticketsToDownload.length > 1) {
+            allDownloadsSucceeded = false;
+          } else {
+            for (let i = 0; i < ticketsToDownload.length; i++) {
+              try {
+                if (i > 0) await new Promise((res) => setTimeout(res, 500));
+                await downloadTicket(
+                  ticketsToDownload[i],
+                  i + 1,
+                  ticketsToDownload.length,
+                  i === 0 ? preOpenedDownloadWindow : null
+                );
+              } catch (dlErr) {
+                console.error("Download failed", dlErr);
+                allDownloadsSucceeded = false;
               }
             }
           }
-
-          if (allDownloadsSucceeded) {
-            setSuccess(`Thank you! Your free ticket for ${event?.title} has been confirmed. The ticket should be downloading now. Check your downloads folder.`);
-          } else {
-            setSuccess(`Thank you! Your free ticket for ${event?.title} has been confirmed. There was an issue automatically downloading one or more tickets — you can download them manually below or from your confirmation email.`);
-          }
-
-          // Keep the tickets available for manual download in the UI
-          setDownloadableTickets(ticketsToDownload);
-
-          // Reset form
-          setFormData({
-            fullName: "",
-            email: "",
-            phone: "",
-          });
-          setQuantityInput("1");
         }
+
+        if (allDownloadsSucceeded) {
+          setSuccess(
+            `Thank you! Your free ticket for ${event?.title} has been confirmed. The ticket should be downloading now. Check your downloads folder.`
+          );
+        } else {
+          setSuccess(
+            `Thank you! Your free ticket for ${event?.title} has been confirmed. There was an issue automatically downloading one or more tickets — you can download them manually below.`
+          );
+        }
+
+        setDownloadableTickets(ticketsToDownload);
+        setFormData({ fullName: "", email: "", phone: "" });
+        setQuantityInput("1");
       }
+      setLoading(false);
     } catch (err: any) {
       console.error("Ticket purchase error:", err);
       let errorMessage = "Failed to process ticket purchase";
 
-      if (err && typeof err === 'object') {
+      if (err && typeof err === "object") {
         if (err.message) {
           errorMessage = err.message;
         } else if (Object.keys(err).length === 0) {
-          // Handle empty error object case
           errorMessage = "An unexpected error occurred. Please try again.";
         } else {
-          // Try to stringify non-empty objects
           try {
             errorMessage = JSON.stringify(err);
-          } catch (stringifyErr) {
+          } catch {
             errorMessage = "An unknown error occurred";
           }
         }
-      } else if (typeof err === 'string') {
+      } else if (typeof err === "string") {
         errorMessage = err;
       }
 
       setError(errorMessage);
-    } finally {
+      setMmPhase("idle");
+      setPendingTicketId(null);
       setLoading(false);
     }
-  }, [selectedTicketType, quantity, formData, getTicketTypeById, getEventById, getTotalPrice, downloadTicket, downloadAllTickets]);
+  }, [
+    selectedTicketType,
+    quantity,
+    formData,
+    payRail,
+    getTicketTypeById,
+    getEventById,
+    getTotalPrice,
+    downloadTicket,
+    downloadAllTickets,
+  ]);
 
   const closeModal = useCallback(() => {
     setIsModalOpen(false);
+    setMmPhase("idle");
+    setPendingTicketId(null);
     if (success) {
       setSuccess(null);
       setDownloadableTickets([]);
@@ -1214,6 +1417,15 @@ export default function TicketsPage() {
                 onClose={closeModal}
                 quantityInput={quantityInput}
                 quantity={quantity}
+                payRail={payRail}
+                onPayRailChange={setPayRail}
+                mmPhase={mmPhase}
+                onCancelMm={() => {
+                  setMmPhase("idle");
+                  setPendingTicketId(null);
+                  setLoading(false);
+                  setError(null);
+                }}
               />
             </div>
           </motion.div>

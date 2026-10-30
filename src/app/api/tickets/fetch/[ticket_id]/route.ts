@@ -33,10 +33,10 @@ export async function GET(
       .eq('id', ticketId)
       .single();
 
-    // If not found by ID, try to find by pesapal_transaction_id
+    // If not found by ID, try provider transaction / payment reference
     if ((!ticket || ticketError) && ticketId) {
       ({ data: ticket, error: ticketError } = await supabase
-        .from('tickets')
+        .from("tickets")
         .select(`
           *,
           events (
@@ -52,8 +52,30 @@ export async function GET(
             name
           )
         `)
-        .eq('pesapal_transaction_id', ticketId)
+        .eq("pesapal_transaction_id", ticketId)
         .single());
+
+      if ((!ticket || ticketError) && ticketId) {
+        ({ data: ticket, error: ticketError } = await supabase
+          .from("tickets")
+          .select(`
+            *,
+            events (
+              id,
+              title,
+              date,
+              location,
+              organizer_name,
+              organizer_logo_url,
+              sponsor_logos
+            ),
+            ticket_types (
+              name
+            )
+          `)
+          .eq("payment_reference", ticketId)
+          .maybeSingle());
+      }
     }
 
     if (ticketError) {
