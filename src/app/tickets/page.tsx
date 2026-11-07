@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +13,95 @@ import { generateTicketPDF, generateMultiTicketPDF } from "@/lib/ticketGenerator
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { splitFullName } from "@/lib/utils";
+
+const OPTIMIZABLE_IMAGE_HOSTS = new Set([
+  "images.unsplash.com",
+  "source.unsplash.com",
+  "ext.same-assets.com",
+  "ugc.same-assets.com",
+  "i.ytimg.com",
+  "via.placeholder.com",
+]);
+
+function canOptimizeImageUrl(url: string): boolean {
+  try {
+    const { hostname, protocol } = new URL(url);
+    if (protocol !== "https:" && protocol !== "http:") return false;
+    if (hostname.endsWith(".supabase.co")) return true;
+    return OPTIMIZABLE_IMAGE_HOSTS.has(hostname);
+  } catch {
+    return false;
+  }
+}
+
+function EventCardImage({
+  src,
+  alt,
+  priority = false,
+  dateLabel,
+}: {
+  src: string | null | undefined;
+  alt: string;
+  priority?: boolean;
+  dateLabel: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  const trimmed = src?.trim() || "";
+  const hasImage = Boolean(trimmed) && !failed;
+  const useNextImage = hasImage && canOptimizeImageUrl(trimmed);
+
+  return (
+    <div className="relative aspect-[16/10] w-full overflow-hidden bg-gradient-to-br from-red-500 to-purple-600 sm:aspect-[21/9]">
+      {hasImage && useNextImage ? (
+        <Image
+          src={trimmed}
+          alt={alt}
+          fill
+          priority={priority}
+          sizes="(max-width: 640px) 100vw, (max-width: 896px) 90vw, 896px"
+          quality={72}
+          className="object-cover object-center"
+          onError={() => setFailed(true)}
+        />
+      ) : hasImage ? (
+        // eslint-disable-next-line @next/next/no-img-element -- external hosts not in next.config
+        <img
+          src={trimmed}
+          alt={alt}
+          loading={priority ? "eager" : "lazy"}
+          decoding="async"
+          fetchPriority={priority ? "high" : "auto"}
+          className="absolute inset-0 h-full w-full object-cover object-center"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center" aria-hidden>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-12 w-12 text-white/80 sm:h-16 sm:w-16"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.5}
+              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
+          </svg>
+        </div>
+      )}
+      <div
+        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent"
+        aria-hidden
+      />
+      <span className="absolute bottom-3 left-3 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold text-gray-900 shadow-sm backdrop-blur-sm sm:bottom-4 sm:left-4 sm:px-3 sm:py-1.5 sm:text-xs">
+        {dateLabel}
+      </span>
+    </div>
+  );
+}
 
 interface Event {
   id: string;
@@ -980,7 +1070,7 @@ export default function TicketsPage() {
           <div className="mx-auto max-w-4xl">
             {/* Events List with Ticket Types */}
             <motion.div
-              className="backdrop-blur-sm bg-white/80 rounded-2xl sm:rounded-3xl shadow-xl border border-white/30 p-4 sm:p-6 relative overflow-hidden"
+              className="relative overflow-hidden rounded-2xl border border-white/30 bg-white/80 p-3 shadow-xl backdrop-blur-sm sm:rounded-3xl sm:p-6"
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
@@ -1001,7 +1091,7 @@ export default function TicketsPage() {
                   </Link>
                 </div>
               ) : (
-                <div className="space-y-5">
+                <div className="space-y-4 sm:space-y-5">
                   {events.map((event, index) => {
                     const eventTicketTypes = getTicketTypesForEvent(event.id);
                     const isSelected = searchParams?.get('event') === event.id;
@@ -1033,43 +1123,69 @@ export default function TicketsPage() {
                           transition: { duration: 0.5 }
                         } : {}}
                       >
+                        <EventCardImage
+                          src={event.image_url}
+                          alt={event.title}
+                          priority={index === 0}
+                          dateLabel={new Date(event.date).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        />
                         <div
-                          className={`p-4 sm:p-6 border-b border-gray-100 ${isSelected ? `bg-gradient-to-r ${colorScheme.from} ${colorScheme.to}` : 'bg-gradient-to-r from-red-50/50 to-purple-50/50'}`}
+                          className={`border-b border-gray-100 px-4 py-3.5 sm:px-6 sm:py-5 ${
+                            isSelected
+                              ? `bg-gradient-to-r ${colorScheme.from} ${colorScheme.to}`
+                              : "bg-gradient-to-r from-red-50/50 to-purple-50/50"
+                          }`}
                         >
-                          {event.image_url ? (
-                            <div className="rounded-xl overflow-hidden mb-3 sm:mb-4 h-32 sm:h-40">
-                              <img 
-                                src={event.image_url} 
-                                alt={event.title}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          ) : (
-                            <div className="rounded-xl overflow-hidden mb-3 sm:mb-4 h-32 sm:h-40 bg-gradient-to-r from-red-500 to-purple-600 flex items-center justify-center">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                            </div>
-                          )}
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <h3 className={`font-bold text-gray-900 text-lg sm:text-xl ${isSelected ? colorScheme.text : ''}`}>
-                              {event.title}
-                            </h3>
-                            <span className="bg-gradient-to-r from-red-500 to-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap shadow">
-                              {new Date(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-sm text-gray-600">
+                          <h3
+                            className={`text-lg font-bold leading-snug text-gray-900 sm:text-xl ${
+                              isSelected ? colorScheme.text : ""
+                            }`}
+                          >
+                            {event.title}
+                          </h3>
+                          <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-gray-600">
                             <span className="inline-flex items-center gap-1.5">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4 text-red-500"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                aria-hidden
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
                               </svg>
                               {event.time}
                             </span>
-                            <span className="inline-flex items-center gap-1.5 min-w-0">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <span className="inline-flex min-w-0 items-center gap-1.5">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4 shrink-0 text-red-500"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                aria-hidden
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                                />
                               </svg>
                               <span className="truncate">{event.location}</span>
                             </span>
